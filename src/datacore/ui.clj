@@ -120,8 +120,7 @@
        KeyEvent/ANY
        (reify EventHandler
          (^void handle [this ^Event event]
-          (= :data.core.ui.keys/consume (keys/global-key-handler event))
-          )))
+          (keys/global-key-handler event))))
       (.show))))
 
 (comment

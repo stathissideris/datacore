@@ -4,7 +4,8 @@
             [clojure.math.combinatorics :as combo]
             [datacore.ui.timer :as timer]
             [datacore.util :as util])
-  (:import [javafx.scene.input KeyEvent KeyCode]))
+  (:import [javafx.scene.input KeyEvent KeyCode]
+           [javafx.event Event]))
 
 (def chain (atom []))
 (def timer (atom nil))
@@ -67,20 +68,26 @@
   (timer/cancel @timer)
   (reset! timer (timer/delayed 3500 #(do (prn 'KEY-STATE-RESET) (clear-chain!)))))
 
+(defn consume-event [^Event e]
+  (.consume e)
+  (.isConsumed e))
+
+;;(def debug prn)
+(defn debug [& _])
+
 (defn global-key-handler [fx-event]
   (try
     (let [{:keys [modifier? type] :as event} (event->map fx-event)]
       (if (not= :key-pressed type)
         (do
-          (prn 'CONSUMED event)
-          (.consume event)
-          ::consume)
+          (debug 'CONSUMED event)
+          (consume-event fx-event))
         (when (= :key-pressed type)
           (let [press (event->press event)]
             (when-not modifier?
               (swap! chain conj press)
               (wait-for-next!)
-              (prn 'KEY press 'SEQ @chain))
+              (debug 'KEY press 'SEQ @chain))
             (let [match (get-in global-keymap @chain)]
               (cond
                 (not match)
@@ -90,18 +97,17 @@
 
                 (= match ::propagate)
                 (do
-                  (prn 'PROPAGATED event)
+                  (debug 'PROPAGATED event)
                   (clear-chain!))
 
                 :else
                 (do
+                  (when (prefix? match) (prn 'PREFIX @chain))
                   (when (action? match)
                     (prn 'COMBO match)
                     (timer/cancel @timer)
                     (clear-chain!))
-                  (when (prefix? match) (prn 'PREFIX @chain))
-                  (prn 'CONSUMED event)
-                  (.consume event)
-                  ::consume)))))))
+                  (debug 'CONSUMED event)
+                  (consume-event fx-event))))))))
     (catch Exception e
       (.printStackTrace e))))
