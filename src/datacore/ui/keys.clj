@@ -80,7 +80,8 @@
 (defn consume-event [^Event e press event]
   (debug 'CONSUMED press event)
   (alter last-consumed (constantly event))
-  (.consume e)) ;;safe to retry
+  (.consume e) ;;safe to retry
+  nil)
 
 (defn also-consume-this? [event]
   (when-let [last-consumed @last-consumed]
@@ -94,42 +95,43 @@
           press                    (event->press event)
           new-chain                (conj @chain press)
           match                    (get-in global-keymap new-chain)]
-      (cond
-        ;;also consume :key-typed and :key-released equivalents of
-        ;;events that have been consumed:
-        (also-consume-this? event)
-        (do
-          (debug 'ALSO-CONSUMING)
-          (dosync
+      (dosync
+       (cond
+         ;;also consume :key-typed and :key-released equivalents of
+         ;;events that have been consumed:
+         (also-consume-this? event)
+         (do
+           (debug 'ALSO-CONSUMING)
            (consume-event fx-event press event)
            (when (= type :key-released)
-             (alter last-consumed (constantly nil))))) ;;...but stop consuming at :key-released
+             (alter last-consumed (constantly nil))) ;;...but stop consuming at :key-released
+           nil)
 
-        (and (= type :key-pressed) (not match))
-        (do
-          (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
-          (dosync
+         (and (= type :key-pressed) (not match))
+         (do
+           (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
            (clear-chain)
-           (consume-event fx-event press event)))
+           (consume-event fx-event press event))
 
-        (= match ::propagate)
-        (do
-          (debug 'PROPAGATED press event)
-          (dosync (clear-chain)))
+         (= match ::propagate)
+         (do
+           (debug 'PROPAGATED press event)
+           (clear-chain))
 
-        :else
-        (cond
-          (prefix? match)
-          (dosync
-            (alter chain conj press)
-            (prn 'PREFIX @chain)
-            (wait-for-next)
-            (consume-event fx-event press event))
-          (action? match)
-          (dosync
-            (prn 'COMBO new-chain match)
-            (clear-chain)
-            (consume-event fx-event press event)
-            match))))
+         :else
+         (cond
+           (prefix? match)
+           (do
+             (alter chain conj press)
+             (prn 'PREFIX @chain)
+             (wait-for-next)
+             (consume-event fx-event press event))
+           (action? match)
+           (do
+             (prn 'COMBO new-chain match)
+             (clear-chain)
+             (consume-event fx-event press event)
+             match)))))
     (catch Exception e
-      (.printStackTrace e))))
+      (.printStackTrace e)
+      (throw e))))
