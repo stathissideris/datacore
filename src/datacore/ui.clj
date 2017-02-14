@@ -1,5 +1,6 @@
 (ns datacore.ui
-  (:require [datacore.ui.keys :as keys])
+  (:require [datacore.ui.keys :as keys]
+            [datacore.ui.keys.defaults :as default-keys])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.application Application]
            [javafx.scene Group Scene]
@@ -112,7 +113,8 @@
       (.setStyle "-fx-base: rgb(30, 30, 35);"))))
 
 (defn make-app []
-  (let [scene (Scene. (main-view panes) 800 800)]
+  (let [scene       (Scene. (main-view panes) 800 800)
+        key-handler (keys/key-handler default-keys/root-keymap)]
     (doto (Stage.)
       (.setScene scene)
       (.setTitle "foobar")
@@ -120,7 +122,7 @@
        KeyEvent/ANY
        (reify EventHandler
          (^void handle [this ^Event event]
-          (keys/global-key-handler event))))
+          (key-handler event))))
       (.show))))
 
 (comment
