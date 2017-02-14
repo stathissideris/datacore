@@ -7,9 +7,9 @@
   (:import [javafx.scene.input KeyEvent KeyCode]
            [javafx.event Event]))
 
-(def chain (atom []))
-(def timer (atom nil))
-(def last-consumed (atom nil))
+(def chain (ref []))
+(def timer (ref nil))
+(def last-consumed (ref nil))
 
 (def modifiers [:alt :ctrl :meta :shift :shortcut])
 
@@ -63,24 +63,24 @@
       (first press)
       press)))
 
-(defn- clear-chain! []
+(defn- clear-chain []
   (timer/cancel @timer)
-  (reset! last-consumed nil)
-  (reset! chain [])
+  (alter last-consumed (constantly nil))
+  (alter chain (constantly []))
   nil)
 
-(defn- wait-for-next! []
-  (timer/cancel @timer)
-  (reset! timer (timer/delayed 3500 #(do (prn 'KEY-STATE-RESET) (clear-chain!)))))
+(defn- wait-for-next []
+  (dosync
+   (timer/cancel @timer)
+   (alter timer (constantly (timer/delayed 3500 #(do (prn 'KEY-STATE-RESET) (dosync (clear-chain))))))))
 
-(def debug prn)
-;;(defn debug [& _])
+;;(def debug prn)
+(defn debug [& _])
 
 (defn consume-event [^Event e press event]
   (debug 'CONSUMED press event)
-  (reset! last-consumed event)
-  (.consume e)
-  (.isConsumed e))
+  (alter last-consumed (constantly event))
+  (.consume e))
 
 (defn also-consume-this? [event]
   (when-let [last-consumed @last-consumed]
@@ -100,34 +100,35 @@
         (also-consume-this? event)
         (do
           (debug 'ALSO-CONSUMING)
-          (consume-event fx-event press event)
-          (when (= type :key-released)
-            (reset! last-consumed nil))) ;;...but stop consuming at :key-released
+          (dosync
+           (consume-event fx-event press event)
+           (when (= type :key-released)
+             (alter last-consumed (constantly nil))))) ;;...but stop consuming at :key-released
 
         (and (= type :key-pressed) (not match))
         (do
           (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
-          (clear-chain!)
-          (consume-event fx-event press event))
+          (dosync
+           (clear-chain)
+           (consume-event fx-event press event)))
 
         (= match ::propagate)
         (do
           (debug 'PROPAGATED press event)
-          (clear-chain!))
+          (dosync (clear-chain)))
 
         :else
         (cond
           (prefix? match)
-          (do
-            (swap! chain conj press)
+          (dosync
+            (alter chain conj press)
             (prn 'PREFIX @chain)
-            (wait-for-next!)
+            (wait-for-next)
             (consume-event fx-event press event))
           (action? match)
-          (do
-            (prn 'COMBO match)
-            (timer/cancel @timer)
-            (clear-chain!)
+          (dosync
+            (prn 'COMBO new-chain match)
+            (clear-chain)
             (consume-event fx-event press event)
             match))))
     (catch Exception e
