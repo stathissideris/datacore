@@ -71,7 +71,7 @@
 
 (defn- wait-for-next []
   (dosync
-   (timer/cancel @timer)
+   (timer/cancel @timer) ;;safe to rerty
    (alter timer (constantly (timer/delayed 3500 #(do (prn 'KEY-STATE-RESET) (dosync (clear-chain))))))))
 
 ;;(def debug prn)
@@ -80,7 +80,7 @@
 (defn consume-event [^Event e press event]
   (debug 'CONSUMED press event)
   (alter last-consumed (constantly event))
-  (.consume e))
+  (.consume e)) ;;safe to retry
 
 (defn also-consume-this? [event]
   (when-let [last-consumed @last-consumed]
@@ -90,10 +90,10 @@
 
 (defn global-key-handler [fx-event]
   (try
-    (let [{:keys [modifier? type code] :as event} (event->map fx-event)
-          press                                   (event->press event)
-          new-chain                               (conj @chain press)
-          match                                   (get-in global-keymap new-chain)]
+    (let [{:keys [type] :as event} (event->map fx-event)
+          press                    (event->press event)
+          new-chain                (conj @chain press)
+          match                    (get-in global-keymap new-chain)]
       (cond
         ;;also consume :key-typed and :key-released equivalents of
         ;;events that have been consumed:
