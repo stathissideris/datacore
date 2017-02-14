@@ -9,6 +9,7 @@
 
 (def chain (atom []))
 (def timer (atom nil))
+(def last-consumed (atom nil))
 
 (def modifiers [:alt :ctrl :meta :shift :shortcut])
 
@@ -39,7 +40,9 @@
                 KeyEvent/KEY_PRESSED :key-pressed
                 KeyEvent/KEY_TYPED :key-typed
                 KeyEvent/KEY_RELEASED :key-released)
-   :code      (-> fx-event .getCode .getName str/lower-case keyword)
+   :code      (if (= KeyEvent/KEY_TYPED (.getEventType fx-event))
+                (-> fx-event .getCharacter keyword)
+                (-> fx-event .getCode .getName str/lower-case keyword))
    :alt       (.isAltDown fx-event)
    :ctrl      (.isControlDown fx-event)
    :meta      (.isMetaDown fx-event)
@@ -61,6 +64,8 @@
       press)))
 
 (defn- clear-chain! []
+  (timer/cancel @timer)
+  (reset! last-consumed nil)
   (reset! chain [])
   nil)
 
@@ -68,46 +73,62 @@
   (timer/cancel @timer)
   (reset! timer (timer/delayed 3500 #(do (prn 'KEY-STATE-RESET) (clear-chain!)))))
 
-(defn consume-event [^Event e]
+(def debug prn)
+;;(defn debug [& _])
+
+(defn consume-event [^Event e press event]
+  (debug 'CONSUMED press event)
+  (reset! last-consumed event)
   (.consume e)
   (.isConsumed e))
 
-;;(def debug prn)
-(defn debug [& _])
+(defn also-consume-this? [event]
+  (when-let [last-consumed @last-consumed]
+    (debug 'last-consumed last-consumed)
+    (= (dissoc event :type)
+       (dissoc last-consumed :type))))
 
 (defn global-key-handler [fx-event]
   (try
-    (let [{:keys [modifier? type] :as event} (event->map fx-event)]
-      (if (not= :key-pressed type)
+    (let [{:keys [modifier? type code] :as event} (event->map fx-event)
+          press                                   (event->press event)
+          new-chain                               (conj @chain press)
+          match                                   (get-in global-keymap new-chain)]
+      (cond
+        ;;also consume :key-typed and :key-released equivalents of
+        ;;events that have been consumed:
+        (also-consume-this? event)
         (do
-          (debug 'CONSUMED event)
-          (consume-event fx-event))
-        (when (= :key-pressed type)
-          (let [press (event->press event)]
-            (when-not modifier?
-              (swap! chain conj press)
-              (wait-for-next!)
-              (debug 'KEY press 'SEQ @chain))
-            (let [match (get-in global-keymap @chain)]
-              (cond
-                (not match)
-                (do
-                  (println (str "ERROR - Key sequence " (pr-str @chain) " not mapped to anything"))
-                  (clear-chain!))
+          (debug 'ALSO-CONSUMING)
+          (consume-event fx-event press event)
+          (when (= type :key-released)
+            (reset! last-consumed nil))) ;;...but stop consuming at :key-released
 
-                (= match ::propagate)
-                (do
-                  (debug 'PROPAGATED event)
-                  (clear-chain!))
+        (and (= type :key-pressed) (not match))
+        (do
+          (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
+          (clear-chain!)
+          (consume-event fx-event press event))
 
-                :else
-                (do
-                  (when (prefix? match) (prn 'PREFIX @chain))
-                  (when (action? match)
-                    (prn 'COMBO match)
-                    (timer/cancel @timer)
-                    (clear-chain!))
-                  (debug 'CONSUMED event)
-                  (consume-event fx-event))))))))
+        (= match ::propagate)
+        (do
+          (debug 'PROPAGATED press event)
+          (clear-chain!))
+
+        :else
+        (cond
+          (prefix? match)
+          (do
+            (swap! chain conj press)
+            (prn 'PREFIX @chain)
+            (wait-for-next!)
+            (consume-event fx-event press event))
+          (action? match)
+          (do
+            (prn 'COMBO match)
+            (timer/cancel @timer)
+            (clear-chain!)
+            (consume-event fx-event press event)
+            match))))
     (catch Exception e
       (.printStackTrace e))))
