@@ -38,13 +38,25 @@
 
 (defn longest [xs ys] (if (> (count xs) (count ys)) xs ys))
 
-(def lcs
-  (memoize
-   (fn [[x & xs] [y & ys]]
-     (cond
-      (or (= x nil) (= y nil)) nil
-      (= x y) (cons x (lcs xs ys))
-      :else (longest (lcs (cons x xs) ys) (lcs xs (cons y ys)))))))
+(defn memoize-with
+  "Memoize a bit of code using your own cache atom and key."
+  [cache-atom k fun]
+  (if-let [e (find @cache-atom k)]
+    (val e)
+    (let [ret (fun)]
+      (swap! cache-atom assoc k ret)
+      ret)))
+
+(defn lcs [x y]
+  (let [cache (atom {}) ;;local memoization, new cache for every call of lcs
+        lcs*  (fn lcs* [[x & xs :as xx] [y & ys :as yy]]
+                (memoize-with
+                 cache [xx yy]
+                 #(cond
+                    (or (= x nil) (= y nil)) nil
+                    (= x y) (cons x (lcs* xs ys))
+                    :else (longest (lcs* (cons x xs) ys) (lcs* xs (cons y ys))))))]
+    (lcs* x y)))
 
 (defn- diffs [as bs common]
   (loop [[a & ra :as as]     as
