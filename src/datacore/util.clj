@@ -1,4 +1,9 @@
-(ns datacore.util)
+(ns datacore.util
+  (:require [clojure.string :as str]))
+
+(defn camel->kebab [from]
+  (let [s (str/split (name from) #"(?=[A-Z])" )]
+    (apply str (interpose "-" (map str/lower-case s)))))
 
 (defn deep-merge
   "Recursively merges maps. If keys are not maps, the last value wins."
@@ -58,7 +63,7 @@
                     :else (longest (lcs* (cons x xs) ys) (lcs* xs (cons y ys))))))]
     (lcs* x y)))
 
-(defn- diffs [as bs common]
+(defn- seq-diffs [as bs common]
   (loop [[a & ra :as as]     as
          [b & rb :as bs]     bs
          [c & rc :as common] common
@@ -71,8 +76,8 @@
             (not= a c) (recur ra bs common (conj diffs [:delete a]))
             (not= b c) (recur as rb common (conj diffs [:add b]))))))
 
-(defn diff [a b]
-  (diffs a b (lcs a b)))
+(defn seq-diff [a b]
+  (seq-diffs a b (lcs a b)))
 
 #_(pprint (diff [0 1 2 3 4 5 6 7 8] [1 2 3 :a :b :c 4 5 6]))
 #_(pprint (diff [0 1 2 3 :e :f :g 4 5 6 7 8] [1 2 3 :a :b :c 4 5 6]))

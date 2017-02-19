@@ -1,6 +1,7 @@
 (ns datacore.ui
   (:require [datacore.ui.keys :as keys]
-            [datacore.ui.keys.defaults :as default-keys])
+            [datacore.ui.keys.defaults :as default-keys]
+            [datacore.ui.table :as table])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.application Application]
            [javafx.scene Group Scene]
@@ -8,11 +9,16 @@
            [javafx.stage Stage Modality]
            [javafx.application Platform]
            [javafx.scene.layout Pane HBox BorderPane]
-           [javafx.scene.control Button SplitPane TextArea Label]
+           [javafx.scene.control Control Button SplitPane TextArea Label]
            [javafx.collections ObservableList]
            [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]
            [java.util Collection]))
+
+(def table-data
+  (atom [{:a 6 :b 7 :c 8}
+         {:a 16 :b 17 :c 18}
+         {:a 26 :b 27 :c 28}]))
 
 ;;(set! *warn-on-reflection* true)
 (JFXPanel.)
@@ -74,8 +80,8 @@
    :orientation :horizontal
    :children    [{:type        :split-pane
                   :orientation :vertical
-                  :children    [{:type :text-area
-                                 :text "FOO A"}
+                  :children    [{:type :table
+                                 :data table-data}
                                 {:type :text-area
                                  :text "FOO B"}]}
                  {:type        :split-pane
@@ -104,6 +110,15 @@
   (with-status-line
     (TextArea. text)))
 
+(defmethod build-view :table
+  [{:keys [data]}]
+  (with-status-line
+    (table/set-columns!
+     (table/view data)
+     [(table/column "foo" :a)
+      (table/column "bar" :b)
+      (table/column "baz" :c)])))
+
 (defn main-view [panes]
   (let [view (border-pane
               {:center
@@ -128,3 +143,10 @@
 (comment
   (run-later! make-app)
   )
+
+;;to see the table being updated live:
+
+(comment
+  (swap! table-data assoc-in [0 :b] 10000)
+  (swap! table-data assoc-in [2 :a] "fooo")
+  (swap! table-data conj {:a (rand-int 100), :b (rand-int 100), :c (rand-int 100)}))
