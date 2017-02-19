@@ -94,6 +94,27 @@
               :delegate (delegate-methods clazz)
               :delegate-deref (delegate-deref-methods clazz))))))))
 
+(def ^:dynamic trace-proxy-depth -2)
+
+(defn pad [n]
+  (apply str (repeat n " ")))
+
+(defn- trace-proxy-fn [fun]
+  (let [[name args & body] fun]
+    `(~name ~args
+      (binding [trace-proxy-depth (+ 2 trace-proxy-depth)]
+        (println (str (dev/pad trace-proxy-depth) "CALL: " (pr-str (list '~name ~@args))))
+        (let [ret# (do ~@body)]
+          (println (str (dev/pad trace-proxy-depth) "=> " (pr-str ret#)))
+          ret#)))))
+
+(defmacro trace-proxy
+  "Does not work for proxies containing multi-arity functions"
+  [code]
+  (let [[op classes args & fns] code]
+    `(~op ~classes ~args
+      ~@(map trace-proxy-fn fns))))
+
 #_(pprint (dev/reify-template [[ObservableList :dummy]
                                [javafx.beans.Observable :dummy]
                                [java.util.List :delegate-deref]

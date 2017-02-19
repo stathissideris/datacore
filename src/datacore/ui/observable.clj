@@ -1,5 +1,6 @@
 (ns datacore.ui.observable
-  (:require [datacore.util :as util])
+  (:require [datacore.util :as util]
+            [dev :as dev])
   (:import [javafx.collections FXCollections ObservableList ListChangeListener ListChangeListener$Change]))
 
 (defmulti observable-list type)
@@ -9,35 +10,37 @@
   (FXCollections/observableArrayList x))
 
 (defn list-change [the-list old new]
-  (let [raw-diff (util/seq-diff old new)
-        diff     (partition-by first raw-diff)
-        idx      (atom 0)
-        current  #(nth @diff idx)]
-    (proxy [ListChangeListener$Change] [the-list]
-      (getList [] the-list)
+  (let [diff     (->> (util/seq-diff old new)
+                      (remove #(-> % first (= :same)))
+                      (partition-by first))
+        idx      (atom -1)
+        current  #(nth diff @idx)]
+    (dev/trace-proxy
+     (proxy [ListChangeListener$Change] [the-list]
+       (getList [] the-list)
 
-      (next [] (swap! idx inc) (= @idx (count diff)))
-      (reset [] (reset! idx 0))
+       (next [] (swap! idx inc) (< @idx (count diff)))
+       (reset [] (reset! idx 0))
 
-      (wasAdded [] (= :add (ffirst (current))))
-      (wasRemoved [] (= :delete (ffirst (current))))
-      (wasPermutated [] false)
-      (wasReplaced [] (= :edit (ffirst (current))))
-      (wasUpdated [] (= :edit (ffirst (current))))
+       (wasAdded [] (= :add (ffirst (current))))
+       (wasRemoved [] (= :delete (ffirst (current))))
+       (wasReplaced [] (= :edit (ffirst (current))))
+       (wasUpdated [] (= :edit (ffirst (current))))
+       (wasPermutated [] false)
 
-      (getAddedSize [] (count (current)))
-      (getAddedSubList [] (map second (current)))
+       (getAddedSize [] (if-not (.wasAdded this) 0 (count (current))))
+       (getAddedSubList [] (map second (current)))
 
-      (getFrom [] (apply + (map count (take @idx diff))))
-      (getTo [] (+ (apply + (map count (take @idx diff)))
-                   (count (current))))
+       (getFrom [] (apply + (map count (take @idx diff))))
+       (getTo [] (+ (apply + (map count (take @idx diff)))
+                    (count (current))))
 
-      (getPermutation
-        ([] (prn 'CALLED 'getPermutation [this]))
-        ([int] (prn 'CALLED 'getPermutation [this int])))
+       #_(getPermutation
+           ([] (prn 'CALLED 'getPermutation [this]))
+           ([int] (prn 'CALLED 'getPermutation [this int])))
 
-      (getRemoved [] (map second (current)))
-      (getRemovedSize [] (count (current))))))
+       (getRemoved [] (map second (current)))
+       (getRemovedSize [] (if-not (.wasRemoved this) 0 (count (current))))))))
 
 (defmethod observable-list clojure.lang.Atom
   [x]
