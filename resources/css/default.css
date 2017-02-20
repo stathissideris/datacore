@@ -1,0 +1,8 @@
+.root {
+  -fx-base: rgb(3, 43, 52);
+}
+
+.label {
+  -fx-font-size: 0.9em;
+  -fx-padding: 5px;
+}

@@ -1,7 +1,8 @@
 (ns datacore.ui
   (:require [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
-            [datacore.ui.table :as table])
+            [datacore.ui.table :as table]
+            [hawk.core :as hawk])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.application Application]
            [javafx.scene Group Scene]
@@ -13,7 +14,8 @@
            [javafx.collections ObservableList]
            [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]
-           [java.util Collection]))
+           [java.util Collection]
+           [java.net URI]))
 
 (def table-data
   (atom [{:a 6 :b 7 :c 8}
@@ -120,18 +122,44 @@
       (table/column "baz" :c)])))
 
 (defn main-view [panes]
-  (let [view (border-pane
-              {:center
-               (build-view panes)
-               :bottom (TextArea. "MINIBUFFER")})]
-    (doto view
-      (.setStyle "-fx-base: rgb(3, 43, 52);"))))
+  (border-pane
+   {:center
+    (build-view panes)
+    :bottom (TextArea. "MINIBUFFER")}))
 
+
+(def stylesheets (atom []))
+
+(defn- clear-stylesheets [scene]
+  (-> scene .getStylesheets .clear)
+  (doseq [watcher (map :file-watcher @stylesheets)]
+    (when watcher (hawk/stop! watcher)))
+  (reset! stylesheets []))
+
+(defn- reload-stylesheets [scene]
+  (prn @stylesheets)
+  (-> scene .getStylesheets .clear)
+  (-> scene .getStylesheets (.addAll (map :path @stylesheets))))
+
+(defn- add-stylesheet [scene path]
+  (-> scene .getStylesheets (.add path))
+  (let [uri (URI. path)]
+    (swap! stylesheets conj {:path path
+                             :file-watcher
+                             (when (.isAbsolute uri)
+                               (hawk/watch! [{:paths   [(.getPath uri)]
+                                              :handler (fn [_  _] (reload-stylesheets scene))}]))}))
+  scene)
+
+
+(def scene (atom nil))
 (defn make-app []
-  (let [scene       (Scene. (main-view panes) 800 800)
+  (let [the-scene   (doto (Scene. (main-view panes) 800 800)
+                      (add-stylesheet "css/default.css"))
         key-handler (keys/key-handler default-keys/root-keymap)]
+    (reset! scene the-scene)
     (doto (Stage.)
-      (.setScene scene)
+      (.setScene the-scene)
       (.setTitle "foobar")
       (.addEventFilter
        KeyEvent/ANY
@@ -150,3 +178,8 @@
   (swap! table-data assoc-in [0 :b] 10000)
   (swap! table-data assoc-in [2 :a] "fooo")
   (swap! table-data conj {:a (rand-int 100), :b (rand-int 100), :c (rand-int 100)}))
+
+;;to see live CSS updates:
+
+(comment
+  (add-stylesheet @scene "file:///tmp/default.css"))
