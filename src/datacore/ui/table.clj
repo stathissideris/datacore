@@ -9,8 +9,6 @@
     (call [this p]
       (fun p))))
 
-;;(.setValueFactory )
-
 (defn column [name cell-value-fn]
   (doto (TableColumn. name)
     (.setCellValueFactory

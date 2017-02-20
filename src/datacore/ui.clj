@@ -125,7 +125,7 @@
                (build-view panes)
                :bottom (TextArea. "MINIBUFFER")})]
     (doto view
-      (.setStyle "-fx-base: rgb(30, 30, 35);"))))
+      (.setStyle "-fx-base: rgb(3, 43, 52);"))))
 
 (defn make-app []
   (let [scene       (Scene. (main-view panes) 800 800)
