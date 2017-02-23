@@ -2,10 +2,11 @@
   (:require [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.style :as style]
-            [datacore.ui.table :as table])
+            [datacore.ui.table :as table]
+            [datacore.ui.java-fx :as fx])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.application Application]
-           [javafx.scene Group Scene]
+           [javafx.scene Group Scene Parent]
            [javafx.scene.shape Circle]
            [javafx.stage Stage Modality]
            [javafx.application Platform]
@@ -36,45 +37,12 @@
            (.printStackTrace e)
            (throw e)))))))
 
-(defn set-children! [^Pane c coll]
-  (.setAll ^ObservableList (.getChildren c) ^Collection coll))
-
-(defn button [text]
-  (doto (Button.)
-    (.setText text)))
-
-(defn test-pane []
-  (doto (HBox. (double 8))
-    (set-children!
-     [(button "foo")])))
-
-(defn split-pane
-  ([panes]
-   (split-pane nil panes))
-  ([orientation panes]
-   (let [pane (SplitPane.)]
-     (.setAll ^ObservableList (.getItems pane) ^Collection panes)
-     (when orientation
-       (condp = orientation
-         :horizontal (.setOrientation pane javafx.geometry.Orientation/HORIZONTAL)
-         :vertical (.setOrientation pane javafx.geometry.Orientation/VERTICAL)))
-     pane)))
-
 (defmacro doto-cond-> [x & clauses]
   (let [comp (gensym)]
     `(let [~comp ~x]
        ~@(for [[pred code] (partition 2 clauses)]
            `(when ~pred (-> ~comp ~code)))
        ~comp)))
-
-(defn border-pane [{:keys [top bottom left right center] :as mm}]
-  (let [b (BorderPane.)]
-    (doto-cond-> b
-      top (.setTop top)
-      bottom (.setBottom bottom)
-      center (.setCenter center)
-      left (.setLeft left)
-      right (.setRight right))))
 
 (def panes
   {:type        :split-pane
@@ -96,7 +64,8 @@
   (Label. "status"))
 
 (defn with-status-line [c]
-  (border-pane
+  (fx/make
+   :scene.layout/border-pane
    {:center c
     :bottom (status-line)}))
 
@@ -104,12 +73,16 @@
 
 (defmethod build-view :split-pane
   [{:keys [orientation children]}]
-  (split-pane orientation (map build-view children)))
+  (fx/make :scene.control/split-pane
+           {:items       (map build-view children)
+            :orientation (if (= orientation :horizontal)
+                           javafx.geometry.Orientation/HORIZONTAL
+                           javafx.geometry.Orientation/VERTICAL)}))
 
 (defmethod build-view :text-area
   [{:keys [text]}]
   (with-status-line
-    (TextArea. text)))
+    (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})))
 
 (defmethod build-view :table
   [{:keys [data]}]
@@ -121,10 +94,15 @@
       (table/column "baz" :c)])))
 
 (defn main-view [panes]
-  (border-pane
-   {:center
-    (build-view panes)
-    :bottom (TextArea. "MINIBUFFER")}))
+  (fx/make
+   :scene.layout/border-pane
+   {:center (build-view panes)
+    :bottom (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})}))
+
+(comment
+  (fx/make :scene/scene
+           {:fx/args  [(main-view panes) 800 800]
+            :fx/setup #(style/add-stylesheet % "css/default.css")}))
 
 (def scene (atom nil))
 (defn make-app []
@@ -132,6 +110,16 @@
                       (style/add-stylesheet "css/default.css"))
         key-handler (keys/key-handler default-keys/root-keymap)]
     (reset! scene the-scene)
+    (comment
+     (fx/make
+      :stage/stage
+      {:scene    the-scene
+       :title    "foobar"
+       :fx/setup #(.addEventFilter
+                   % KeyEvent/ANY
+                   (reify EventHandler
+                     (^void handle [this ^Event event]
+                      (key-handler event))))}))
     (doto (Stage.)
       (.setScene the-scene)
       (.setTitle "foobar")
@@ -144,6 +132,7 @@
 
 (comment
   (run-later! make-app)
+  (do (dev/refresh) (datacore.ui/run-later! datacore.ui/make-app))
   )
 
 ;;to see the table being updated live:
