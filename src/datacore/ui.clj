@@ -5,17 +5,10 @@
             [datacore.ui.table :as table]
             [datacore.ui.java-fx :as fx])
   (:import [javafx.embed.swing JFXPanel]
-           [javafx.application Application]
-           [javafx.scene Group Scene Parent]
-           [javafx.scene.shape Circle]
-           [javafx.stage Stage Modality]
+           [javafx.stage Stage]
            [javafx.application Platform]
-           [javafx.scene.layout Pane HBox BorderPane]
-           [javafx.scene.control Control Button SplitPane TextArea Label]
-           [javafx.collections ObservableList]
            [javafx.scene.input KeyEvent]
-           [javafx.event EventHandler Event]
-           [java.util Collection]))
+           [javafx.event EventHandler Event]))
 
 (def table-data
   (atom [{:a 6 :b 7 :c 8}
@@ -61,7 +54,7 @@
                                  :text "FOO D"}]}]})
 
 (defn status-line []
-  (Label. "status"))
+  (fx/make :scene.control/label {:text "status"}))
 
 (defn with-status-line [c]
   (fx/make
