@@ -101,8 +101,9 @@
 
 (def scene (atom nil))
 (defn make-app []
-  (let [the-scene   (fx/make (Scene. (main-view panes) 800 800)
-                             {:fx/setup #(style/add-stylesheet % "css/default.css")})
+  (let [the-scene   (fx/make :scene/scene
+                             {:fx/args  [(main-view panes) 800 800]
+                              :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
     (reset! scene the-scene)
     (comment

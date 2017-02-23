@@ -37,13 +37,6 @@
 (defn set-field! [object field-kw value]
   ((setter (class object) field-kw) object value))
 
-(defn- constructor [clazz arg-types]
-  (let [constructors (-> clazz .getConstructors seq)
-        params->con  (dissoc (zipmap (map #(seq (.getParameterTypes %)) constructors)
-                                     constructors)
-                             nil)]
-    (get params->con arg-types)))
-
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)
     (Class/forName (str "javafx."
@@ -61,12 +54,7 @@
                  class-kw)]
      (if (empty? args)
        (.newInstance clazz)
-       ;;(eval `(new ~(symbol (.getName clazz)) ~@args))
-       (if-let [matching-con (constructor clazz (map class args))]
-         (.newInstance matching-con (object-array args))
-         (throw (ex-info "No matching constructor found for args"
-                         {:args      args
-                          :arg-types (map class args)})))))))
+       (clojure.lang.Reflector/invokeConstructor clazz (to-array args))))))
 
 ;;;;; make ;;;;;
 
