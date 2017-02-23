@@ -99,27 +99,22 @@
    {:center (build-view panes)
     :bottom (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})}))
 
-(comment
-  (fx/make :scene/scene
-           {:fx/args  [(main-view panes) 800 800]
-            :fx/setup #(style/add-stylesheet % "css/default.css")}))
-
 (def scene (atom nil))
 (defn make-app []
-  (let [the-scene   (doto (Scene. (main-view panes) 800 800)
-                      (style/add-stylesheet "css/default.css"))
+  (let [the-scene   (fx/make (Scene. (main-view panes) 800 800)
+                             {:fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
     (reset! scene the-scene)
     (comment
-     (fx/make
-      :stage/stage
-      {:scene    the-scene
-       :title    "foobar"
-       :fx/setup #(.addEventFilter
-                   % KeyEvent/ANY
-                   (reify EventHandler
-                     (^void handle [this ^Event event]
-                      (key-handler event))))}))
+      (fx/make
+       :stage/stage
+       {:scene    the-scene
+        :title    "foobar"
+        :fx/setup #(.addEventFilter
+                    % KeyEvent/ANY
+                    (reify EventHandler
+                      (^void handle [this ^Event event]
+                       (key-handler event))))}))
     (doto (Stage.)
       (.setScene the-scene)
       (.setTitle "foobar")

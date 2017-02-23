@@ -45,10 +45,12 @@
     (get params->con arg-types)))
 
 (defn- resolve-class [class-kw]
-  (Class/forName (str "javafx."
-                      (namespace class-kw)
-                      "."
-                      (-> class-kw name util/kebab->camel util/capitalize-first))))
+  (if (keyword? class-kw)
+    (Class/forName (str "javafx."
+                        (namespace class-kw)
+                        "."
+                        (-> class-kw name util/kebab->camel util/capitalize-first)))
+    class-kw))
 
 (defn new-instance
   ([class-kw]
@@ -75,10 +77,13 @@
   (remove #(= (first %) :fx/args) spec))
 
 (defn make
-  ([class-kw]
-   (make class-kw {}))
-  ([class-kw spec]
-   (let [o (new-instance class-kw (make-args spec))]
+  ([class-or-instance]
+   (make class-or-instance {}))
+  ([class-or-instance spec]
+   (let [o (if (or (keyword? class-or-instance)
+                   (class? class-or-instance))
+             (new-instance class-or-instance (make-args spec))
+             class-or-instance)]
      (doseq [[field value] (make-other spec)]
        (if (= field :fx/setup)
          (value o)
