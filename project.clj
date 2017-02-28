@@ -6,6 +6,8 @@
   :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
                  [org.clojure/math.combinatorics "0.1.4"]
                  [hawk "0.2.11"]
+                 ;;[org.clojure/tools.analyzer "0.6.9"]
+                 [org.clojure/tools.analyzer.jvm "0.7.0"]
                  [org.clojure/data.csv "0.1.3"]]
   :resource-paths ["resources"]
   :profiles {:dev {:source-paths ["dev"]
