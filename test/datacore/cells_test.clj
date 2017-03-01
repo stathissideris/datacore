@@ -1,7 +1,8 @@
 (ns datacore.cells-test
   (:refer-clojure :exclude [swap!])
   (:require [datacore.cells :refer :all]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [clojure.core :as core]))
 
 (deftest test-propagation
   (testing "one level"
@@ -61,4 +62,21 @@
                         [(cell 0)] (range 100))]
       (doall (map-indexed (fn [i c] (is (= i @c))) chain))
       (swap! (first chain) #(+ % 5))
-      (doall (map-indexed (fn [i c] (is (= (+ i 5) @c))) chain)))))
+      (doall (map-indexed (fn [i c] (is (= (+ i 5) @c))) chain))))
+
+  (testing "eager propagation"
+    (let [log (atom [])
+          a   (cell 100)
+          b   (cell=
+               (core/swap! log conj :b)
+               (+ @a 10))
+          c   (cell=
+               (core/swap! log conj :c)
+               (+ @a 20))
+          d   (cell=
+               (core/swap! log conj :d)
+               (+ @b @c))]
+      @d ;;to establish link
+      (is (= [:d :b :c] @log))
+      (swap! a inc)
+      (is (= [:d :b :c :c :b :d] @log)))))
