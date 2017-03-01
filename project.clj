@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
                  [org.clojure/math.combinatorics "0.1.4"]
+                 [org.clojure/data.priority-map "0.0.7"]
                  [hawk "0.2.11"]
                  [org.clojure/data.csv "0.1.3"]]
   :resource-paths ["resources"]

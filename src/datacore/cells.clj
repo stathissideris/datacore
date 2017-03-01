@@ -1,16 +1,17 @@
 (ns datacore.cells
-  (:refer-clojure :exclude [swap!]))
+  (:refer-clojure :exclude [swap!])
+  (:require [clojure.data.priority-map :as pm]))
 
-(def id (ref 0))
-(def cells (ref {}))
-(def links (ref {}))
+(def ^:private id (ref 0))
+(def ^:private cells (ref {})) ;;map of cell IDs to cell values
+(def ^:private links (ref {})) ;;map of cell IDs to sets of sinks
 
 (defn link! [cell1 cell2]
   (dosync
    (alter links update (.-id cell2)
           (fn [x] (if-not x #{(.-id cell1)} (conj x (.-id cell1)))))))
 
-(def ^:dynamic *cell-context* nil)
+(def ^:private ^:dynamic *cell-context* nil)
 
 (defn value [cell]
   (when *cell-context*
@@ -42,15 +43,29 @@
 (defmacro cell= [& code]
   `(formula (fn [] ~@code)))
 
+(comment
+ (defn- propagate [pri-map]
+   (when-let [next (first (peek pri-map))]
+     (let [popq (pop pri-map)
+           old  (x/get (.-prev next))
+           new  (if-let [f (x/get (.-thunk next))] (f) (x/get (.-state next)))]
+       (recur (if (= new old)
+                popq ;;continue to next thing in priority map
+                (reduce #(assoc %1 %2 (x/get (.-rank %2))) ;;add all sinks of cell to priority map before continuing
+                        popq
+                        (x/get (.-sinks next)))))))))
+
 (defn swap! [cell fun & args]
   (if (.-formula cell)
     (throw (ex-info "Cannot swap, cell is a formula" {:cell cell}))
     (dosync
-     (let [current @cell]
-       (alter cells assoc (.-id cell) (apply fun current args))
-       (doseq [linked (get @links (.-id cell))]
-         ((get @cells linked)))
-       @cell))))
+     (let [current   @cell
+           new-value (apply fun current args)]
+       (when-not (= current new-value)
+         (alter cells assoc (.-id cell) new-value)
+         (doseq [linked (get @links (.-id cell))]
+           ((get @cells linked))))
+       new-value))))
 
 (comment
   (def foo (cell 100))
