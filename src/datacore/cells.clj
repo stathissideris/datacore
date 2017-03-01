@@ -8,8 +8,8 @@
 
 (defn link! [cell1 cell2]
   (dosync
-   (alter links update (.-id cell2)
-          (fn [x] (if-not x #{(.-id cell1)} (conj x (.-id cell1)))))))
+   (alter links update cell2
+          (fn [x] (if-not x #{cell1} (conj x cell1))))))
 
 (def ^:private ^:dynamic *cell-context* nil)
 
@@ -18,21 +18,27 @@
     (link! *cell-context* cell))
   (if (.-formula cell)
     (binding [*cell-context* cell]
-      ((get @cells (.-id cell))))
-    (get @cells (.-id cell))))
+      ((get @cells cell)))
+    (get @cells cell)))
 
 (deftype CellID [id formula]
   clojure.lang.IRef
   (deref [this] (value this)))
 
+(defmethod print-method CellID
+  [x w]
+  (.write w (pr-str {:id (.-id x)
+                     :formula? (.-formula x)})))
+
 (defn cell? [x] (instance? CellID x))
 
 (defn- register-cell! [x formula?]
   (dosync
-   (let [current-id @id]
+   (let [current-id @id
+         cell       (CellID. current-id formula?)]
      (alter id inc)
-     (alter cells assoc current-id x)
-     (CellID. current-id formula?))))
+     (alter cells assoc cell x)
+     cell)))
 
 (defn cell [x]
   (register-cell! x false))
@@ -62,8 +68,8 @@
      (let [current   @cell
            new-value (apply fun current args)]
        (when-not (= current new-value)
-         (alter cells assoc (.-id cell) new-value)
-         (doseq [linked (get @links (.-id cell))]
+         (alter cells assoc cell new-value)
+         (doseq [linked (get @links cell)]
            ((get @cells linked))))
        new-value))))
 
