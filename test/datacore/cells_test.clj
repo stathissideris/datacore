@@ -57,12 +57,23 @@
 
   (testing "long chain"
     (let [chain (reduce (fn [chain _]
-                          (let [prev (last chain)]
-                            (conj chain (cell= (inc @prev)))))
+                          (conj chain (cell= (inc @(last chain)))))
                         [(cell 0)] (range 100))]
       (doall (map-indexed (fn [i c] (is (= i @c))) chain))
       (swap! (first chain) #(+ % 5))
       (doall (map-indexed (fn [i c] (is (= (+ i 5) @c))) chain))))
+
+  (testing "long chain with eager propagation"
+    (let [chain (reduce (fn [chain _]
+                          (conj chain (cell= (inc @(last chain)))))
+                        [(cell 0)] (range 100))
+          touch (atom 0)
+          chain (conj chain (cell= (core/swap! touch inc)
+                                   @(last chain)))]
+      @(last chain) ;; establish link
+      (is (= 1 @touch))
+      (swap! (first chain) #(+ % 5))
+      (is (= 2 @touch))))
 
   (testing "eager propagation"
     (let [log (atom [])
@@ -79,4 +90,4 @@
       @d ;;to establish link
       (is (= [:d :b :c] @log))
       (swap! a inc)
-      (is (= [:d :b :c :c :b :d] @log)))))
+      (is (= [:d :b :c :b :c :d] @log)))))

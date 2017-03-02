@@ -6,20 +6,28 @@
 (def ^:private cells (ref {})) ;;map of cell IDs to cell values
 (def ^:private links (ref {})) ;;map of cell IDs to sets of sinks
 
-(defn link! [cell1 cell2]
+(defn link! [source sink]
   (dosync
-   (alter links update cell2
-          (fn [x] (if-not x #{cell1} (conj x cell1))))))
+   (alter links update source
+          (fn [x] (if-not x #{sink} (conj x sink))))))
 
 (def ^:private ^:dynamic *cell-context* nil)
 
-(defn value [cell]
+(declare set-value!)
+(defn- value [cell]
   (when *cell-context*
-    (link! *cell-context* cell))
+    (link! cell *cell-context*))
   (if (.-formula cell)
     (binding [*cell-context* cell]
-      ((get @cells cell)))
+      (let [{:keys [cache thunk]} (get @cells cell)]
+        (or cache (set-value! cell (thunk)))))
     (get @cells cell)))
+
+(defn- thunk [cell]
+  (let [t (:thunk (get @cells cell))]
+    (when-not t
+      (throw (ex-info "Cell is not a formula" {:cell cell})))
+    t))
 
 (deftype CellID [id formula]
   clojure.lang.IRef
@@ -31,13 +39,24 @@
                      :formula? (.-formula x)})))
 
 (defn cell? [x] (instance? CellID x))
+(defn formula? [x] (and (cell? x) (.-formula x)))
+(defn input? [x] (and (cell? x) (not (.-formula x))))
+
+(defn- set-value! [cell x]
+  (dosync
+   (if (formula? cell)
+     (alter cells assoc-in [cell :cache] x)
+     (alter cells assoc cell x))
+   x))
 
 (defn- register-cell! [x formula?]
   (dosync
    (let [current-id @id
          cell       (CellID. current-id formula?)]
      (alter id inc)
-     (alter cells assoc cell x)
+     (if formula?
+       (alter cells assoc cell {:thunk x})
+       (alter cells assoc cell x))
      cell)))
 
 (defn cell [x]
@@ -49,17 +68,21 @@
 (defmacro cell= [& code]
   `(formula (fn [] ~@code)))
 
-(comment
- (defn- propagate [pri-map]
-   (when-let [next (first (peek pri-map))]
-     (let [popq (pop pri-map)
-           old  (x/get (.-prev next))
-           new  (if-let [f (x/get (.-thunk next))] (f) (x/get (.-state next)))]
-       (recur (if (= new old)
-                popq ;;continue to next thing in priority map
-                (reduce #(assoc %1 %2 (x/get (.-rank %2))) ;;add all sinks of cell to priority map before continuing
-                        popq
-                        (x/get (.-sinks next)))))))))
+(defn- cells-into-pm [pm cells]
+  (reduce (fn [pm cell]
+            (assoc pm cell (.-id cell)))
+          pm cells))
+
+(defn- propagate [pri-map]
+  (when-let [next (first (peek pri-map))]
+    (let [popq  (pop pri-map)
+          old   @next
+          new   ((thunk next))
+          diff? (not= new old)]
+      (when diff? (set-value! next new))
+      (recur (if-not diff?
+               popq ;;continue to next thing in priority map
+               (cells-into-pm popq (get @links next))))))) ;;add all sinks of cell to priority map before continuing
 
 (defn swap! [cell fun & args]
   (if (.-formula cell)
@@ -69,8 +92,7 @@
            new-value (apply fun current args)]
        (when-not (= current new-value)
          (alter cells assoc cell new-value)
-         (doseq [linked (get @links cell)]
-           ((get @cells linked))))
+         (propagate (cells-into-pm (pm/priority-map) (get @links cell))))
        new-value))))
 
 (comment
