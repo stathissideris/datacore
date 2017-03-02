@@ -4,6 +4,15 @@
             [clojure.test :refer :all]
             [clojure.core :as core]))
 
+(def cycles? @#'datacore.cells/cycles?)
+(deftest test-cycles?
+  (is (nil?  (cycles? {:a #{:b :c}} :a)))
+  (is (true? (cycles? {:a #{:b :c} :b #{:a :z}} :a)))
+  (is (true? (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:a}} :a)))
+  (is (true? (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:b}} :a)))
+  (is (true? (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:b}} :d)))
+  (is (nil?  (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:f}} :a))))
+
 (deftest test-propagation
   (testing "one level"
     (let [a (cell 100)

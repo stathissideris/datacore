@@ -1,15 +1,33 @@
 (ns datacore.cells
   (:refer-clojure :exclude [swap! reset!])
-  (:require [clojure.data.priority-map :as pm]))
+  (:require [clojure.data.priority-map :as pm]
+            [clojure.set :as set]))
 
 (def ^:private id (ref 0))
 (def ^:private cells (ref {})) ;;map of cell IDs to cell values
 (def ^:private links (ref {})) ;;map of cell IDs to sets of sinks
 
+(def ^:dynamic *detect-cycles* true)
+
+(defn- cycles? [links cell]
+  (loop [sinks   (get links cell)
+         visited #{cell}]
+    (when (seq sinks)
+      (if (seq (set/intersection sinks visited))
+        true
+        (recur (set (mapcat links sinks)) (into visited sinks))))))
+
+(defn- add-link [links source sink]
+  (update links source
+          (fn [x] (if-not x #{sink} (conj x sink)))))
+
 (defn link! [source sink]
   (dosync
-   (alter links update source
-          (fn [x] (if-not x #{sink} (conj x sink))))))
+   (when-not (get-in @links [source sink])
+     (if (and *detect-cycles* (cycles? (add-link @links source sink) source))
+       (throw (ex-info "Cannot add link, cycle detected"
+                       {:source source :sink sink}))
+       (alter links add-link source sink)))))
 
 (def ^:private ^:dynamic *cell-context* nil)
 
@@ -20,7 +38,9 @@
   (if (.-formula cell)
     (binding [*cell-context* cell]
       (let [{:keys [cache thunk]} (get @cells cell)]
-        (or cache (set-value! cell (thunk)))))
+        (or cache
+            (let [new-value (thunk)]
+              (dosync (set-value! cell new-value))))))
     (get @cells cell)))
 
 (defn- thunk [cell]
@@ -43,11 +63,10 @@
 (defn input? [x] (and (cell? x) (not (.-formula x))))
 
 (defn- set-value! [cell x]
-  (dosync
-   (if (formula? cell)
-     (alter cells assoc-in [cell :cache] x)
-     (alter cells assoc cell x))
-   x))
+  (if (formula? cell)
+    (alter cells assoc-in [cell :cache] x)
+    (alter cells assoc cell x))
+  x)
 
 (defn- register-cell! [x formula?]
   (dosync
@@ -91,7 +110,7 @@
      (let [current   @cell
            new-value (apply fun current args)]
        (when-not (= current new-value)
-         (alter cells assoc cell new-value)
+         (set-value! cell new-value)
          (propagate (cells-into-pm (pm/priority-map) (get @links cell))))
        new-value))))
 
