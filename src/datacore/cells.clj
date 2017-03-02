@@ -9,6 +9,8 @@
 
 (def ^:dynamic *detect-cycles* true)
 
+(declare set-value! formula?)
+
 (defn- cycles? [links cell]
   (loop [sinks   (get links cell)
          visited #{cell}]
@@ -22,6 +24,9 @@
           (fn [x] (if-not x #{sink} (conj x sink)))))
 
 (defn link! [source sink]
+  (when-not (formula? sink)
+    (throw (ex-info "Cannot add link, sink is not a formula"
+                    {:source source :sink sink})))
   (dosync
    (when-not (get-in @links [source sink])
      (if (and *detect-cycles* (cycles? (add-link @links source sink) source))
@@ -31,7 +36,6 @@
 
 (def ^:private ^:dynamic *cell-context* nil)
 
-(declare set-value!)
 (defn- value [cell]
   (when *cell-context*
     (link! cell *cell-context*))
@@ -122,6 +126,8 @@
   (def bar (cell 2))
   (def baz (cell= (prn "calc baz!" (* 2 @foo @bar))
                   (* 2 @foo @bar)))
+  (def boo (cell= (prn "calc boo!" (* 2 @foo))
+                  (* 2 @foo)))
   ;;or
   (def baz (formula #(do
                        (prn "calc baz!" (* 2 @foo @bar))
