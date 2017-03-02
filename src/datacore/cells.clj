@@ -1,5 +1,5 @@
 (ns datacore.cells
-  (:refer-clojure :exclude [swap!])
+  (:refer-clojure :exclude [swap! reset!])
   (:require [clojure.data.priority-map :as pm]))
 
 (def ^:private id (ref 0))
@@ -94,6 +94,9 @@
          (alter cells assoc cell new-value)
          (propagate (cells-into-pm (pm/priority-map) (get @links cell))))
        new-value))))
+
+(defn reset! [cell value]
+  (swap! cell (fn [& _] value)))
 
 (comment
   (def foo (cell 100))
