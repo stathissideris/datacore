@@ -3,7 +3,9 @@
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.style :as style]
             [datacore.ui.table :as table]
-            [datacore.ui.java-fx :as fx])
+            [datacore.ui.message :as message]
+            [datacore.ui.java-fx :as fx]
+            [datacore.cells :refer [cell=]])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.stage Stage]
            [javafx.application Platform]
@@ -86,16 +88,18 @@
       (table/column "bar" :b)
       (table/column "baz" :c)])))
 
-(defn main-view [panes]
-  (fx/make
-   :scene.layout/border-pane
-   {:center (build-view panes)
-    :bottom (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})}))
+(defn main-view [panes message]
+  (let [minibuffer (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})]
+    @(cell= (fx/set-field! minibuffer :text @message))
+    (fx/make
+     :scene.layout/border-pane
+     {:center (build-view panes)
+      :bottom minibuffer})))
 
 (def scene (atom nil))
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
-                             {:fx/args  [(main-view panes) 800 800]
+                             {:fx/args  [(main-view panes message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
     (reset! scene the-scene)
