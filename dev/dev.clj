@@ -1,4 +1,5 @@
 (ns dev
+  (:refer-clojure :exclude [method-sig])
   (:require [clojure.tools.namespace.repl :as repl :refer (clear refresh-all)]
             [datacore.util :as util]))
 

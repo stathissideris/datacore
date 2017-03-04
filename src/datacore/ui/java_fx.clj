@@ -35,7 +35,14 @@
   ((getter (class object) field-kw) object))
 
 (defn set-field! [object field-kw value]
-  ((setter (class object) field-kw) object value))
+  (let [s! (setter (class object) field-kw)]
+    (if-not s!
+      (throw (ex-info "setter not found"
+                      {:object object
+                       :class  (class object)
+                       :field  field-kw
+                       :value  value}))
+      (s! object value))))
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)

@@ -9,6 +9,10 @@
   [^java.util.List x]
   (FXCollections/observableArrayList x))
 
+(defmethod observable-list clojure.lang.LazySeq
+  [^java.util.List x]
+  (FXCollections/observableArrayList x))
+
 (defn list-change [the-list old new]
   (let [diff    (->> (util/seq-diff old new)
                      (remove #(-> % first (= :same)))

@@ -4,8 +4,12 @@
             [datacore.ui.style :as style]
             [datacore.ui.table :as table]
             [datacore.ui.message :as message]
+            [datacore.view :as view]
+            [datacore.view.table]
             [datacore.ui.java-fx :as fx]
-            [datacore.cells :refer [cell=]])
+            [datacore.ui.util :as ui.util]
+            [datacore.cells :refer [cell=]]
+            [datacore.state :as state])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.stage Stage]
            [javafx.application Platform]
@@ -55,53 +59,51 @@
                                 {:type :text-area
                                  :text "FOO D"}]}]})
 
-(defn status-line []
-  (fx/make :scene.control/label {:text "status"}))
-
-(defn with-status-line [c]
-  (fx/make
-   :scene.layout/border-pane
-   {:center c
-    :bottom (status-line)}))
-
-(defmulti build-view :type)
-
-(defmethod build-view :split-pane
+(defmethod view/build-view :split-pane
   [{:keys [orientation children]}]
   (fx/make :scene.control/split-pane
-           {:items       (map build-view children)
+           {:items       (map view/build-view children)
             :orientation (if (= orientation :horizontal)
                            javafx.geometry.Orientation/HORIZONTAL
                            javafx.geometry.Orientation/VERTICAL)}))
 
-(defmethod build-view :text-area
+(defmethod view/build-view :text-area
   [{:keys [text]}]
-  (with-status-line
+  (ui.util/with-status-line
     (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})))
 
-(defmethod build-view :table
+(defmethod view/build-view :table
   [{:keys [data]}]
-  (with-status-line
+  (ui.util/with-status-line
     (table/set-columns!
      (table/view data)
      [(table/column "foo" :a)
       (table/column "bar" :b)
       (table/column "baz" :c)])))
 
-(defn main-view [panes message]
+(defn main-view [view message]
   (let [minibuffer (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})]
     (cell= (fx/set-field! minibuffer :text @message))
+    #_(fx/make
+       :scene.layout/border-pane
+       {:center (build-view panes)
+        :bottom minibuffer})
     (fx/make
      :scene.layout/border-pane
-     {:center (build-view panes)
+     {:center (if-not view
+                (fx/make :scene.control/label {:text "Nothing to show"})
+                (view/build-view view))
       :bottom minibuffer})))
 
 (def scene (atom nil))
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
-                             {:fx/args  [(main-view panes message/current-message) 800 800]
+                             {:fx/args  [(main-view (first @state/views) message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
+    (cell=
+     (prn "Views have changed!")
+     (.setRoot the-scene (main-view (some-> @state/state :views first) message/current-message)))
     (reset! scene the-scene)
     (comment
       (fx/make
