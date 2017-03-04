@@ -68,7 +68,6 @@
     (let [chain (reduce (fn [chain _]
                           (conj chain (cell= (inc @(last chain)))))
                         [(cell 0)] (range 100))]
-      (doall (map-indexed (fn [i c] (is (= i @c))) chain))
       (swap! (first chain) #(+ % 5))
       (doall (map-indexed (fn [i c] (is (= (+ i 5) @c))) chain))))
 
@@ -79,7 +78,6 @@
           touch (atom 0)
           chain (conj chain (cell= (core/swap! touch inc)
                                    @(last chain)))]
-      @(last chain) ;; establish link
       (is (= 1 @touch))
       (swap! (first chain) #(+ % 5))
       (is (= 2 @touch))))
@@ -96,7 +94,6 @@
           d   (cell=
                (core/swap! log conj :d)
                (+ @b @c))]
-      @d ;;to establish link
-      (is (= [:d :b :c] @log))
+      (is (= [:b :c :d] @log))
       (swap! a inc)
-      (is (= [:d :b :c :b :c :d] @log)))))
+      (is (= [:b :c :d :b :c :d] @log)))))

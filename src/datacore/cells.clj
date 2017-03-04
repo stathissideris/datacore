@@ -86,7 +86,9 @@
   (register-cell! x false))
 
 (defn formula [fun]
-  (register-cell! fun true))
+  (let [cell (register-cell! fun true)]
+    @cell ;;to initialize cache and establish links
+    cell))
 
 (defmacro cell= [& code]
   `(formula (fn [] ~@code)))

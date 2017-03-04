@@ -90,7 +90,7 @@
 
 (defn main-view [panes message]
   (let [minibuffer (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})]
-    @(cell= (fx/set-field! minibuffer :text @message))
+    (cell= (fx/set-field! minibuffer :text @message))
     (fx/make
      :scene.layout/border-pane
      {:center (build-view panes)
