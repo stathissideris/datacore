@@ -1,7 +1,8 @@
 (ns datacore.source.csv
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
-            [me.raynes.fs :as fs]))
+            [me.raynes.fs :as fs]
+            [datacore.cells :as c]))
 
 (defn load-csv [{:keys [filename separator quote] :as options}]
   (with-open [in-file (io/reader filename)]
@@ -16,6 +17,7 @@
    :data-fn  #(load-csv options)})
 
 (defn default-view [{:keys [label] :as source}]
-  {:source source
-   :label  label
-   :type   :datacore.view/table})
+  {:source       source
+   :label        (c/cell :source-label label)
+   :type         :datacore.view/table
+   :transformers (c/cell :transformers [])})

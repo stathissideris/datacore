@@ -1,7 +1,20 @@
 (ns datacore.ui.java-fx
   (:require [datacore.util :as util]
-            [clojure.string :as str])
-  (:import [javafx.collections ObservableList]))
+            [clojure.string :as str]
+            [datacore.cells :as c])
+  (:import [javafx.collections ObservableList]
+           [javafx.application Platform]))
+
+(defn run-later! [fun]
+  (if (Platform/isFxApplicationThread)
+    (fun)
+    (Platform/runLater
+     (fn []
+       (try
+         (fun)
+         (catch Exception e
+           (.printStackTrace e)
+           (throw e)))))))
 
 (defn- getter-method [clazz field-kw]
   (let [method-name (->> (util/kebab->camel field-kw)
@@ -43,21 +56,26 @@
           (str "set"))
      (object-array [value]))
     (catch Exception _
-      (let [s! (setter (class object) field-kw)]
-        (if-not s!
-          (throw (ex-info "setter not found"
-                          {:object object
-                           :class  (class object)
-                           :field  field-kw
-                           :value  value}))
-          (try
-            (s! object value)
-            (catch Exception e
-              (throw (ex-info "error while calling setter"
-                              {:object object
-                               :class  (class object)
-                               :field  field-kw
-                               :value  value})))))))))
+      (if (c/cell? value)
+        @(c/formula (fn [v]
+                      (run-later! #(set-field! object field-kw v))
+                      v)
+                    {:label :fx/setter} value)
+        (let [s! (setter (class object) field-kw)]
+          (if-not s!
+            (throw (ex-info "setter not found"
+                            {:object object
+                             :class  (class object)
+                             :field  field-kw
+                             :value  value}))
+            (try
+              (s! object value)
+              (catch Exception e
+                (throw (ex-info "error while calling setter"
+                                {:object object
+                                 :class  (class object)
+                                 :field  field-kw
+                                 :value  value}))))))))))
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)

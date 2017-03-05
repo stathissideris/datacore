@@ -143,7 +143,7 @@
    (register-cell! x {:formula? false :label label})))
 
 (defmacro defcell [name x]
-  `(def ~name (cell ~name ~x)))
+  `(def ~name (cell ~(keyword name) ~x)))
 
 (defn formula
   [fun & cells]
@@ -151,6 +151,10 @@
         cells   (if (map? (first cells)) (rest cells) cells)]
     (register-cell! fun (merge options {:formula? true
                                         :sources  cells}))))
+
+(defmacro deformula
+  [name fun & cells]
+  `(def ~name (formula ~fun {:label ~(keyword name)} ~@cells)))
 
 (defn- cells-into-pm [pm cells]
   (reduce (fn [pm cell]

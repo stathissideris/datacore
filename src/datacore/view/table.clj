@@ -24,18 +24,17 @@
   [{:keys [label source transformers] :as view}]
   (if-let [data-fn (:data-fn source)]
     (let [original-data (data-fn)
-          data          (view/transform original-data transformers)]
-      #_(with-status-line
+          data          (view/transform original-data @transformers)]
+      (with-status-line
         (fx/make
          :scene.control/table-view
-         {:fx/args [(observable-list (view/transform (rest data) transformers))]
+         {:fx/args [(observable-list (view/transform (rest data) @transformers))]
           :columns (map-indexed (fn [i c] (column (str c) #(nth % i))) (first data))})
-        (c/cell= (str label (when-not (empty? transformers)
-                                (str " - " (count transformers) " transformers")))))
-      (fx/make
-       :scene.control/table-view
-       {:fx/args [(observable-list (view/transform (rest data) transformers))]
-        :columns (map-indexed (fn [i c] (column (str c) #(nth % i))) (first data))}))
+        (c/formula (fn [label tr]
+                     (str label (when-not (empty? tr)
+                                  (str " - " (count tr) " transformers"))))
+                   {:label :table-status-line}
+                   label transformers)))
     (do
       (message/error "nil data-fn function")
       nil)))

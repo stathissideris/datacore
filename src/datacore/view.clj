@@ -13,4 +13,5 @@
                  data))
              data transformers))
    (catch Exception e
-     (message/error "Error while apply transformers"))))
+     (message/error "Error while applying transformers")
+     (throw e))))

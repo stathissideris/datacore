@@ -8,11 +8,10 @@
             [datacore.view.table]
             [datacore.ui.java-fx :as fx]
             [datacore.ui.util :as ui.util]
-            [datacore.cells :refer [cell=]]
+            [datacore.cells :as c]
             [datacore.state :as state])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.stage Stage]
-           [javafx.application Platform]
            [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]))
 
@@ -24,17 +23,6 @@
 ;;(set! *warn-on-reflection* true)
 (JFXPanel.)
 (Platform/setImplicitExit false)
-
-(defn run-later! [fun]
-  (if (Platform/isFxApplicationThread)
-    (fun)
-    (Platform/runLater
-     (fn []
-       (try
-         (fun)
-         (catch Exception e
-           (.printStackTrace e)
-           (throw e)))))))
 
 (defmacro doto-cond-> [x & clauses]
   (let [comp (gensym)]
@@ -101,10 +89,12 @@
                              {:fx/args  [(main-view (some-> @state/state :views first) message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
-    (cell=
-     (do
-       (prn "Views have changed!")
-       (.setRoot the-scene (main-view (some-> @state/state :views first) message/current-message))))
+    (c/formula
+     #(do
+        (prn "Views have changed!")
+        (.setRoot the-scene (main-view (first %) message/current-message)))
+     {:label :view-obs}
+     state/views)
     (reset! scene the-scene)
     (comment
       (fx/make
@@ -127,7 +117,7 @@
       (.show))))
 
 (comment
-  (run-later! make-app)
+  (fx/run-later! make-app)
   (do (dev/refresh) (datacore.ui/run-later! datacore.ui/make-app))
   )
 
