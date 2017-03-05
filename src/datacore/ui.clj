@@ -12,6 +12,7 @@
             [datacore.state :as state])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.stage Stage]
+           [javafx.application Platform]
            [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]))
 
