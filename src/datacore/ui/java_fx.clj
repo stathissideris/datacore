@@ -35,21 +35,29 @@
   ((getter (class object) field-kw) object))
 
 (defn set-field! [object field-kw value]
-  (let [s! (setter (class object) field-kw)]
-    (if-not s!
-      (throw (ex-info "setter not found"
-                      {:object object
-                       :class  (class object)
-                       :field  field-kw
-                       :value  value}))
-      (try
-        (s! object value)
-        (catch Exception e
-          (throw (ex-info "error while calling setter"
+  (try
+    (clojure.lang.Reflector/invokeInstanceMethod
+     object
+     (->> (util/kebab->camel field-kw)
+          str/capitalize
+          (str "set"))
+     (object-array [value]))
+    (catch Exception _
+      (let [s! (setter (class object) field-kw)]
+        (if-not s!
+          (throw (ex-info "setter not found"
                           {:object object
                            :class  (class object)
                            :field  field-kw
-                           :value  value})))))))
+                           :value  value}))
+          (try
+            (s! object value)
+            (catch Exception e
+              (throw (ex-info "error while calling setter"
+                              {:object object
+                               :class  (class object)
+                               :field  field-kw
+                               :value  value})))))))))
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)
