@@ -10,12 +10,12 @@
 (def ^:private cells (ref {})) ;;map of cell IDs to cell values
 (def ^:private links (ref {})) ;;map of cell IDs to sets of sinks
 
-(def ^:dynamic *detect-cycles* false)
+(def ^:dynamic *detect-cycles* true)
 
 (declare set-value! set-error! formula?)
 
-(defn all-cells []
-  (for [[c v] @cells]
+(defn cell->debug [c]
+  (let [v (get @cells c)]
     {:id       (.-id c)
      :label    (.-label c)
      :formula? (.-formula c)
@@ -35,8 +35,12 @@
                   (:code v))))
      :sinks    (not-empty (set (map #(.-id %) (get @links c))))}))
 
-(defn print-all-cells []
-  (print-table (map #(update % :error (fn [e] (when e (.getMessage e)))) (all-cells))))
+(defn all-cells []
+  (for [c (keys @cells)]
+    (cell->debug c)))
+
+(defn print-cells [cells]
+  (print-table (map #(update % :error (fn [e] (when e (.getMessage e)))) cells)))
 
 (defn- cycles? [links cell]
   (loop [sinks   (get links cell)
@@ -72,18 +76,18 @@
 
 (def ^:private ^:dynamic *cell-context* nil)
 
+(defn- calc-formula! [cell]
+  (let [{:keys [thunk]} (get @cells cell)]
+    (try
+      (let [new-value (thunk)]
+        (dosync (set-value! cell new-value)))
+      (catch Exception e
+        (dosync (set-error! cell (ex-info "Error initializing formula cell" {:thunk thunk} e)))))))
+
 (defn- value [cell]
-  (when *cell-context*
-    (link! cell *cell-context*))
   (if (.-formula cell)
-    (binding [*cell-context* cell]
-      (let [{:keys [cache thunk code]} (get @cells cell)]
-        (or cache
-            (try
-              (let [new-value (thunk)]
-                (dosync (set-value! cell new-value)))
-              (catch Exception e
-                (dosync (set-error! cell (ex-info "Error initializing formula cell" {:thunk thunk} e))))))))
+    (or (:cache (get @cells cell))
+        (calc-formula! cell))
     (get @cells cell)))
 
 (defn- thunk [cell]
@@ -119,42 +123,34 @@
     )
   e)
 
-(defn- register-cell! [x {:keys [formula? code label]}]
+(defn- register-cell! [x {:keys [formula? code label sources]}]
   (dosync
    (let [current-id @id
-         cell       (CellID. current-id label formula?)]
+         cell       (CellID. current-id (keyword label) formula?)]
      (alter id inc)
      (if formula?
-       (alter cells assoc cell {:thunk x :code code})
+       (do
+         (alter cells assoc cell {:thunk (fn [] (apply x (map deref sources))) :code code})
+         (doseq [source sources]
+           (link! source cell)))
        (alter cells assoc cell x))
      cell)))
 
-(defn cell [x]
-  (register-cell! x {:formula? false}))
+(defn cell
+  ([x]
+   (cell nil x))
+  ([label x]
+   (register-cell! x {:formula? false :label label})))
 
 (defmacro defcell [name x]
-  `(def ~name
-     (register-cell! ~x {:formula? false
-                         :label (quote ~name)})))
+  `(def ~name (cell ~name ~x)))
 
 (defn formula
-  ([fun]
-   (formula fun nil))
-  ([fun {:keys [code label] :as options}]
-   (let [cell (register-cell! fun (merge options {:formula? true}))]
-     (value cell) ;;to initialize cache and establish links
-     cell)))
-
-(defmacro cell= [code]
-  `(formula (fn [] ~code)
-            {:code (quote ~code)}))
-
-(defmacro defcell= [name code]
-  `(def
-     ~name
-     (formula (fn [] ~code)
-              {:code  (quote ~code)
-               :label (quote ~name)})))
+  [fun & cells]
+  (let [options (if (map? (first cells)) (first cells) {})
+        cells   (if (map? (first cells)) (rest cells) cells)]
+    (register-cell! fun (merge options {:formula? true
+                                        :sources  cells}))))
 
 (defn- cells-into-pm [pm cells]
   (reduce (fn [pm cell]
@@ -165,19 +161,19 @@
   (instance? Exception x))
 
 (defn- propagate [pri-map]
-  (when-let [next (first (peek pri-map))]
+  (when-let [cell (first (peek pri-map))]
+    ;;(prn (cell->debug cell))
     (let [popq  (pop pri-map)
-          old   (value next)
-          new   (try ((thunk next))
-                     (catch Exception e
-                       e))
+          old   (:cache (get @cells cell))
+          new   (calc-formula! cell)
           diff? (not= new old)]
+      ;;(prn 'old-value old 'new-value new)
       (if (exception? new)
-        (set-error! next new)
-        (when diff? (set-value! next new)))
+        (set-error! cell new)
+        (when diff? (set-value! cell new)))
       (recur (if-not diff?
-               popq ;;continue to next thing in priority map
-               (cells-into-pm popq (get @links next))))))) ;;add all sinks of cell to priority map before continuing
+               popq ;;continue to next cell in priority map
+               (cells-into-pm popq (get @links cell))))))) ;;add all sinks of cell to priority map before continuing
 
 (defn swap! [cell fun & args]
   (if (.-formula cell)

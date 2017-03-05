@@ -17,7 +17,7 @@
   (testing "one level"
     (let [a (cell 100)
           b (cell 2)
-          c (cell= (* 2 @a @b))]
+          c (formula (partial * 2) a b)]
       (is (= 400 @c))
 
       (testing "- 1"
@@ -35,7 +35,7 @@
   (testing "one level - no change"
     (let [a (cell 100)
           b (cell 2)
-          c (cell= (* 2 @a @b))]
+          c (formula (partial * 2) a b)]
       (is (= 400 @c))
       (swap! a identity)
       (is (= 100 @a))
@@ -45,8 +45,8 @@
   (testing "two levels"
     (let [a (cell 100)
           b (cell 2)
-          c (cell= (* 2 @a @b))
-          d (cell= (* 10 @c))]
+          c (formula (partial * 2) a b)
+          d (formula (partial * 10) c)]
       (is (= 400 @c))
       (is (= 4000 @d))
 
@@ -64,40 +64,42 @@
         (is (= (* 101 3 2) @c))
         (is (= (* 101 3 2 10) @d)))))
 
-  (testing "long chain"
+  (testing "long chain 1"
     (let [chain (reduce (fn [chain _]
-                          (conj chain (cell= (inc @(last chain)))))
+                          (conj chain (formula inc (last chain))))
                         [(cell 0)] (range 100))]
       (swap! (first chain) #(+ % 5))
       (doall (map-indexed (fn [i c] (is (= (+ i 5) @c))) chain))))
 
-  (testing "long chain with eager propagation"
+  (testing "long chain 2"
     (let [chain (reduce (fn [chain _]
-                          (conj chain (cell= (inc @(last chain)))))
+                          (conj chain (formula inc (last chain))))
                         [(cell 0)] (range 100))
           touch (atom 0)
-          chain (conj chain (cell= (do
-                                     (core/swap! touch inc)
-                                     @(last chain))))]
-      (is (= 1 @touch))
-      (swap! (first chain) #(+ % 5))
-      (is (= 2 @touch))))
+          chain (conj chain (formula (fn [x]
+                                       (core/swap! touch inc)
+                                       x)
+                                     (last chain)))]
+      (swap! (first chain) #(+ % 1000))
+      (is (= 1 @touch))))
 
   (testing "eager propagation"
     (let [log (atom [])
-          a   (cell 100)
-          b   (cell=
-               (do
-                 (core/swap! log conj :b)
-                 (+ @a 10)))
-          c   (cell=
-               (do
-                 (core/swap! log conj :c)
-                 (+ @a 20)))
-          d   (cell=
-               (do
-                 (core/swap! log conj :d)
-                 (+ @b @c)))]
-      (is (= [:b :c :d] @log))
+          a   (cell :a 100)
+          b   (formula (fn [x]
+                         (core/swap! log conj :b)
+                         (+ x 10))
+                       {:label :b}
+                       a)
+          c   (formula (fn [x]
+                         (core/swap! log conj :c)
+                         (+ x 20))
+                       {:label :c}
+                       a)
+          d   (formula (fn [b c]
+                         (core/swap! log conj :d)
+                         (+ b c))
+                       {:label :d}
+                       b c)]
       (swap! a inc)
-      (is (= [:b :c :d :b :c :d] @log)))))
+      (is (= [:b :c :d] @log)))))
