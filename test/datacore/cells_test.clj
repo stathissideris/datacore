@@ -83,7 +83,7 @@
       (swap! (first chain) #(+ % 1000))
       (is (= 1 @touch))))
 
-  (testing "eager propagation"
+  (testing "chain 3"
     (let [log (atom [])
           a   (cell :a 100)
           b   (formula (fn [x]
@@ -102,4 +102,14 @@
                        {:label :d}
                        b c)]
       (swap! a inc)
-      (is (= [:b :c :d] @log)))))
+      (is (= [:b :c :d] @log))))
+
+  (testing "muting"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a)
+          c (formula (partial + 1) b)]
+      (is (= 1001 @c))
+      (mute! b)
+      (is (= 101 @c))
+      (unmute! b)
+      (is (= 1001 @c)))))

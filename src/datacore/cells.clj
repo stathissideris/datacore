@@ -12,13 +12,14 @@
 
 (def ^:dynamic *detect-cycles* true)
 
-(declare set-value! set-error! formula?)
+(declare set-value! set-error! touch! formula?)
 
 (defn cell->debug [c]
   (let [v (get @cells c)]
     {:id       (.-id c)
      :label    (.-label c)
      :formula? (.-formula c)
+     :enabled? (:enabled? v)
      :value    (if (.-formula c)
                  (:cache v)
                  v)
@@ -77,9 +78,9 @@
 (def ^:private ^:dynamic *cell-context* nil)
 
 (defn- calc-formula! [cell]
-  (let [{:keys [thunk]} (get @cells cell)]
+  (let [{:keys [thunk identity enabled?]} (get @cells cell)]
     (try
-      (let [new-value (thunk)]
+      (let [new-value (if enabled? (thunk) (identity))]
         (dosync (set-value! cell new-value)))
       (catch Exception e
         (dosync (set-error! cell (ex-info "Error initializing formula cell" {:thunk thunk} e)))))))
@@ -116,6 +117,26 @@
     (alter cells assoc cell x))
   x)
 
+(defn- clear-cache! [cell]
+  (if (formula? cell)
+    (alter cells update cell dissoc :cache)
+    ;;TODO throw exception
+    ))
+
+(defn mute! [cell]
+  (if (formula? cell)
+    (dosync (alter cells assoc-in [cell :enabled?] false)
+            (touch! cell))
+    ;;TODO throw exception
+    ))
+
+(defn unmute! [cell]
+  (if (formula? cell)
+    (dosync (alter cells assoc-in [cell :enabled?] true)
+            (touch! cell))
+    ;;TODO throw exception
+    ))
+
 (defn- set-error! [cell e]
   (if (formula? cell)
     (alter cells assoc-in [cell :error] e)
@@ -130,7 +151,10 @@
      (alter id inc)
      (if formula?
        (do
-         (alter cells assoc cell {:thunk (fn [] (apply x (map deref sources))) :code code})
+         (alter cells assoc cell {:thunk    (fn [] (apply x (map deref sources)))
+                                  :identity (fn [] (deref (first sources)))
+                                  :enabled? true
+                                  :code     code})
          (doseq [source sources]
            (link! source cell)))
        (alter cells assoc cell x))
@@ -178,6 +202,15 @@
       (recur (if-not diff?
                popq ;;continue to next cell in priority map
                (cells-into-pm popq (get @links cell))))))) ;;add all sinks of cell to priority map before continuing
+
+(defn touch! [cell]
+  (if-not (.-formula cell)
+    (throw (ex-info "Cannot touch, cell is not a formula" {:cell cell}))
+    (dosync
+     (let [new-value (calc-formula! cell)]
+       (set-value! cell new-value)
+       (propagate (cells-into-pm (pm/priority-map) (get @links cell)))
+       new-value))))
 
 (defn swap! [cell fun & args]
   (if (.-formula cell)
