@@ -13,6 +13,19 @@
   (is (true? (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:b}} :d)))
   (is (nil?  (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:f}} :a))))
 
+(deftest test-construction
+  (let [log (atom [])
+        a   (cell 100)
+        b   (cell 2)
+        c   (formula
+             (fn [b]
+               (formula
+                (fn [b] (core/swap! log conj :foo) (prn @b))
+                b)
+               (* 100 @b))
+             b)]
+    ))
+
 (deftest test-propagation
   (testing "one level"
     (let [a (cell 100)
@@ -112,4 +125,18 @@
       (mute! b)
       (is (= 101 @c))
       (unmute! b)
-      (is (= 1001 @c)))))
+      (is (= 1001 @c))))
+
+  (testing "destroying"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a)
+          c (formula (partial + 1) b)]
+      (destroy! b)
+      (is (= :datacore.cells/destroyed @b))
+      (is (= :datacore.cells/destroyed @c)))))
+
+(comment
+  (do
+    (def a (cell :a 100))
+    (def b (formula (partial * 10) a))
+    (def c (formula (partial + 1) b))))

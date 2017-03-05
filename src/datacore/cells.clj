@@ -2,13 +2,13 @@
   (:refer-clojure :exclude [swap! reset!])
   (:require [clojure.data.priority-map :as pm]
             [clojure.set :as set]
-            [datacore.error :as error]
             [clojure.pprint :refer [print-table]]
             [clojure.walk :as walk]))
 
 (def ^:private id (ref 0))
 (def ^:private cells (ref {})) ;;map of cell IDs to cell values
-(def ^:private links (ref {})) ;;map of cell IDs to sets of sinks
+(def ^:private sinks (ref {})) ;;map of cell IDs to sets of sinks
+(def ^:private sources (ref {})) ;;map of cell IDs to sets of sources
 
 (def ^:dynamic *detect-cycles* true)
 
@@ -19,7 +19,7 @@
     {:id       (.-id c)
      :label    (.-label c)
      :formula? (.-formula c)
-     :enabled? (:enabled? v)
+     ;;:enabled? (:enabled? v)
      :value    (if (.-formula c)
                  (:cache v)
                  v)
@@ -34,7 +34,8 @@
                       (-> x name symbol)
                       x))
                   (:code v))))
-     :sinks    (not-empty (set (map #(.-id %) (get @links c))))}))
+     :sinks    (not-empty (set (map #(.-id %) (get @sinks c))))
+     :sources  (not-empty (set (map #(.-id %) (get @sources c))))}))
 
 (defn all-cells []
   (for [c (keys @cells)]
@@ -43,16 +44,16 @@
 (defn print-cells [cells]
   (print-table (map #(update % :error (fn [e] (when e (.getMessage e)))) cells)))
 
-(defn- cycles? [links cell]
-  (loop [sinks   (get links cell)
+(defn- cycles? [sink-map cell]
+  (loop [sinks   (get sink-map cell)
          visited #{cell}]
     (when (seq sinks)
       (if (seq (set/intersection sinks visited))
         true
-        (recur (set (mapcat links sinks)) (into visited sinks))))))
+        (recur (set (mapcat sink-map sinks)) (into visited sinks))))))
 
-(defn- add-link [links source sink]
-  (update links source
+(defn- add-link [sinks source sink]
+  (update sinks source
           (fn [x] (if-not x #{sink} (conj x sink)))))
 
 (defn cell-code [cell]
@@ -66,14 +67,16 @@
                      :source-code (cell-code source)
                      :sink-code (cell-code sink)})))
   (dosync
-   (when-not (get-in @links [source sink])
-     (if (and *detect-cycles* (cycles? (add-link @links source sink) source))
+   (when-not (get-in @sinks [source sink])
+     (if (and *detect-cycles* (cycles? (add-link @sinks source sink) source))
        (throw (ex-info "Cannot add link, cycle detected"
                        {:source source
                         :sink sink
                         :source-code (cell-code source)
                         :sink-code (cell-code sink)}))
-       (alter links add-link source sink)))))
+       (do
+         (alter sinks add-link source sink)
+         (alter sources add-link sink source))))))
 
 (def ^:private ^:dynamic *cell-context* nil)
 
@@ -86,10 +89,12 @@
         (dosync (set-error! cell (ex-info "Error initializing formula cell" {:thunk thunk} e)))))))
 
 (defn- value [cell]
-  (if (.-formula cell)
-    (or (:cache (get @cells cell))
-        (calc-formula! cell))
-    (get @cells cell)))
+  (if-let [v (get @cells cell)]
+    (if (.-formula cell)
+      (or (:cache v)
+          (calc-formula! cell))
+      v)
+    ::destroyed))
 
 (defn- thunk [cell]
   (let [t (:thunk (get @cells cell))]
@@ -143,6 +148,21 @@
     ;;TODO throw exception
     )
   e)
+
+(defn destroy! [cell]
+  (dosync
+   (let [cell-sinks (get @sinks cell)]
+    ;;remove cell from sinks of its sources
+    (doseq [source (get @sources cell)]
+      (alter sources update source disj cell))
+    ;;remove from registry
+    (alter cells dissoc cell)
+    ;;remove cell's sinks
+    (alter sinks dissoc cell)
+    ;;destroy its sinks that have just one source
+    (doseq [sink cell-sinks]
+      (when (= 1 (count (get @sources sink)))
+        (destroy! sink))))))
 
 (defn- register-cell! [x {:keys [formula? code label sources]}]
   (dosync
@@ -201,7 +221,7 @@
         (when diff? (set-value! cell new)))
       (recur (if-not diff?
                popq ;;continue to next cell in priority map
-               (cells-into-pm popq (get @links cell))))))) ;;add all sinks of cell to priority map before continuing
+               (cells-into-pm popq (get @sinks cell))))))) ;;add all sinks of cell to priority map before continuing
 
 (defn touch! [cell]
   (if-not (.-formula cell)
@@ -209,7 +229,7 @@
     (dosync
      (let [new-value (calc-formula! cell)]
        (set-value! cell new-value)
-       (propagate (cells-into-pm (pm/priority-map) (get @links cell)))
+       (propagate (cells-into-pm (pm/priority-map) (get @sinks cell)))
        new-value))))
 
 (defn swap! [cell fun & args]
@@ -220,7 +240,7 @@
            new-value (apply fun current args)]
        (when-not (= current new-value)
          (set-value! cell new-value)
-         (propagate (cells-into-pm (pm/priority-map) (get @links cell))))
+         (propagate (cells-into-pm (pm/priority-map) (get @sinks cell))))
        new-value))))
 
 (defn reset! [cell value]
