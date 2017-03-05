@@ -22,7 +22,7 @@
      :value    (if (.-formula c)
                  (:cache v)
                  v)
-     :error    (:error v)
+     :error    (when (:error v) (.getMessage (:error v)))
      :code     (not-empty
                 (apply
                  list
@@ -83,7 +83,7 @@
               (let [new-value (thunk)]
                 (dosync (set-value! cell new-value)))
               (catch Exception e
-                (dosync (set-error! cell e)))))))
+                (dosync (set-error! cell (ex-info "Error initializing formula cell" e {:thunk thunk}))))))))
     (get @cells cell)))
 
 (defn- thunk [cell]
@@ -145,15 +145,15 @@
      (value cell) ;;to initialize cache and establish links
      cell)))
 
-(defmacro cell= [& code]
-  `(formula (fn [] ~@code)
-            {:code (quote (do ~@code))}))
+(defmacro cell= [code]
+  `(formula (fn [] ~code)
+            {:code (quote ~code)}))
 
-(defmacro defcell= [name & code]
+(defmacro defcell= [name code]
   `(def
      ~name
-     (formula (fn [] ~@code)
-              {:code  (quote (do ~@code))
+     (formula (fn [] ~code)
+              {:code  (quote ~code)
                :label (quote ~name)})))
 
 (defn- cells-into-pm [pm cells]

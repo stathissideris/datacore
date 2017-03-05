@@ -76,8 +76,9 @@
                           (conj chain (cell= (inc @(last chain)))))
                         [(cell 0)] (range 100))
           touch (atom 0)
-          chain (conj chain (cell= (core/swap! touch inc)
-                                   @(last chain)))]
+          chain (conj chain (cell= (do
+                                     (core/swap! touch inc)
+                                     @(last chain))))]
       (is (= 1 @touch))
       (swap! (first chain) #(+ % 5))
       (is (= 2 @touch))))
@@ -86,14 +87,17 @@
     (let [log (atom [])
           a   (cell 100)
           b   (cell=
-               (core/swap! log conj :b)
-               (+ @a 10))
+               (do
+                 (core/swap! log conj :b)
+                 (+ @a 10)))
           c   (cell=
-               (core/swap! log conj :c)
-               (+ @a 20))
+               (do
+                 (core/swap! log conj :c)
+                 (+ @a 20)))
           d   (cell=
-               (core/swap! log conj :d)
-               (+ @b @c))]
+               (do
+                 (core/swap! log conj :d)
+                 (+ @b @c)))]
       (is (= [:b :c :d] @log))
       (swap! a inc)
       (is (= [:b :c :d :b :c :d] @log)))))
