@@ -1,15 +1,42 @@
 (ns datacore.cells
   (:refer-clojure :exclude [swap! reset!])
   (:require [clojure.data.priority-map :as pm]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [datacore.error :as error]
+            [clojure.pprint :refer [print-table]]
+            [clojure.walk :as walk]))
 
 (def ^:private id (ref 0))
 (def ^:private cells (ref {})) ;;map of cell IDs to cell values
 (def ^:private links (ref {})) ;;map of cell IDs to sets of sinks
 
-(def ^:dynamic *detect-cycles* true)
+(def ^:dynamic *detect-cycles* false)
 
-(declare set-value! formula?)
+(declare set-value! set-error! formula?)
+
+(defn all-cells []
+  (for [[c v] @cells]
+    {:id       (.-id c)
+     :label    (.-label c)
+     :formula? (.-formula c)
+     :value    (if (.-formula c)
+                 (:cache v)
+                 v)
+     :error    (:error v)
+     :code     (not-empty
+                (apply
+                 list
+                 (walk/postwalk
+                  (fn [x]
+                    (if (and (symbol? x)
+                             (= "clojure.core" (namespace x)))
+                      (-> x name symbol)
+                      x))
+                  (:code v))))
+     :sinks    (not-empty (set (map #(.-id %) (get @links c))))}))
+
+(defn print-all-cells []
+  (print-table (all-cells)))
 
 (defn- cycles? [links cell]
   (loop [sinks   (get links cell)
@@ -23,15 +50,24 @@
   (update links source
           (fn [x] (if-not x #{sink} (conj x sink)))))
 
+(defn cell-code [cell]
+  (:code (get @cells cell)))
+
 (defn link! [source sink]
   (when-not (formula? sink)
     (throw (ex-info "Cannot add link, sink is not a formula"
-                    {:source source :sink sink})))
+                    {:source source
+                     :sink sink
+                     :source-code (cell-code source)
+                     :sink-code (cell-code sink)})))
   (dosync
    (when-not (get-in @links [source sink])
      (if (and *detect-cycles* (cycles? (add-link @links source sink) source))
        (throw (ex-info "Cannot add link, cycle detected"
-                       {:source source :sink sink}))
+                       {:source source
+                        :sink sink
+                        :source-code (cell-code source)
+                        :sink-code (cell-code sink)}))
        (alter links add-link source sink)))))
 
 (def ^:private ^:dynamic *cell-context* nil)
@@ -41,10 +77,13 @@
     (link! cell *cell-context*))
   (if (.-formula cell)
     (binding [*cell-context* cell]
-      (let [{:keys [cache thunk]} (get @cells cell)]
+      (let [{:keys [cache thunk code]} (get @cells cell)]
         (or cache
-            (let [new-value (thunk)]
-              (dosync (set-value! cell new-value))))))
+            (try
+              (let [new-value (thunk)]
+                (dosync (set-value! cell new-value)))
+              (catch Exception e
+                (dosync (set-error! cell e)))))))
     (get @cells cell)))
 
 (defn- thunk [cell]
@@ -53,16 +92,17 @@
       (throw (ex-info "Cell is not a formula" {:cell cell})))
     t))
 
-(deftype CellID [id formula]
+(deftype CellID [id label formula]
   clojure.lang.IRef
   (deref [this] (value this)))
 
-(defmethod print-method CellID
-  [x w]
-  (.write w (pr-str {:id (.-id x)
-                     :formula? (.-formula x)})))
+(comment
+  (defmethod print-method CellID
+    [x w]
+    (.write w (pr-str {:id (.-id x)
+                       :formula? (.-formula x)}))))
 
-(defn cell? [x] (instance? CellID x))
+(defn cell? [x] (= (class x) datacore.cells.CellID))
 (defn formula? [x] (and (cell? x) (.-formula x)))
 (defn input? [x] (and (cell? x) (not (.-formula x))))
 
@@ -72,39 +112,69 @@
     (alter cells assoc cell x))
   x)
 
-(defn- register-cell! [x formula?]
+(defn- set-error! [cell e]
+  (if (formula? cell)
+    (alter cells assoc-in [cell :error] e)
+    ;;TODO throw exception
+    )
+  e)
+
+(defn- register-cell! [x {:keys [formula? code label]}]
   (dosync
    (let [current-id @id
-         cell       (CellID. current-id formula?)]
+         cell       (CellID. current-id label formula?)]
      (alter id inc)
      (if formula?
-       (alter cells assoc cell {:thunk x})
+       (alter cells assoc cell {:thunk x :code code})
        (alter cells assoc cell x))
      cell)))
 
 (defn cell [x]
-  (register-cell! x false))
+  (register-cell! x {:formula? false}))
 
-(defn formula [fun]
-  (let [cell (register-cell! fun true)]
-    @cell ;;to initialize cache and establish links
-    cell))
+(defmacro defcell [name x]
+  `(def ~name
+     (register-cell! ~x {:formula? false
+                         :label (quote ~name)})))
+
+(defn formula
+  ([fun]
+   (formula fun nil))
+  ([fun {:keys [code label] :as options}]
+   (let [cell (register-cell! fun (merge options {:formula? true}))]
+     (value cell) ;;to initialize cache and establish links
+     cell)))
 
 (defmacro cell= [& code]
-  `(formula (fn [] ~@code)))
+  `(formula (fn [] ~@code)
+            {:code (quote (do ~@code))}))
+
+(defmacro defcell= [name & code]
+  `(def
+     ~name
+     (formula (fn [] ~@code)
+              {:code  (quote (do ~@code))
+               :label (quote ~name)})))
 
 (defn- cells-into-pm [pm cells]
   (reduce (fn [pm cell]
             (assoc pm cell (.-id cell)))
           pm cells))
 
+(defn- exception? [x]
+  (instance? Exception x))
+
 (defn- propagate [pri-map]
   (when-let [next (first (peek pri-map))]
     (let [popq  (pop pri-map)
-          old   @next
-          new   ((thunk next))
+          old   (value next)
+          new   (try ((thunk next))
+                     (catch Exception e
+                       e))
           diff? (not= new old)]
-      (when diff? (set-value! next new))
+      (if (exception? new)
+        (set-error! next new)
+        (when diff? (set-value! next new)))
       (recur (if-not diff?
                popq ;;continue to next thing in priority map
                (cells-into-pm popq (get @links next))))))) ;;add all sinks of cell to priority map before continuing
@@ -124,12 +194,17 @@
   (swap! cell (fn [& _] value)))
 
 (comment
-  (def foo (cell 100))
-  (def bar (cell 2))
-  (def baz (cell= (prn "calc baz!" (* 2 @foo @bar))
-                  (* 2 @foo @bar)))
-  (def boo (cell= (prn "calc boo!" (* 2 @foo))
-                  (* 2 @foo)))
+  (defcell foo 100)
+  (defcell bar 2)
+  (defcell= baz
+    (prn "calc baz!" (* 2 @foo @bar))
+    (* 2 @foo @bar))
+  (defcell= boo
+    (prn "calc boo!" (* 2 @foo))
+    (* 2 @foo))
+  (defcell= boz
+    (/ 10 @bar))
+
   ;;or
   (def baz (formula #(do
                        (prn "calc baz!" (* 2 @foo @bar))
