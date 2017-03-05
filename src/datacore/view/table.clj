@@ -2,6 +2,8 @@
   (:require [datacore.view :as view]
             [datacore.ui.util :refer [with-status-line]]
             [datacore.ui.java-fx :as fx]
+            [datacore.ui.message :as message]
+            [datacore.cells :as c]
             [datacore.ui.observable :refer [observable-list]])
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]))
@@ -19,11 +21,21 @@
     #(.setCellValueFactory % (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x))))))}))
 
 (defmethod view/build-view :datacore.view/table
-  [{:keys [source] :as view}]
-  (if-not (:data-fn source)
-    (prn "nil data-fn function")
-    (let [data ((:data-fn source))]
+  [{:keys [label source transformers] :as view}]
+  (if-let [data-fn (:data-fn source)]
+    (let [original-data (data-fn)
+          data          (view/transform original-data transformers)]
+      #_(with-status-line
+        (fx/make
+         :scene.control/table-view
+         {:fx/args [(observable-list (view/transform (rest data) transformers))]
+          :columns (map-indexed (fn [i c] (column (str c) #(nth % i))) (first data))})
+        (c/cell= (str label (when-not (empty? transformers)
+                                (str " - " (count transformers) " transformers")))))
       (fx/make
        :scene.control/table-view
-       {:fx/args [(observable-list (rest data))]
-        :columns (map-indexed (fn [i c] (column (str c) #(nth % i))) (first data))}))))
+       {:fx/args [(observable-list (view/transform (rest data) transformers))]
+        :columns (map-indexed (fn [i c] (column (str c) #(nth % i))) (first data))}))
+    (do
+      (message/error "nil data-fn function")
+      nil)))

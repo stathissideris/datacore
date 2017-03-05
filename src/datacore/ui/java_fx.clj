@@ -42,7 +42,14 @@
                        :class  (class object)
                        :field  field-kw
                        :value  value}))
-      (s! object value))))
+      (try
+        (s! object value)
+        (catch Exception e
+          (throw (ex-info "error while calling setter"
+                          {:object object
+                           :class  (class object)
+                           :field  field-kw
+                           :value  value})))))))
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)

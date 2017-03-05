@@ -83,7 +83,7 @@
 
 (defn main-view [view message]
   (let [minibuffer (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})]
-    (cell= (fx/set-field! minibuffer :text @message))
+    ;;(cell= (fx/set-field! minibuffer :text @message))
     #_(fx/make
        :scene.layout/border-pane
        {:center (build-view panes)
@@ -98,12 +98,13 @@
 (def scene (atom nil))
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
-                             {:fx/args  [(main-view (first @state/views) message/current-message) 800 800]
+                             {:fx/args  [(main-view (some-> @state/state :views first) message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
     (cell=
-     (prn "Views have changed!")
-     (.setRoot the-scene (main-view (some-> @state/state :views first) message/current-message)))
+     (do
+       (prn "Views have changed!")
+       (.setRoot the-scene (main-view (some-> @state/state :views first) message/current-message))))
     (reset! scene the-scene)
     (comment
       (fx/make

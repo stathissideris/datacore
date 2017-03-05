@@ -22,7 +22,7 @@
      :value    (if (.-formula c)
                  (:cache v)
                  v)
-     :error    (when (:error v) (.getMessage (:error v)))
+     :error    (:error v)
      :code     (not-empty
                 (apply
                  list
@@ -36,7 +36,7 @@
      :sinks    (not-empty (set (map #(.-id %) (get @links c))))}))
 
 (defn print-all-cells []
-  (print-table (all-cells)))
+  (print-table (map #(update % :error (fn [e] (when e (.getMessage e)))) (all-cells))))
 
 (defn- cycles? [links cell]
   (loop [sinks   (get links cell)
@@ -83,7 +83,7 @@
               (let [new-value (thunk)]
                 (dosync (set-value! cell new-value)))
               (catch Exception e
-                (dosync (set-error! cell (ex-info "Error initializing formula cell" e {:thunk thunk}))))))))
+                (dosync (set-error! cell (ex-info "Error initializing formula cell" {:thunk thunk} e))))))))
     (get @cells cell)))
 
 (defn- thunk [cell]
