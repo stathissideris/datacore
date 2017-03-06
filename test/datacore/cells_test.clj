@@ -133,7 +133,19 @@
           c (formula (partial + 1) b)]
       (destroy! b)
       (is (= :datacore.cells/destroyed @b))
-      (is (= :datacore.cells/destroyed @c)))))
+      (is (= :datacore.cells/destroyed @c))))
+
+  (testing "lazy seqs"
+    (let [a (cell (range 10))
+          b (formula (partial map inc) a)
+          c (formula (partial map inc) b)]
+      @c
+      (is (not (realized? @b)))
+      (is (not (realized? @c)))
+      (doall @c)
+      (is (realized? @b))
+      (is (realized? @c)))))
+
 
 (comment
   (do
