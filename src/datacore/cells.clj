@@ -19,12 +19,14 @@
     {:id       (.-id c)
      :label    (.-label c)
      :formula? (.-formula c)
-     ;;:enabled? (:enabled? v)
+     :enabled? (if (.-formula c)
+                 (:enabled? v)
+                 "N/A")
      :value    (if (.-formula c)
                  (:cache v)
                  v)
      :error    (:error v)
-     :code     (not-empty
+     #_:code     #_(not-empty
                 (apply
                  list
                  (walk/postwalk
