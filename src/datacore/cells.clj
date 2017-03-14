@@ -32,9 +32,11 @@
 
 (s/def ::cells-graph (s/keys :req-un [::cells ::sinks ::sources]))
 
-(s/def ::cells (s/map-of cell-id? ::cell))
-(s/def ::sinks (s/map-of cell-id? (s/coll-of cell-id?)))
-(s/def ::sources (s/map-of cell-id? (s/coll-of cell-id?)))
+(s/def ::cell-id cell-id?)
+
+(s/def ::cells (s/map-of ::cell-id ::cell))
+(s/def ::sinks (s/map-of ::cell-id (s/coll-of ::cell-id)))
+(s/def ::sources (s/map-of ::cell-id (s/coll-of ::cell-id)))
 
 (s/def ::cell (s/or :input ::input-cell
                     :formula ::formula-cell))
@@ -48,7 +50,7 @@
 (s/def ::label (s/nilable keyword?))
 (s/def ::code any?)
 (s/def ::fun ifn?)
-(s/def ::cell-sources-list (s/coll-of (s/or :cell cell-id?
+(s/def ::cell-sources-list (s/coll-of (s/or :cell ::cell-id
                                             :unlinked #{::unlinked})))
 
 (def ^:dynamic *detect-cycles* true)
@@ -114,7 +116,7 @@
                          :sink sink}))
         new-cells))))
 (s/fdef link
- :args (s/cat :cells-graph ::cells-graph :source cell-id? :sink cell-id?)
+ :args (s/cat :cells-graph ::cells-graph :source ::cell-id :sink ::cell-id)
  :ret  ::cells-graph)
 
 (defn link! [source sink]
@@ -149,24 +151,29 @@
       ::no-value)
     ::destroyed))
 
+(defn no-value? [x]
+  (and (not (instance? clojure.lang.LazySeq x))
+       (= ::no-value x)))
+
 (defn- calc-formula [cells {:keys [fun sources-list enabled?] :as cell}]
   (try
-    (let [new-value (cond (some (partial = ::unlinked) sources-list)
-                          ::no-value
+    (-> cell
+        (dissoc :error)
+        (assoc
+         :value
+         (cond (some (partial = ::unlinked) sources-list)
+               ::no-value
 
-                          enabled?
-                          (let [sources-values (map (partial current-value cells) sources-list)]
-                            (if (some (partial = ::no-value) sources-values)
-                              ::no-value
-                              (apply fun sources-values)))
+               enabled?
+               (let [sources-values (map (partial current-value cells) sources-list)]
+                 (if (some no-value? sources-values)
+                   ::no-value
+                   (apply fun sources-values)))
 
-                          :else
-                          (if-let [first-value (current-value cells (first sources-list))]
-                            first-value
-                            ::no-value))]
-      (-> cell
-          (assoc :value new-value)
-          (dissoc :error)))
+               :else
+               (if-let [first-value (current-value cells (first sources-list))]
+                 first-value
+                 ::no-value))))
     (catch Exception e
       (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e)))))
 (s/fdef calc-formula
@@ -224,7 +231,7 @@
                  (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
       (update-in [:cells sink] dissoc :value)))
 (s/fdef unlink
- :args (s/cat :cells-graph ::cells-graph :source cell-id? :sink cell-id?)
+ :args (s/cat :cells-graph ::cells-graph :source ::cell-id :sink ::cell-id)
  :ret  ::cells-graph)
 
 (defn unlink! [source sink]
@@ -239,7 +246,7 @@
     (update $ :sinks dissoc cell-id)
     (update $ :cells dissoc cell-id)))
 (s/fdef destroy
- :args (s/cat :cells-graph ::cells-graph :cell-id cell-id?)
+ :args (s/cat :cells-graph ::cells-graph :cell-id ::cell-id)
  :ret  ::cells-graph)
 
 (defn destroy! [cell-id]
@@ -276,7 +283,7 @@
 (s/fdef make-cell
   :args (s/alt :unlabeled (s/cat :cells-graph ::cells-graph :value any?)
                :labeled   (s/cat :cells-graph ::cells-graph :label (s/nilable keyword?) :value any?))
-  :ret  (s/cat :id cell-id? :new-cells ::cells-graph))
+  :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn cell
   ([x]
@@ -288,7 +295,7 @@
 (s/fdef cell
   :args (s/alt :unlabeled (s/cat :value any?)
                :labeled   (s/cat :label (s/nilable keyword?) :value any?))
-  :ret  cell-id?)
+  :ret  ::cell-id)
 
 (defmacro defcell [name x]
   `(def ~name (cell ~(keyword name) ~x)))
@@ -306,9 +313,9 @@
 (s/fdef make-formula
   :args (s/cat :cells-graph ::cells-graph
                :function ifn?
-               :sources (s/+ cell-id?)
+               :sources (s/+ ::cell-id)
                :options (s/? option-map?))
-  :ret  (s/cat :id cell-id? :new-cells ::cells-graph))
+  :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn formula
   [fun & sources]
@@ -319,8 +326,8 @@
                                                                     :sources  sources}))
       id)))
 (s/fdef formula
-  :args (s/cat :function ifn? :sources (s/+ cell-id?) :options (s/? option-map?))
-  :ret  cell-id?)
+  :args (s/cat :function ifn? :sources (s/+ ::cell-id) :options (s/? option-map?))
+  :ret  ::cell-id)
 
 (defmacro deformula
   [name fun & cells]
