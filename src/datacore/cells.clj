@@ -132,28 +132,32 @@
 (defn- current-value [cells cell-id]
   (get-in cells [:cells cell-id :value]))
 
-(defn- calc-formula [cells cell-id]
-  (let [cell                           (get-in cells [:cells cell-id])
-        {:keys [fun sources enabled?]} cell]
-    (if-not cell
-      (throw (ex-info "Cell not found in cells" {:cell-id cell-id
-                                                 :cells   cells}))
-      (try
-        (let [new-value (if enabled?
-                          (apply fun (map (partial current-value cells) sources))
-                          (fun (current-value cells (first sources))))]
-          (-> cell
-              (assoc :value new-value)
-              (dissoc :error)))
-        (catch Exception e
-          (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e)))))))
+(defn- lookup [cells cell-id]
+  (if-let [cell (get-in cells [:cells cell-id])]
+    cell
+    (throw (ex-info "Cell not found in cells" {:cell-id cell-id
+                                               :cells   cells}))))
+
+(defn- calc-formula [cells {:keys [fun sources-list enabled?] :as cell}]
+  (try
+    (let [new-value (if enabled?
+                      (apply fun (map (partial current-value cells) sources-list))
+                      (current-value cells (first sources-list)))]
+      (-> cell
+          (assoc :value new-value)
+          (dissoc :error)))
+    (catch Exception e
+      (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e)))))
+(s/fdef calc-formula
+  :args (s/cat :cells-graph ::cells-graph :formula ::formula-cell)
+  :ret  ::formula-cell)
 
 (defn- pull [cells cell-id]
   (let [pm (cells-into-pm (pm/priority-map-keyfn #(.-id %))
                           (conj (all-blank-sources cells cell-id) cell-id))]
-    (reduce (fn [cells [_ source]]
-              (assoc-in cells [:cells source]
-                        (calc-formula cells source))) cells pm)))
+    (reduce (fn [cells [_ source-id]]
+              (assoc-in cells [:cells source-id]
+                        (calc-formula cells (lookup cells source-id)))) cells pm)))
 
 (defn value
   ([cell-id]
@@ -185,18 +189,6 @@
     (throw (ex-info "Operation failed, cell is not a formula"
                     {:cell-id cell-id
                      :cell    (get-in cells [:cells cell-id])}))))
-
-(defn mute [cells cell-id]
-  (update-formula cells cell-id assoc :enabled? false))
-
-(defn mute! [cell-id]
-  (core/swap! global-cells mute cell-id))
-
-(defn unmute [cells cell-id]
-  (update-formula cells cell-id assoc :enabled? true))
-
-(defn unmute! [cell-id]
-  (core/swap! global-cells unmute cell-id))
 
 (defn set-error [cells cell-id e]
   (update-formula cells cell-id assoc :error e))
@@ -308,7 +300,7 @@
   (if-let [cell-id (first (peek pri-map))]
     (let [remaining (pop pri-map)
           cell      (get-in cells [:cells cell-id])
-          new-cell  (calc-formula cells cell-id)
+          new-cell  (calc-formula cells (lookup cells cell-id))
           diff?     (not= (:value cell)
                           (:value new-cell))]
       (recur (assoc-in cells [:cells cell-id] new-cell)
@@ -320,7 +312,7 @@
 (defn touch [cells cell-id]
   (if-not (formula? cells cell-id)
     (throw (ex-info "Cannot touch, cell is not a formula" {:cell cell-id}))
-    (let [new-cell (calc-formula cells cell-id)]
+    (let [new-cell (calc-formula cells (lookup cells cell-id))]
       (-> cells
           (assoc-in [:cells cell-id] new-cell)
           (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
@@ -328,6 +320,22 @@
 
 (defn touch! [cell-id]
   (core/swap! global-cells touch cell-id))
+
+(defn mute [cells cell-id]
+  (-> cells
+      (update-formula cell-id assoc :enabled? false)
+      (touch cell-id)))
+
+(defn mute! [cell-id]
+  (core/swap! global-cells mute cell-id))
+
+(defn unmute [cells cell-id]
+  (-> cells
+      (update-formula cell-id assoc :enabled? true)
+      (touch cell-id)))
+
+(defn unmute! [cell-id]
+  (core/swap! global-cells unmute cell-id))
 
 (defn swap [cells cell-id fun args]
   (if (formula? cells cell-id)
