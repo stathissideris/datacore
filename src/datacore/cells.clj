@@ -151,7 +151,10 @@
       ::no-value)
     ::destroyed))
 
-(defn no-value? [x]
+(defn- no-value?
+  "Straight equality checking results in the sequence to be realized,
+  be more gentle to avoid that."
+  [x]
   (and (not (instance? clojure.lang.LazySeq x))
        (= ::no-value x)))
 
