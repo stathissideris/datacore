@@ -196,21 +196,39 @@
 (defn- set-error! [cell-id e]
   (core/swap! global-cells set-error cell-id e))
 
-(comment
- (defn destroy! [cell] ;;TODO
-   (dosync
-    (let [cell-sinks (get @sinks cell)]
-      ;;remove cell from sinks of its sources
-      (doseq [source (get @sources cell)]
-        (alter sources update source disj cell))
-      ;;remove from registry
-      (alter cells dissoc cell)
-      ;;remove cell's sinks
-      (alter sinks dissoc cell)
-      ;;destroy its sinks that have just one source
-      (doseq [sink cell-sinks]
-        (when (= 1 (count (get @sources sink)))
-          (destroy! sink)))))))
+(defn- sources [cells cell-id]
+  (get-in cells [:sources cell-id]))
+
+(defn- sinks [cells cell-id]
+  (get-in cells [:sinks cell-id]))
+
+(defn unlink [cells source sink]
+  (-> cells
+      (update-in [:sinks source] disj sink)
+      (update-in [:sources sink] disj source)
+      (update-in [:cells sink :sources-list]
+                 (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))))
+(s/fdef unlink
+ :args (s/cat :cells-graph ::cells-graph :source cell-id? :sink cell-id?)
+ :ret  ::cells-graph)
+
+(defn unlink! [source sink]
+  (core/swap! global-cells unlink source sink))
+
+(defn destroy [cells cell-id]
+  (as-> cells $
+    (update $ :cells dissoc cell-id)
+    (reduce (fn [cells sink-id] (unlink cells cell-id sink-id))
+            $ (sinks cells cell-id))
+    (reduce (fn [cells source-id] (unlink cells source-id cell-id))
+            $ (sources cells cell-id))
+    (update $ :sinks dissoc cell-id)))
+(s/fdef destroy
+ :args (s/cat :cells-graph ::cells-graph :cell-id cell-id?)
+ :ret  ::cells-graph)
+
+(defn destroy! [cell-id]
+  (core/swap! global-cells destroy cell-id))
 
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
   (let [id        (.-id cell-id)
