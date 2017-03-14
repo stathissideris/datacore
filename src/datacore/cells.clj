@@ -161,9 +161,9 @@
 
 (defn value
   ([cell-id]
-   (let [[v new-cells] (value @global-cells cell-id)]
-     (core/reset! global-cells new-cells)
-     v))
+   (current-value
+    (core/swap! global-cells #(second (value % cell-id)))
+    cell-id))
   ([cells cell-id]
    (if-let [c (get-in cells [:cells cell-id])]
      (if (and (formula? cells cell-id) (not (:value c)))
