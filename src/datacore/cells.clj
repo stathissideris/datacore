@@ -13,6 +13,23 @@
 
 (defn cell-id? [cell-id] (= (class cell-id) datacore.cells.CellID))
 
+(defn make-cells []
+  {:cells {}     ;;map of cell IDs to cell values
+   :sinks {}     ;;map of cell IDs to sets of sinks
+   :sources {}}) ;;map of cell IDs to sets of sources
+(s/fdef make-cells
+  :ret ::cells-graph)
+
+(def ^:private global-cells
+  (atom (make-cells)))
+
+(defn formula?
+  ([cell-id]
+   (and (cell-id? cell-id) (formula? @global-cells cell-id)))
+  ([cells cell-id] (get-in cells [:cells cell-id :formula?])))
+
+(def input? (complement formula?))
+
 (s/def ::cells-graph (s/keys :req-un [::cells ::sinks ::sources]))
 
 (s/def ::cells (s/map-of cell-id? ::cell))
@@ -31,17 +48,8 @@
 (s/def ::label (s/nilable keyword?))
 (s/def ::code any?)
 (s/def ::fun ifn?)
-(s/def ::cell-sources-list (s/coll-of cell-id?))
-
-(defn make-cells []
-  {:cells {}     ;;map of cell IDs to cell values
-   :sinks {}     ;;map of cell IDs to sets of sinks
-   :sources {}}) ;;map of cell IDs to sets of sources
-(s/fdef make-cells
-  :ret ::cells-graph)
-
-(def ^:private global-cells
-  (atom (make-cells)))
+(s/def ::cell-sources-list (s/coll-of (s/or :cell cell-id?
+                                            :unlinked #{::unlinked})))
 
 (def ^:dynamic *detect-cycles* true)
 
@@ -90,7 +98,6 @@
 (defn- add-link [m from to]
   (update m from (fn [x] (if-not x #{to} (conj x to)))))
 
-(declare formula?)
 (defn link [cells source sink]
   (when-not (formula? cells sink)
     (throw (ex-info "Cannot add link, sink is not a formula"
@@ -129,20 +136,34 @@
             (assoc pm cell cell))
           pm cells))
 
-(defn- current-value [cells cell-id]
-  (get-in cells [:cells cell-id :value]))
-
 (defn- lookup [cells cell-id]
   (if-let [cell (get-in cells [:cells cell-id])]
     cell
     (throw (ex-info "Cell not found in cells" {:cell-id cell-id
                                                :cells   cells}))))
 
+(defn- current-value [cells cell-id]
+  (if-let [cell (get-in cells [:cells cell-id])]
+    (if (contains? cell :value)
+      (:value cell)
+      ::no-value)
+    ::destroyed))
+
 (defn- calc-formula [cells {:keys [fun sources-list enabled?] :as cell}]
   (try
-    (let [new-value (if enabled?
-                      (apply fun (map (partial current-value cells) sources-list))
-                      (current-value cells (first sources-list)))]
+    (let [new-value (cond (some (partial = ::unlinked) sources-list)
+                          ::no-value
+
+                          enabled?
+                          (let [sources-values (map (partial current-value cells) sources-list)]
+                            (if (some (partial = ::no-value) sources-values)
+                              ::no-value
+                              (apply fun sources-values)))
+
+                          :else
+                          (if-let [first-value (current-value cells (first sources-list))]
+                            first-value
+                            ::no-value))]
       (-> cell
           (assoc :value new-value)
           (dissoc :error)))
@@ -170,18 +191,11 @@
        (let [new-cells (pull cells cell-id)]
          [(current-value new-cells cell-id) new-cells])
        [(:value c) cells])
-     ::destroyed)))
+     [::destroyed cells])))
 
 (defn error
   [cells cell-id]
   (get-in cells [:cells cell-id :error]))
-
-(defn formula?
-  ([cell-id]
-   (and (cell-id? cell-id) (formula? @global-cells cell-id)))
-  ([cells cell-id] (get-in cells [:cells cell-id :formula?])))
-
-(def input? (complement formula?))
 
 (defn- update-formula [cells cell-id fun & args]
   (if (formula? cells cell-id)
@@ -207,7 +221,8 @@
       (update-in [:sinks source] disj sink)
       (update-in [:sources sink] disj source)
       (update-in [:cells sink :sources-list]
-                 (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))))
+                 (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
+      (update-in [:cells sink] dissoc :value)))
 (s/fdef unlink
  :args (s/cat :cells-graph ::cells-graph :source cell-id? :sink cell-id?)
  :ret  ::cells-graph)
@@ -217,12 +232,12 @@
 
 (defn destroy [cells cell-id]
   (as-> cells $
-    (update $ :cells dissoc cell-id)
     (reduce (fn [cells sink-id] (unlink cells cell-id sink-id))
             $ (sinks cells cell-id))
     (reduce (fn [cells source-id] (unlink cells source-id cell-id))
             $ (sources cells cell-id))
-    (update $ :sinks dissoc cell-id)))
+    (update $ :sinks dissoc cell-id)
+    (update $ :cells dissoc cell-id)))
 (s/fdef destroy
  :args (s/cat :cells-graph ::cells-graph :cell-id cell-id?)
  :ret  ::cells-graph)
@@ -373,25 +388,3 @@
 
 (defn reset! [cell value]
   (swap! cell (fn [& _] value)))
-
-(comment
-  (defcell foo 100)
-  (defcell bar 2)
-  (defcell= baz
-    (prn "calc baz!" (* 2 @foo @bar))
-    (* 2 @foo @bar))
-  (defcell= boo
-    (prn "calc boo!" (* 2 @foo))
-    (* 2 @foo))
-  (defcell= boz
-    (/ 10 @bar))
-
-  ;;or
-  (def baz (formula #(do
-                       (prn "calc baz!" (* 2 @foo @bar))
-                       (* 2 @foo @bar))))
-  @baz
-
-  (swap! foo inc)
-  (swap! bar inc)
-  )

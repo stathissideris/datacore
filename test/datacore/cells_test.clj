@@ -163,32 +163,6 @@
       (swap! a inc)
       (is (= [:b :c :d] @log))))
 
-  (testing "muting 1"
-    (let [cells     (make-cells)
-          [a cells] (make-cell cells 100)
-          [b cells] (make-formula cells (fn [x] (+ x 3)) a)
-          cells     (mute cells b)]
-      (is (false? (some-> cells :cells (get b) :enabled?)))))
-
-  (testing "muting 2"
-    (let [a (cell :a 100)
-          b (formula (partial * 10) a)
-          c (formula (partial + 1) b)]
-      (is (= 1001 (value c)))
-      (mute! b)
-      (is (= 101 (value c)))
-      (unmute! b)
-      (is (= 1001 (value c)))))
-
-  (comment
-   (testing "destroying"
-     (let [a (cell :a 100)
-           b (formula (partial * 10) a)
-           c (formula (partial + 1) b)]
-       (destroy! b)
-       (is (= :datacore.cells/destroyed (value b)))
-       (is (= :datacore.cells/destroyed (value c))))))
-
   (testing "lazy seqs"
     (let [a (cell (range 10))
           b (formula (partial map inc) a)
@@ -198,8 +172,33 @@
       (is (not (realized? (value c))))
       (doall (value c))
       (is (realized? (value b)))
-      (is (realized? (value c))))))
+      (is (realized? (value c)))))
 
+  (testing "alter the graph"
+    (testing "mute 1"
+      (let [cells     (make-cells)
+            [a cells] (make-cell cells 100)
+            [b cells] (make-formula cells (fn [x] (+ x 3)) a)
+            cells     (mute cells b)]
+        (is (false? (some-> cells :cells (get b) :enabled?)))))
+
+    (testing "mute 2"
+      (let [a (cell :a 100)
+            b (formula (partial * 10) a)
+            c (formula (partial + 1) b)]
+        (is (= 1001 (value c)))
+        (mute! b)
+        (is (= 101 (value c)))
+        (unmute! b)
+        (is (= 1001 (value c)))))
+
+    (testing "destroying"
+      (let [a (cell :a 100)
+            b (formula (partial * 10) a)
+            c (formula (partial + 1) b)]
+        (destroy! b)
+        (is (= :datacore.cells/destroyed (value b)))
+        (is (= :datacore.cells/no-value (value c)))))))
 
 (comment
   (do
