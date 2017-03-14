@@ -56,7 +56,7 @@
           (str "set"))
      (object-array [value]))
     (catch Exception _
-      (if (c/cell? value)
+      (if (c/cell-id? value)
         @(c/formula (fn [v]
                       (run-later! #(set-field! object field-kw v))
                       v)

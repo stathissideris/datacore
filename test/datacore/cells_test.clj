@@ -2,7 +2,46 @@
   (:refer-clojure :exclude [swap! reset!])
   (:require [datacore.cells :refer :all]
             [clojure.test :refer :all]
-            [clojure.core :as core]))
+            [clojure.core :as core]
+            [clojure.spec :as s]
+            [clojure.spec.test :as stest]))
+
+(doseq [s (stest/instrumentable-syms)]
+  (stest/instrument s))
+
+(deftest test-specs
+  (is (true?
+       (s/valid? :datacore.cells/cell
+                 {:id       8
+                  :value    {}
+                  :formula? false
+                  :label    :state
+                  :code     nil})))
+  (is (true?
+       (s/valid? :datacore.cells/input-cell
+                 {:id       8
+                  :value    {}
+                  :formula? false
+                  :label    :state
+                  :code     nil})))
+  (is (true?
+       (s/valid? :datacore.cells/cell
+                 {:id           11
+                  :fun          :sources
+                  :sources-list [#datacore.cells.CellID{:id 10}]
+                  :formula?     true
+                  :enabled?     true
+                  :label        :sources
+                  :code         nil})))
+  (is (true?
+       (s/valid? :datacore.cells/formula-cell
+                 {:id           11
+                  :fun          :sources
+                  :sources-list [#datacore.cells.CellID{:id 10}]
+                  :formula?     true
+                  :enabled?     true
+                  :label        :sources
+                  :code         nil}))))
 
 (def cycles? @#'datacore.cells/cycles?)
 (deftest test-cycles?
@@ -13,81 +52,88 @@
   (is (true? (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:b}} :d)))
   (is (nil?  (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:f}} :a))))
 
-(deftest test-construction
-  (let [log (atom [])
-        a   (cell 100)
-        b   (cell 2)
-        c   (formula
-             (fn [b]
-               (formula
-                (fn [b] (core/swap! log conj :foo) (prn @b))
-                b)
-               (* 100 @b))
-             b)]
-    ))
+(def all-blank-sources @#'datacore.cells/all-blank-sources)
+(deftest test-all-blank-sources
+  (let [cells     (make-cells)
+        [a cells] (make-cell cells :a 100)
+        [b cells] (make-formula cells (fn [x] (+ x 3)) a {:label :b})
+        [c cells] (make-cell cells :c 200)
+        [d cells] (make-formula cells (fn [x] (+ x 300)) c {:label :d})
+        [e cells] (make-formula cells (fn [x y] (* x y)) b d {:label :e})]
+    (is (= #{b d} (all-blank-sources cells e)))))
+
+(deftest test-value
+  (let [cells     (make-cells)
+        [a cells] (make-cell cells 100)
+        [b cells] (make-formula cells (fn [x] (+ x 3)) a)
+        [c cells] (make-cell cells 200)
+        [d cells] (make-formula cells (fn [x] (+ x 300)) c)
+        [e cells] (make-formula cells (fn [x y] (* x y)) b d)]
+    (is (= (* (+ 100 3)
+              (+ 200 300)) (first (value cells e))))))
 
 (deftest test-propagation
   (testing "one level"
     (let [a (cell 100)
           b (cell 2)
           c (formula (partial * 2) a b)]
-      (is (= 400 @c))
+      (is (= 400 (value c)))
 
       (testing "- 1"
         (swap! a inc)
-        (is (= 101 @a))
-        (is (= 2 @b))
-        (is (= (* 101 2 2) @c)))
+        (is (= 101 (value a)))
+        (is (= 2 (value b)))
+        (is (= (* 101 2 2) (value c))))
 
       (testing "- 2"
         (swap! b inc)
-        (is (= 101 @a))
-        (is (= 3 @b))
-        (is (= (* 101 3 2) @c)))))
+        (is (= 101 (value a)))
+        (is (= 3 (value b)))
+        (is (= (* 101 3 2) (value c))))))
 
   (testing "one level - no change"
     (let [a (cell 100)
           b (cell 2)
           c (formula (partial * 2) a b)]
-      (is (= 400 @c))
+      (is (= 400 (value c)))
       (swap! a identity)
-      (is (= 100 @a))
-      (is (= 2 @b))
-      (is (= 400 @c))))
+      (is (= 100 (value a)))
+      (is (= 2 (value b)))
+      (is (= 400 (value c)))))
 
   (testing "two levels"
     (let [a (cell 100)
           b (cell 2)
           c (formula (partial * 2) a b)
           d (formula (partial * 10) c)]
-      (is (= 400 @c))
-      (is (= 4000 @d))
+      (is (= 400 (value c)))
+      (is (= 4000 (value d)))
 
       (testing "- 1"
         (swap! a inc)
-        (is (= 101 @a))
-        (is (= 2 @b))
-        (is (= (* 101 2 2) @c))
-        (is (= (* 101 2 2 10) @d)))
+        (is (= 101 (value a)))
+        (is (= 2 (value b)))
+        (is (= (* 101 2 2) (value c)))
+        (is (= (* 101 2 2 10) (value d))))
 
       (testing "- 2"
         (swap! b inc)
-        (is (= 101 @a))
-        (is (= 3 @b))
-        (is (= (* 101 3 2) @c))
-        (is (= (* 101 3 2 10) @d)))))
+        (is (= 101 (value a)))
+        (is (= 3 (value b)))
+        (is (= (* 101 3 2) (value c)))
+        (is (= (* 101 3 2 10) (value d))))))
 
   (testing "long chain 1"
     (let [chain (reduce (fn [chain _]
                           (conj chain (formula inc (last chain))))
-                        [(cell 0)] (range 100))]
+                        [(cell 0)] (range 5))]
       (swap! (first chain) #(+ % 5))
-      (doall (map-indexed (fn [i c] (is (= (+ i 5) @c))) chain))))
+      (doall (map-indexed (fn [i c] (is (= (+ i 5) (value c)))) chain))))
 
   (testing "long chain 2"
     (let [chain (reduce (fn [chain _]
                           (conj chain (formula inc (last chain))))
-                        [(cell 0)] (range 100))
+                        [(cell 0)] (range 5))
           touch (atom 0)
           chain (conj chain (formula (fn [x]
                                        (core/swap! touch inc)
@@ -102,49 +148,57 @@
           b   (formula (fn [x]
                          (core/swap! log conj :b)
                          (+ x 10))
-                       {:label :b}
-                       a)
+                       a
+                       {:label :b})
           c   (formula (fn [x]
                          (core/swap! log conj :c)
                          (+ x 20))
-                       {:label :c}
-                       a)
+                       a
+                       {:label :c})
           d   (formula (fn [b c]
                          (core/swap! log conj :d)
                          (+ b c))
-                       {:label :d}
-                       b c)]
+                       b c
+                       {:label :d})]
       (swap! a inc)
       (is (= [:b :c :d] @log))))
 
-  (testing "muting"
-    (let [a (cell :a 100)
-          b (formula (partial * 10) a)
-          c (formula (partial + 1) b)]
-      (is (= 1001 @c))
-      (mute! b)
-      (is (= 101 @c))
-      (unmute! b)
-      (is (= 1001 @c))))
+  (testing "muting 1"
+    (let [cells     (make-cells)
+          [a cells] (make-cell cells 100)
+          [b cells] (make-formula cells (fn [x] (+ x 3)) a)
+          cells     (mute cells b)]
+      (is (false? (some-> cells :cells (get b) :enabled?)))))
 
-  (testing "destroying"
+  (testing "muting 2"
     (let [a (cell :a 100)
           b (formula (partial * 10) a)
           c (formula (partial + 1) b)]
-      (destroy! b)
-      (is (= :datacore.cells/destroyed @b))
-      (is (= :datacore.cells/destroyed @c))))
+      (is (= 1001 (value c)))
+      (mute! b)
+      (is (= 101 (value c)))
+      (unmute! b)
+      (is (= 1001 (value c)))))
+
+  (comment
+   (testing "destroying"
+     (let [a (cell :a 100)
+           b (formula (partial * 10) a)
+           c (formula (partial + 1) b)]
+       (destroy! b)
+       (is (= :datacore.cells/destroyed (value b)))
+       (is (= :datacore.cells/destroyed (value c))))))
 
   (testing "lazy seqs"
     (let [a (cell (range 10))
           b (formula (partial map inc) a)
           c (formula (partial map inc) b)]
-      @c
-      (is (not (realized? @b)))
-      (is (not (realized? @c)))
-      (doall @c)
-      (is (realized? @b))
-      (is (realized? @c)))))
+      (value c)
+      (is (not (realized? (value b))))
+      (is (not (realized? (value c))))
+      (doall (value c))
+      (is (realized? (value b)))
+      (is (realized? (value c))))))
 
 
 (comment

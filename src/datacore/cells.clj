@@ -2,46 +2,79 @@
   (:refer-clojure :exclude [swap! reset!])
   (:require [clojure.data.priority-map :as pm]
             [clojure.set :as set]
-            [clojure.pprint :refer [print-table]]
-            [clojure.walk :as walk]))
+            [clojure.pprint :refer [print-table pprint] :as pp]
+            [clojure.walk :as walk]
+            [clojure.core :as core]
+            [clojure.spec :as s]))
 
-(def ^:private id (ref 0))
-(def ^:private cells (ref {})) ;;map of cell IDs to cell values
-(def ^:private sinks (ref {})) ;;map of cell IDs to sets of sinks
-(def ^:private sources (ref {})) ;;map of cell IDs to sets of sources
+(def ^:private cell-counter (atom -1))
+
+(defrecord CellID [id])
+
+(defn cell-id? [cell-id] (= (class cell-id) datacore.cells.CellID))
+
+(s/def ::cells-graph (s/keys :req-un [::cells ::sinks ::sources]))
+
+(s/def ::cells (s/map-of cell-id? ::cell))
+(s/def ::sinks (s/map-of cell-id? (s/coll-of cell-id?)))
+(s/def ::sources (s/map-of cell-id? (s/coll-of cell-id?)))
+
+(s/def ::cell (s/or :input ::input-cell
+                    :formula ::formula-cell))
+(s/def ::input-cell (s/keys :req-un [::id ::value ::formula? ::label ::code]))
+(s/def ::formula-cell (s/keys :req-un [::id ::fun ::sources-list ::formula? ::enabled? ::label ::code]
+                              :opt-un [::value]))
+(s/def ::id integer?)
+(s/def ::value any?)
+(s/def ::formula? boolean?)
+(s/def ::enabled boolean?)
+(s/def ::label (s/nilable keyword?))
+(s/def ::code any?)
+(s/def ::fun ifn?)
+(s/def ::cell-sources-list (s/coll-of cell-id?))
+
+(defn make-cells []
+  {:cells {}     ;;map of cell IDs to cell values
+   :sinks {}     ;;map of cell IDs to sets of sinks
+   :sources {}}) ;;map of cell IDs to sets of sources
+(s/fdef make-cells
+  :ret ::cells-graph)
+
+(def ^:private global-cells
+  (atom (make-cells)))
 
 (def ^:dynamic *detect-cycles* true)
 
-(declare set-value! set-error! touch! formula?)
-
-(defn cell->debug [c]
-  (let [v (get @cells c)]
-    {:id       (.-id c)
-     :label    (.-label c)
-     :formula? (.-formula c)
-     :enabled? (if (.-formula c)
-                 (:enabled? v)
-                 "N/A")
-     :value    (if (.-formula c)
-                 (:cache v)
-                 v)
-     :error    (:error v)
-     #_:code     #_(not-empty
-                (apply
-                 list
-                 (walk/postwalk
-                  (fn [x]
-                    (if (and (symbol? x)
-                             (= "clojure.core" (namespace x)))
-                      (-> x name symbol)
-                      x))
-                  (:code v))))
-     :sinks    (not-empty (set (map #(.-id %) (get @sinks c))))
-     :sources  (not-empty (set (map #(.-id %) (get @sources c))))}))
+(defn cell->debug
+  ([cell-id]
+   (cell->debug @global-cells cell-id))
+  ([cells cell-id]
+   (let [c (get-in cells [:cells cell-id])]
+     {:id       (:id c)
+      :label    (:label c)
+      :formula? (:formula? c)
+      :enabled? (if (:formula? c)
+                  (:enabled? c)
+                  "N/A")
+      :value    (:value c)
+      :error    (:error c)
+      #_:code     #_(not-empty
+                     (apply
+                      list
+                      (walk/postwalk
+                       (fn [x]
+                         (if (and (symbol? x)
+                                  (= "clojure.core" (namespace x)))
+                           (-> x name symbol)
+                           x))
+                       (:code v))))
+      :sinks    (not-empty (set (map #(.-id %) (get-in cells [:sinks cell-id]))))
+      :sources  (not-empty (set (map #(.-id %) (get-in cells [:sources cell-id]))))})))
 
 (defn all-cells []
-  (for [c (keys @cells)]
-    (cell->debug c)))
+  (let [cells @global-cells]
+    (for [ids (keys (:cells cells))]
+      (cell->debug cells ids))))
 
 (defn print-cells [cells]
   (print-table (map #(update % :error (fn [e] (when e (.getMessage e)))) cells)))
@@ -54,196 +87,263 @@
         true
         (recur (set (mapcat sink-map sinks)) (into visited sinks))))))
 
-(defn- add-link [sinks source sink]
-  (update sinks source
-          (fn [x] (if-not x #{sink} (conj x sink)))))
+(defn- add-link [m from to]
+  (update m from (fn [x] (if-not x #{to} (conj x to)))))
 
-(defn cell-code [cell]
-  (:code (get @cells cell)))
-
-(defn link! [source sink]
-  (when-not (formula? sink)
+(declare formula?)
+(defn link [cells source sink]
+  (when-not (formula? cells sink)
     (throw (ex-info "Cannot add link, sink is not a formula"
                     {:source source
-                     :sink sink
-                     :source-code (cell-code source)
-                     :sink-code (cell-code sink)})))
-  (dosync
-   (when-not (get-in @sinks [source sink])
-     (if (and *detect-cycles* (cycles? (add-link @sinks source sink) source))
-       (throw (ex-info "Cannot add link, cycle detected"
-                       {:source source
-                        :sink sink
-                        :source-code (cell-code source)
-                        :sink-code (cell-code sink)}))
-       (do
-         (alter sinks add-link source sink)
-         (alter sources add-link sink source))))))
+                     :sink sink})))
+  (if (get-in cells [:sinks source sink])
+    cells
+    (let [new-cells (-> cells
+                        (update :sinks add-link source sink)
+                        (update :sources add-link sink source))]
+      (if (and *detect-cycles* (cycles? (:sinks new-cells) source))
+        (throw (ex-info "Cannot add link, cycle detected"
+                        {:source source
+                         :sink sink}))
+        new-cells))))
+(s/fdef link
+ :args (s/cat :cells-graph ::cells-graph :source cell-id? :sink cell-id?)
+ :ret  ::cells-graph)
 
-(def ^:private ^:dynamic *cell-context* nil)
+(defn link! [source sink]
+  (core/swap! global-cells link source sink))
 
-(defn- calc-formula! [cell]
-  (let [{:keys [thunk identity enabled?]} (get @cells cell)]
-    (try
-      (let [new-value (if enabled? (thunk) (identity))]
-        (dosync (set-value! cell new-value)))
-      (catch Exception e
-        (dosync (set-error! cell (ex-info "Error initializing formula cell" {:thunk thunk} e)))))))
+(defn- all-blank-sources [cells cell-id]
+  (loop [current-cells [cell-id]
+         sources   #{}]
+    (if-not (seq current-cells)
+      sources
+      (let [s (->> current-cells
+                   (mapcat #(get-in cells [:sources %]))
+                   (remove nil?)
+                   (remove #(contains? (get-in cells [:cells %]) :value)))]
+        (recur (concat (rest current-cells) s) (into sources s))))))
 
-(defn- value [cell]
-  (if-let [v (get @cells cell)]
-    (if (.-formula cell)
-      (or (:cache v)
-          (calc-formula! cell))
-      v)
-    ::destroyed))
+(defn- cells-into-pm [pm cells]
+  (reduce (fn [pm cell]
+            (assoc pm cell cell))
+          pm cells))
 
-(defn- thunk [cell]
-  (let [t (:thunk (get @cells cell))]
-    (when-not t
-      (throw (ex-info "Cell is not a formula" {:cell cell})))
-    t))
+(defn- current-value [cells cell-id]
+  (get-in cells [:cells cell-id :value]))
 
-(deftype CellID [id label formula]
-  clojure.lang.IRef
-  (deref [this] (value this)))
+(defn- calc-formula [cells cell-id]
+  (let [cell                           (get-in cells [:cells cell-id])
+        {:keys [fun sources enabled?]} cell]
+    (if-not cell
+      (throw (ex-info "Cell not found in cells" {:cell-id cell-id
+                                                 :cells   cells}))
+      (try
+        (let [new-value (if enabled?
+                          (apply fun (map (partial current-value cells) sources))
+                          (fun (current-value cells (first sources))))]
+          (-> cell
+              (assoc :value new-value)
+              (dissoc :error)))
+        (catch Exception e
+          (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e)))))))
+
+(defn- pull [cells cell-id]
+  (let [pm (cells-into-pm (pm/priority-map-keyfn #(.-id %))
+                          (conj (all-blank-sources cells cell-id) cell-id))]
+    (reduce (fn [cells [_ source]]
+              (assoc-in cells [:cells source]
+                        (calc-formula cells source))) cells pm)))
+
+(defn value
+  ([cell-id]
+   (let [[v new-cells] (value @global-cells cell-id)]
+     (core/reset! global-cells new-cells)
+     v))
+  ([cells cell-id]
+   (if-let [c (get-in cells [:cells cell-id])]
+     (if (and (formula? cells cell-id) (not (:value c)))
+       (let [new-cells (pull cells cell-id)]
+         [(current-value new-cells cell-id) new-cells])
+       [(:value c) cells])
+     ::destroyed)))
+
+(defn error
+  [cells cell-id]
+  (get-in cells [:cells cell-id :error]))
+
+(defn formula?
+  ([cell-id]
+   (and (cell-id? cell-id) (formula? @global-cells cell-id)))
+  ([cells cell-id] (get-in cells [:cells cell-id :formula?])))
+
+(def input? (complement formula?))
+
+(defn- update-formula [cells cell-id fun & args]
+  (if (formula? cells cell-id)
+    (update-in cells [:cells cell-id] #(apply fun % args))
+    (throw (ex-info "Operation failed, cell is not a formula"
+                    {:cell-id cell-id
+                     :cell    (get-in cells [:cells cell-id])}))))
+
+(defn mute [cells cell-id]
+  (update-formula cells cell-id assoc :enabled? false))
+
+(defn mute! [cell-id]
+  (core/swap! global-cells mute cell-id))
+
+(defn unmute [cells cell-id]
+  (update-formula cells cell-id assoc :enabled? true))
+
+(defn unmute! [cell-id]
+  (core/swap! global-cells unmute cell-id))
+
+(defn set-error [cells cell-id e]
+  (update-formula cells cell-id assoc :error e))
+
+(defn- set-error! [cell-id e]
+  (core/swap! global-cells set-error cell-id e))
 
 (comment
-  (defmethod print-method CellID
-    [x w]
-    (.write w (pr-str {:id (.-id x)
-                       :formula? (.-formula x)}))))
+ (defn destroy! [cell] ;;TODO
+   (dosync
+    (let [cell-sinks (get @sinks cell)]
+      ;;remove cell from sinks of its sources
+      (doseq [source (get @sources cell)]
+        (alter sources update source disj cell))
+      ;;remove from registry
+      (alter cells dissoc cell)
+      ;;remove cell's sinks
+      (alter sinks dissoc cell)
+      ;;destroy its sinks that have just one source
+      (doseq [sink cell-sinks]
+        (when (= 1 (count (get @sources sink)))
+          (destroy! sink)))))))
 
-(defn cell? [x] (= (class x) datacore.cells.CellID))
-(defn formula? [x] (and (cell? x) (.-formula x)))
-(defn input? [x] (and (cell? x) (not (.-formula x))))
+(defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
+  (let [id        (.-id cell-id)
+        new-cells (assoc-in cells [:cells cell-id]
+                            (if formula?
+                              {:id           id
+                               :fun          v
+                               :sources-list (vec sources)
+                               :formula?     true
+                               :enabled?     true
+                               :label        label
+                               :code         code}
+                              {:id       id
+                               :value    v
+                               :formula? false
+                               :label    label
+                               :code     code}))]
+    (if-not (seq sources)
+      new-cells
+      (reduce (fn [cells source] (link cells source cell-id)) new-cells sources))))
 
-(defn- set-value! [cell x]
-  (if (formula? cell)
-    (alter cells assoc-in [cell :cache] x)
-    (alter cells assoc cell x))
-  x)
+(defn- new-cell-id []
+  (CellID. (core/swap! cell-counter inc)))
 
-(defn- clear-cache! [cell]
-  (if (formula? cell)
-    (alter cells update cell dissoc :cache)
-    ;;TODO throw exception
-    ))
-
-(defn mute! [cell]
-  (if (formula? cell)
-    (dosync (alter cells assoc-in [cell :enabled?] false)
-            (touch! cell))
-    ;;TODO throw exception
-    ))
-
-(defn unmute! [cell]
-  (if (formula? cell)
-    (dosync (alter cells assoc-in [cell :enabled?] true)
-            (touch! cell))
-    ;;TODO throw exception
-    ))
-
-(defn- set-error! [cell e]
-  (if (formula? cell)
-    (alter cells assoc-in [cell :error] e)
-    ;;TODO throw exception
-    )
-  e)
-
-(defn destroy! [cell]
-  (dosync
-   (let [cell-sinks (get @sinks cell)]
-    ;;remove cell from sinks of its sources
-    (doseq [source (get @sources cell)]
-      (alter sources update source disj cell))
-    ;;remove from registry
-    (alter cells dissoc cell)
-    ;;remove cell's sinks
-    (alter sinks dissoc cell)
-    ;;destroy its sinks that have just one source
-    (doseq [sink cell-sinks]
-      (when (= 1 (count (get @sources sink)))
-        (destroy! sink))))))
-
-(defn- register-cell! [x {:keys [formula? code label sources]}]
-  (dosync
-   (let [current-id @id
-         cell       (CellID. current-id (keyword label) formula?)]
-     (alter id inc)
-     (if formula?
-       (do
-         (alter cells assoc cell {:thunk    (fn [] (apply x (map deref sources)))
-                                  :identity (fn [] (deref (first sources)))
-                                  :enabled? true
-                                  :code     code})
-         (doseq [source sources]
-           (link! source cell)))
-       (alter cells assoc cell x))
-     cell)))
+(defn make-cell
+  ([cells x] (make-cell cells nil x))
+  ([cells label x]
+   (let [id (new-cell-id)]
+     [id (register-cell cells id x {:formula? false :label label})])))
+(s/fdef make-cell
+  :args (s/alt :unlabeled (s/cat :cells-graph ::cells-graph :value any?)
+               :labeled   (s/cat :cells-graph ::cells-graph :label (s/nilable keyword?) :value any?))
+  :ret  (s/cat :id cell-id? :new-cells ::cells-graph))
 
 (defn cell
   ([x]
    (cell nil x))
   ([label x]
-   (register-cell! x {:formula? false :label label})))
+   (let [id (new-cell-id)]
+     (core/swap! global-cells register-cell id x {:formula? false :label label})
+     id)))
+(s/fdef cell
+  :args (s/alt :unlabeled (s/cat :value any?)
+               :labeled   (s/cat :label (s/nilable keyword?) :value any?))
+  :ret  cell-id?)
 
 (defmacro defcell [name x]
   `(def ~name (cell ~(keyword name) ~x)))
 
+(defn option-map? [x]
+  (and (not (cell-id? x)) (map? x)))
+
+(defn make-formula
+  [cells fun & sources]
+  (let [options (if (not (cell-id? (last sources))) (last sources) {})
+        sources (if (not (cell-id? (last sources))) (butlast sources) sources)]
+    (let [id (new-cell-id)]
+      [id (register-cell cells id fun (merge options {:formula? true
+                                                      :sources  sources}))])))
+(s/fdef make-formula
+  :args (s/cat :cells-graph ::cells-graph
+               :function ifn?
+               :sources (s/+ cell-id?)
+               :options (s/? option-map?))
+  :ret  (s/cat :id cell-id? :new-cells ::cells-graph))
+
 (defn formula
-  [fun & cells]
-  (let [options (if (map? (first cells)) (first cells) {})
-        cells   (if (map? (first cells)) (rest cells) cells)]
-    (register-cell! fun (merge options {:formula? true
-                                        :sources  cells}))))
+  [fun & sources]
+  (let [options (if (not (cell-id? (last sources))) (last sources) {})
+        sources (if (not (cell-id? (last sources))) (butlast sources) sources)]
+    (let [id (new-cell-id)]
+      (core/swap! global-cells register-cell id fun (merge options {:formula? true
+                                                                    :sources  sources}))
+      id)))
+(s/fdef formula
+  :args (s/cat :function ifn? :sources (s/+ cell-id?) :options (s/? option-map?))
+  :ret  cell-id?)
 
 (defmacro deformula
   [name fun & cells]
-  `(def ~name (formula ~fun {:label ~(keyword name)} ~@cells)))
-
-(defn- cells-into-pm [pm cells]
-  (reduce (fn [pm cell]
-            (assoc pm cell (.-id cell)))
-          pm cells))
+  `(def ~name (formula ~fun ~@cells {:label ~(keyword name)})))
 
 (defn- exception? [x]
   (instance? Exception x))
 
-(defn- propagate [pri-map]
-  (when-let [cell (first (peek pri-map))]
-    ;;(prn (cell->debug cell))
-    (let [popq  (pop pri-map)
-          old   (:cache (get @cells cell))
-          new   (calc-formula! cell)
-          diff? (not= new old)]
-      ;;(prn 'old-value old 'new-value new)
-      (if (exception? new)
-        (set-error! cell new)
-        (when diff? (set-value! cell new)))
-      (recur (if-not diff?
-               popq ;;continue to next cell in priority map
-               (cells-into-pm popq (get @sinks cell))))))) ;;add all sinks of cell to priority map before continuing
+(defn- push [cells pri-map]
+  (if-let [cell-id (first (peek pri-map))]
+    (let [remaining (pop pri-map)
+          cell      (get-in cells [:cells cell-id])
+          new-cell  (calc-formula cells cell-id)
+          diff?     (not= (:value cell)
+                          (:value new-cell))]
+      (recur (assoc-in cells [:cells cell-id] new-cell)
+             (if (and diff? (not (:error new-cell)))
+               (cells-into-pm remaining (get-in cells [:sinks cell-id]))
+               remaining)))
+    cells))
 
-(defn touch! [cell]
-  (if-not (.-formula cell)
-    (throw (ex-info "Cannot touch, cell is not a formula" {:cell cell}))
-    (dosync
-     (let [new-value (calc-formula! cell)]
-       (set-value! cell new-value)
-       (propagate (cells-into-pm (pm/priority-map) (get @sinks cell)))
-       new-value))))
+(defn touch [cells cell-id]
+  (if-not (formula? cells cell-id)
+    (throw (ex-info "Cannot touch, cell is not a formula" {:cell cell-id}))
+    (let [new-cell (calc-formula cells cell-id)]
+      (-> cells
+          (assoc-in [:cells cell-id] new-cell)
+          (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
+                               (get-in cells [:sinks cell-id])))))))
 
-(defn swap! [cell fun & args]
-  (if (.-formula cell)
-    (throw (ex-info "Cannot swap, cell is a formula" {:cell cell}))
-    (dosync
-     (let [current   @cell
-           new-value (apply fun current args)]
-       (when-not (= current new-value)
-         (set-value! cell new-value)
-         (propagate (cells-into-pm (pm/priority-map) (get @sinks cell))))
-       new-value))))
+(defn touch! [cell-id]
+  (core/swap! global-cells touch cell-id))
+
+(defn swap [cells cell-id fun args]
+  (if (formula? cells cell-id)
+    (throw (ex-info "Cannot swap, cell is a formula" {:cell cell-id}))
+    (let [current   (get-in cells [:cells cell-id :value])
+          new-value (apply fun current args)]
+      (if (= current new-value)
+        cells
+        (-> cells
+            (assoc-in [:cells cell-id :value] new-value)
+            (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
+                                 (get-in cells [:sinks cell-id]))))))))
+
+(defn swap! [cell-id fun & args]
+  (get-in (core/swap! global-cells swap cell-id fun args)
+          [:cells cell-id :value]))
 
 (defn reset! [cell value]
   (swap! cell (fn [& _] value)))
