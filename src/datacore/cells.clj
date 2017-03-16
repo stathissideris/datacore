@@ -7,6 +7,14 @@
             [clojure.core :as core]
             [clojure.spec :as s]))
 
+;; TODO
+;; effect cells
+;; move up
+;; move down
+;; tests for unlinking
+;; pluggable caching strategy
+;; pluggabe execution strategy
+
 (def ^:private cell-counter (atom -1))
 
 (defrecord CellID [id])
@@ -17,8 +25,6 @@
   {:cells {}     ;;map of cell IDs to cell values
    :sinks {}     ;;map of cell IDs to sets of sinks
    :sources {}}) ;;map of cell IDs to sets of sources
-(s/fdef make-cells
-  :ret ::cells-graph)
 
 (def ^:private global-cells
   (atom (make-cells)))
@@ -52,6 +58,8 @@
 (s/def ::fun ifn?)
 (s/def ::cell-sources-list (s/coll-of (s/or :cell ::cell-id
                                             :unlinked #{::unlinked})))
+(s/fdef make-cells
+  :ret ::cells-graph)
 
 (def ^:dynamic *detect-cycles* true)
 
@@ -152,7 +160,7 @@
     ::destroyed))
 
 (defn- no-value?
-  "Straight equality checking results in the sequence to be realized,
+  "Straight equality checking causes lazy sequences to be realized,
   be more gentle to avoid that."
   [x]
   (and (not (instance? clojure.lang.LazySeq x))
@@ -240,6 +248,7 @@
 (defn unlink! [source sink]
   (core/swap! global-cells unlink source sink))
 
+(declare touch)
 (defn destroy [cells cell-id]
   (as-> cells $
     (reduce (fn [cells sink-id] (unlink cells cell-id sink-id))
@@ -247,13 +256,32 @@
     (reduce (fn [cells source-id] (unlink cells source-id cell-id))
             $ (sources cells cell-id))
     (update $ :sinks dissoc cell-id)
-    (update $ :cells dissoc cell-id)))
+    (update $ :cells dissoc cell-id)
+    (reduce (fn [cells sink-id] (touch cells sink-id))
+            $ (sinks cells cell-id))))
 (s/fdef destroy
  :args (s/cat :cells-graph ::cells-graph :cell-id ::cell-id)
  :ret  ::cells-graph)
 
 (defn destroy! [cell-id]
   (core/swap! global-cells destroy cell-id))
+
+(defn unlink-slot [cells sink-id slot-idx]
+  (let [sink   (lookup cells sink-id)
+        source (nth (:sources-list sink) slot-idx)]
+    (unlink cells source sink))) ;;TODO touch at the end?
+
+(defn unlink-slot! [sink-id slot-idx]
+  (core/swap! global-cells sink-id slot-idx))
+
+(defn link-slot [cells source-id sink-id slot-idx]
+  (-> cells
+      ;;TODO unlink existing link if any
+      (link source-id sink-id)
+      (assoc-in [:cells sink-id :sources-list slot-idx] source-id))) ;;TODO touch at the end?
+
+(defn link-slot! [source-id sink-id slot-idx]
+  (core/swap! global-cells link-slot source-id sink-id slot-idx))
 
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
   (let [id        (.-id cell-id)
@@ -360,6 +388,9 @@
           (assoc-in [:cells cell-id] new-cell)
           (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
                                (get-in cells [:sinks cell-id])))))))
+(s/fdef touch
+  :args (s/cat :cells-graph ::cells-graph :cell ::cell-id)
+  :ret ::cells-graph)
 
 (defn touch! [cell-id]
   (core/swap! global-cells touch cell-id))

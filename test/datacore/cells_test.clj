@@ -7,6 +7,7 @@
             [clojure.spec.test :as stest]))
 
 (def global-cells @#'datacore.cells/global-cells)
+(core/swap! global-cells (fn [_] (make-cells)))
 
 (doseq [s (stest/instrumentable-syms)]
   (stest/instrument s))
@@ -194,7 +195,7 @@
       (unmute! b)
       (is (= 1001 (value c)))))
 
-  (testing "destroying 1"
+  (testing "destroy 1"
     (let [a (cell :a 100)
           b (formula (partial * 10) a)
           c (formula (partial + 1) b)]
@@ -203,7 +204,25 @@
       (is (= :datacore.cells/no-value (value c)))
       (is (= :datacore.cells/unlinked (-> @global-cells :cells (get c) :sources-list first)))))
 
-  (testing "destroying 2"
+  (testing "destroy 2 - destruction is propagated"
+    ;; can't test by looking putting side-effects in e's function,
+    ;; because the function is not called one of the sources has no
+    ;; value, value is set directly to ::no-value. We'd need effect
+    ;; cells for that. Or should we be calling the function anyway?
+    (let [a   (cell :a 100)
+          b   (formula (partial * 10) a)
+          c   (formula (partial + 1) b)
+          d   (formula (partial + 2) c)
+          e   (formula (partial + 20) d)]
+      (destroy! b)
+      (is (= :datacore.cells/no-value (-> @global-cells :cells (get e) :value)))
+      (is (= :datacore.cells/destroyed (value b)))
+      (is (= :datacore.cells/no-value (value c)))
+      (is (= :datacore.cells/unlinked (-> @global-cells :cells (get c) :sources-list first)))
+      (is (= :datacore.cells/no-value (value d)))
+      (is (= :datacore.cells/no-value (value e)))))
+
+  (testing "destroy 3"
     (let [a (cell :a 100)
           b (formula (partial * 100) a)
           c (formula (partial * 10) a)
@@ -215,9 +234,3 @@
       (is (= :datacore.cells/no-value (value d)))
       (is (= b (-> @global-cells :cells (get d) :sources-list first)))
       (is (= :datacore.cells/unlinked (-> @global-cells :cells (get d) :sources-list second))))))
-
-(comment
-  (do
-    (def a (cell :a 100))
-    (def b (formula (partial * 10) a))
-    (def c (formula (partial + 1) b))))
