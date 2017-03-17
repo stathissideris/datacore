@@ -156,7 +156,7 @@
   (if-let [cell (get-in cells [:cells cell-id])]
     (if (contains? cell :value)
       (:value cell)
-      ::no-value)
+      :datacore/no-value)
     ::destroyed))
 
 (defn- no-value?
@@ -164,29 +164,18 @@
   be more gentle to avoid that."
   [x]
   (and (not (instance? clojure.lang.LazySeq x))
-       (= ::no-value x)))
+       (= :datacore/no-value x)))
 
 (defn- calc-formula [cells {:keys [fun sources-list enabled?] :as cell}]
-  (try
-    (-> cell
-        (dissoc :error)
-        (assoc
-         :value
-         (cond (some (partial = ::unlinked) sources-list)
-               ::no-value
-
-               enabled?
-               (let [sources-values (map (partial current-value cells) sources-list)]
-                 (if (some no-value? sources-values)
-                   ::no-value
-                   (apply fun sources-values)))
-
-               :else
-               (if-let [first-value (current-value cells (first sources-list))]
-                 first-value
-                 ::no-value))))
-    (catch Exception e
-      (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e)))))
+  (let [input-value #(if (= ::unlinked %) :datacore/no-value (current-value cells %))]
+    (try
+      (-> cell
+          (dissoc :error)
+          (assoc :value (if enabled?
+                          (apply fun (map input-value sources-list))
+                          (input-value (first sources-list)))))
+      (catch Exception e
+        (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
 (s/fdef calc-formula
   :args (s/cat :cells-graph ::cells-graph :formula ::formula-cell)
   :ret  ::formula-cell)
