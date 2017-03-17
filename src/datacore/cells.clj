@@ -154,20 +154,11 @@
 
 (defn- current-value [cells cell-id]
   (if-let [cell (get-in cells [:cells cell-id])]
-    (if (contains? cell :value)
-      (:value cell)
-      :datacore/no-value)
+    (:value cell)
     ::destroyed))
 
-(defn- no-value?
-  "Straight equality checking causes lazy sequences to be realized,
-  be more gentle to avoid that."
-  [x]
-  (and (not (instance? clojure.lang.LazySeq x))
-       (= :datacore/no-value x)))
-
 (defn- calc-formula [cells {:keys [fun sources-list enabled?] :as cell}]
-  (let [input-value #(if (= ::unlinked %) :datacore/no-value (current-value cells %))]
+  (let [input-value #(when-not (= ::unlinked %) (current-value cells %))]
     (try
       (-> cell
           (dissoc :error)

@@ -201,7 +201,7 @@
           c (formula (partial + 1) b)]
       (destroy! b)
       (is (= :datacore.cells/destroyed (value b)))
-      (is (= :datacore/no-value (value c)))
+      (is (nil? (value c)))
       (is (= :datacore.cells/unlinked (-> @global-cells :cells (get c) :sources-list first)))))
 
   (testing "destroy 2 - destruction is propagated"
@@ -212,7 +212,7 @@
     (let [safe-fn (fn [fun]
                     (fn [& args]
                       (try (apply fun args)
-                           (catch Exception _ :datacore/no-value))))
+                           (catch Exception _ nil))))
           a       (cell :a 100)
           b       (formula (safe-fn +) a)
           c       (formula (safe-fn -) b)
@@ -220,12 +220,12 @@
           e       (formula (safe-fn /) d)]
       (is (= -1/100 (value e)))
       (destroy! b)
-      (is (= :datacore/no-value (-> @global-cells :cells (get e) :value)))
+      (is (nil? (-> @global-cells :cells (get e) :value)))
       (is (= :datacore.cells/destroyed (value b)))
-      (is (= :datacore/no-value (value c)))
+      (is (nil? (value c)))
       (is (= :datacore.cells/unlinked (-> @global-cells :cells (get c) :sources-list first)))
-      (is (= :datacore/no-value (value d)))
-      (is (= :datacore/no-value (value e)))))
+      (is (nil? (value d)))
+      (is (nil? (value e)))))
 
   (testing "destroy 3"
     (let [a (cell :a 100)
@@ -236,6 +236,6 @@
       (is (= 100 (value a)))
       (is (= 10000 (value b)))
       (is (= :datacore.cells/destroyed (value c)))
-      (is (= :datacore/no-value (value d)))
+      (is (nil? (value d)))
       (is (= b (-> @global-cells :cells (get d) :sources-list first)))
       (is (= :datacore.cells/unlinked (-> @global-cells :cells (get d) :sources-list second))))))
