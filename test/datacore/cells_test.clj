@@ -322,7 +322,7 @@
           c (formula (partial + 1) b {:label :c})
           d (formula (partial / 20) c {:label :d})]
       (is (= (->> 100 (* 10) (+ 1) (/ 20)) (value d)))
-      ;;change connectivity from:
+      ;;change graph from:
       ;; a->b->c->d
       ;; to:
       ;; a->c->b->d
@@ -333,7 +333,12 @@
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})]
-      (move-up! b)))
+      (is (thrown? Exception (move-up! b)))))
+
+  (testing "move-up 3"
+    (let [b (formula (partial * 10) :datacore.cells/unlinked {:label :b})
+          c (formula (partial + 1) b {:label :c})]
+      (is (thrown? Exception (move-up! b)))))
 
   (testing "move-down 1"
     (let [a (cell :a 100)
@@ -341,7 +346,7 @@
           c (formula (partial + 1) b {:label :c})
           d (formula (partial / 20) c {:label :d})]
       (is (= (->> 100 (* 10) (+ 1) (/ 20)) (value d)))
-      ;;change connectivity from:
+      ;;change graph from:
       ;; a->b->c->d
       ;; to:
       ;; a->c->b->d
@@ -354,7 +359,7 @@
           c (formula (partial + 1) b {:label :c})]
       (is (= (->> 100 (* 10) (+ 1)) (value c)))
       (move-down! b)
-      (is (= (->> 100 (+ 1) (* 10)) (value c)))))
+      (is (= (->> 100 (+ 1) (* 10)) (value b)))))
 
   (testing "move-down 3"
     (let [a (cell :a 100)

@@ -122,7 +122,7 @@
                          :sink sink}))
         new-cells))))
 (s/fdef link
- :args (s/cat :cells-graph ::cells-graph :source ::cell-id :sink ::cell-id)
+ :args (s/cat :cells ::cells-graph :source ::cell-id :sink ::cell-id)
  :ret  ::cells-graph)
 
 (defn link! [source sink]
@@ -166,7 +166,7 @@
       (catch Exception e
         (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
 (s/fdef calc-formula
-  :args (s/cat :cells-graph ::cells-graph :formula ::formula-cell)
+  :args (s/cat :cells ::cells-graph :formula ::formula-cell)
   :ret  ::formula-cell)
 
 (defn- pull [cells cell-id]
@@ -227,7 +227,7 @@
        (update-in $ [:cells sink] dissoc :value)
        (if-not push? $ (touch $ sink))))))
 (s/fdef unlink
-  :args (s/cat :cells-graph ::cells-graph
+  :args (s/cat :cells ::cells-graph
                :source (s/or :source ::cell-id
                              :unlinked #{::unlinked})
                :sink ::cell-id
@@ -248,7 +248,7 @@
     (reduce (fn [cells sink-id] (touch cells sink-id))
             $ (sinks cells cell-id))))
 (s/fdef destroy
- :args (s/cat :cells-graph ::cells-graph :cell-id ::cell-id)
+ :args (s/cat :cells ::cells-graph :cell-id ::cell-id)
  :ret  ::cells-graph)
 
 (defn destroy! [cell-id]
@@ -262,7 +262,7 @@
          source (nth (:sources-list sink) slot-idx)]
      (unlink cells source sink-id push?))))
 (s/fdef unlink-slot
-  :args (s/cat :cells-graph ::cells-graph :sink ::cell-id :slot nat-int? :push? (s/? boolean?))
+  :args (s/cat :cells ::cells-graph :sink ::cell-id :slot nat-int? :push? (s/? boolean?))
   :ret ::cells-graph)
 
 (defn unlink-slot! [sink-id slot-idx]
@@ -275,7 +275,7 @@
       (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
       (touch sink-id)))
 (s/fdef link-slot
-  :args (s/cat :cells-graph ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
+  :args (s/cat :cells ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
   :ret ::cells-graph)
 
 (defn link-slot! [source-id sink-id slot-idx]
@@ -289,12 +289,19 @@
 
 (defn move-up [cells cell-id]
   (let [cell (lookup cells cell-id)]
+    (when (= ::unlinked (upstream cells cell-id))
+      (throw (ex-info "Cannot move cell up because there is no upstream cell" {:cell cell})))
     (when-not (= 1 (count (sources cells cell-id)))
       (throw (ex-info "Only cells with exactly one source can be moved up" {:cell cell})))
     (when-not (>= 1 (count (sources cells (upstream cells cell-id))))
       (throw (ex-info "Only cells whose upstream cell has at most one source can be moved up"
                       {:cell cell
                        :upstream (lookup cells (upstream cells cell-id))})))
+    (when (input? cells (upstream cells cell-id))
+      (throw (ex-info "Can't move up if its source is an input cell"
+                      {:cell cell
+                       :upstream (lookup cells (upstream cells cell-id))})))
+
     (let [parent      (upstream cells cell-id)
           grandparent (upstream cells parent)
           child       (downstream cells cell-id)]
@@ -353,7 +360,11 @@
                                :code     code}))]
     (if-not (seq sources)
       new-cells
-      (reduce (fn [cells source] (link cells source cell-id)) new-cells sources))))
+      (reduce (fn [cells source]
+                (if (= ::unlinked source)
+                  cells
+                  (link cells source cell-id)))
+              new-cells sources))))
 
 (defn- new-cell-id []
   (CellID. (core/swap! cell-counter inc)))
@@ -364,8 +375,8 @@
    (let [id (new-cell-id)]
      [id (register-cell cells id x {:formula? false :label label})])))
 (s/fdef make-cell
-  :args (s/alt :unlabeled (s/cat :cells-graph ::cells-graph :value any?)
-               :labeled   (s/cat :cells-graph ::cells-graph :label (s/nilable keyword?) :value any?))
+  :args (s/alt :unlabeled (s/cat :cells ::cells-graph :value any?)
+               :labeled   (s/cat :cells ::cells-graph :label (s/nilable keyword?) :value any?))
   :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn cell
@@ -394,7 +405,7 @@
       [id (register-cell cells id fun (merge options {:formula? true
                                                       :sources  sources}))])))
 (s/fdef make-formula
-  :args (s/cat :cells-graph ::cells-graph
+  :args (s/cat :cells ::cells-graph
                :function ifn?
                :sources (s/+ ::cell-id)
                :options (s/? option-map?))
@@ -409,7 +420,10 @@
                                                                     :sources  sources}))
       id)))
 (s/fdef formula
-  :args (s/cat :function ifn? :sources (s/+ ::cell-id) :options (s/? option-map?))
+  :args (s/cat :function ifn?
+               :sources (s/+ (s/or :source ::cell-id
+                                   :unlinked #{::unlinked}))
+               :options (s/? option-map?))
   :ret  ::cell-id)
 
 (defmacro deformula
@@ -441,7 +455,7 @@
           (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
                                (get-in cells [:sinks cell-id])))))))
 (s/fdef touch
-  :args (s/cat :cells-graph ::cells-graph :cell ::cell-id)
+  :args (s/cat :cells ::cells-graph :cell ::cell-id)
   :ret ::cells-graph)
 
 (defn touch! [cell-id]
