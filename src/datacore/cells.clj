@@ -7,17 +7,40 @@
             [clojure.core :as core]
             [clojure.spec :as s]))
 
+;; TODO
+;; mutation for labels and meta map
+;; effect cells
+;; pluggable caching strategy
+;; pluggabe execution strategy
+
 (def ^:private cell-counter (atom -1))
 
 (defrecord CellID [id])
 
 (defn cell-id? [cell-id] (= (class cell-id) datacore.cells.CellID))
 
+(defn make-cells []
+  {:cells {}     ;;map of cell IDs to cell values
+   :sinks {}     ;;map of cell IDs to sets of sinks
+   :sources {}}) ;;map of cell IDs to sets of sources
+
+(def ^:private global-cells
+  (atom (make-cells)))
+
+(defn formula?
+  ([cell-id]
+   (and (cell-id? cell-id) (formula? @global-cells cell-id)))
+  ([cells cell-id] (get-in cells [:cells cell-id :formula?])))
+
+(def input? (complement formula?))
+
 (s/def ::cells-graph (s/keys :req-un [::cells ::sinks ::sources]))
 
-(s/def ::cells (s/map-of cell-id? ::cell))
-(s/def ::sinks (s/map-of cell-id? (s/coll-of cell-id?)))
-(s/def ::sources (s/map-of cell-id? (s/coll-of cell-id?)))
+(s/def ::cell-id cell-id?)
+
+(s/def ::cells (s/map-of ::cell-id ::cell))
+(s/def ::sinks (s/map-of ::cell-id (s/coll-of ::cell-id)))
+(s/def ::sources (s/map-of ::cell-id (s/coll-of ::cell-id)))
 
 (s/def ::cell (s/or :input ::input-cell
                     :formula ::formula-cell))
@@ -31,17 +54,10 @@
 (s/def ::label (s/nilable keyword?))
 (s/def ::code any?)
 (s/def ::fun ifn?)
-(s/def ::cell-sources-list (s/coll-of cell-id?))
-
-(defn make-cells []
-  {:cells {}     ;;map of cell IDs to cell values
-   :sinks {}     ;;map of cell IDs to sets of sinks
-   :sources {}}) ;;map of cell IDs to sets of sources
+(s/def ::cell-sources-list (s/coll-of (s/or :cell ::cell-id
+                                            :unlinked #{::unlinked})))
 (s/fdef make-cells
   :ret ::cells-graph)
-
-(def ^:private global-cells
-  (atom (make-cells)))
 
 (def ^:dynamic *detect-cycles* true)
 
@@ -90,7 +106,6 @@
 (defn- add-link [m from to]
   (update m from (fn [x] (if-not x #{to} (conj x to)))))
 
-(declare formula?)
 (defn link [cells source sink]
   (when-not (formula? cells sink)
     (throw (ex-info "Cannot add link, sink is not a formula"
@@ -107,7 +122,7 @@
                          :sink sink}))
         new-cells))))
 (s/fdef link
- :args (s/cat :cells-graph ::cells-graph :source cell-id? :sink cell-id?)
+ :args (s/cat :cells ::cells-graph :source ::cell-id :sink ::cell-id)
  :ret  ::cells-graph)
 
 (defn link! [source sink]
@@ -129,27 +144,29 @@
             (assoc pm cell cell))
           pm cells))
 
-(defn- current-value [cells cell-id]
-  (get-in cells [:cells cell-id :value]))
-
 (defn- lookup [cells cell-id]
   (if-let [cell (get-in cells [:cells cell-id])]
     cell
     (throw (ex-info "Cell not found in cells" {:cell-id cell-id
                                                :cells   cells}))))
 
+(defn- current-value [cells cell-id]
+  (if-let [cell (get-in cells [:cells cell-id])]
+    (:value cell)
+    ::destroyed))
+
 (defn- calc-formula [cells {:keys [fun sources-list enabled?] :as cell}]
-  (try
-    (let [new-value (if enabled?
-                      (apply fun (map (partial current-value cells) sources-list))
-                      (current-value cells (first sources-list)))]
+  (let [input-value #(when-not (= ::unlinked %) (current-value cells %))]
+    (try
       (-> cell
-          (assoc :value new-value)
-          (dissoc :error)))
-    (catch Exception e
-      (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e)))))
+          (dissoc :error)
+          (assoc :value (if enabled?
+                          (apply fun (map input-value sources-list))
+                          (input-value (first sources-list)))))
+      (catch Exception e
+        (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
 (s/fdef calc-formula
-  :args (s/cat :cells-graph ::cells-graph :formula ::formula-cell)
+  :args (s/cat :cells ::cells-graph :formula ::formula-cell)
   :ret  ::formula-cell)
 
 (defn- pull [cells cell-id]
@@ -170,18 +187,11 @@
        (let [new-cells (pull cells cell-id)]
          [(current-value new-cells cell-id) new-cells])
        [(:value c) cells])
-     ::destroyed)))
+     [::destroyed cells])))
 
 (defn error
   [cells cell-id]
   (get-in cells [:cells cell-id :error]))
-
-(defn formula?
-  ([cell-id]
-   (and (cell-id? cell-id) (formula? @global-cells cell-id)))
-  ([cells cell-id] (get-in cells [:cells cell-id :formula?])))
-
-(def input? (complement formula?))
 
 (defn- update-formula [cells cell-id fun & args]
   (if (formula? cells cell-id)
@@ -196,21 +206,143 @@
 (defn- set-error! [cell-id e]
   (core/swap! global-cells set-error cell-id e))
 
-(comment
- (defn destroy! [cell] ;;TODO
-   (dosync
-    (let [cell-sinks (get @sinks cell)]
-      ;;remove cell from sinks of its sources
-      (doseq [source (get @sources cell)]
-        (alter sources update source disj cell))
-      ;;remove from registry
-      (alter cells dissoc cell)
-      ;;remove cell's sinks
-      (alter sinks dissoc cell)
-      ;;destroy its sinks that have just one source
-      (doseq [sink cell-sinks]
-        (when (= 1 (count (get @sources sink)))
-          (destroy! sink)))))))
+(defn- sources [cells cell-id]
+  (get-in cells [:sources cell-id]))
+
+(defn- sinks [cells cell-id]
+  (get-in cells [:sinks cell-id]))
+
+(declare touch)
+(defn unlink
+  ([cells source sink]
+   (unlink cells source sink true))
+  ([cells source sink push?]
+   (if (= source ::unlinked)
+     cells
+     (as-> cells $
+       (update-in $ [:sinks source] disj sink)
+       (update-in $ [:sources sink] disj source)
+       (update-in $ [:cells sink :sources-list]
+                  (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
+       (update-in $ [:cells sink] dissoc :value)
+       (if-not push? $ (touch $ sink))))))
+(s/fdef unlink
+  :args (s/cat :cells ::cells-graph
+               :source (s/or :source ::cell-id
+                             :unlinked #{::unlinked})
+               :sink ::cell-id
+               :push? (s/? boolean?))
+  :ret  ::cells-graph)
+
+(defn unlink! [source sink]
+  (core/swap! global-cells unlink source sink))
+
+(defn destroy [cells cell-id]
+  (as-> cells $
+    (reduce (fn [cells sink-id] (unlink cells cell-id sink-id false))
+            $ (sinks cells cell-id))
+    (reduce (fn [cells source-id] (unlink cells source-id cell-id false))
+            $ (sources cells cell-id))
+    (update $ :sinks dissoc cell-id)
+    (update $ :cells dissoc cell-id)
+    (reduce (fn [cells sink-id] (touch cells sink-id))
+            $ (sinks cells cell-id))))
+(s/fdef destroy
+ :args (s/cat :cells ::cells-graph :cell-id ::cell-id)
+ :ret  ::cells-graph)
+
+(defn destroy! [cell-id]
+  (core/swap! global-cells destroy cell-id))
+
+(defn unlink-slot
+  ([cells sink-id slot-idx]
+   (unlink-slot cells sink-id slot-idx true))
+  ([cells sink-id slot-idx push?]
+   (let [sink   (lookup cells sink-id)
+         source (nth (:sources-list sink) slot-idx)]
+     (unlink cells source sink-id push?))))
+(s/fdef unlink-slot
+  :args (s/cat :cells ::cells-graph :sink ::cell-id :slot nat-int? :push? (s/? boolean?))
+  :ret ::cells-graph)
+
+(defn unlink-slot! [sink-id slot-idx]
+  (core/swap! global-cells unlink-slot sink-id slot-idx))
+
+(defn link-slot [cells source-id sink-id slot-idx]
+  (-> cells
+      (unlink-slot sink-id slot-idx false)
+      (link source-id sink-id)
+      (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
+      (touch sink-id)))
+(s/fdef link-slot
+  :args (s/cat :cells ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
+  :ret ::cells-graph)
+
+(defn link-slot! [source-id sink-id slot-idx]
+  (core/swap! global-cells link-slot source-id sink-id slot-idx))
+
+(defn- upstream [cells cell-id]
+  (first (sources cells cell-id)))
+
+(defn- downstream [cells cell-id]
+  (first (sinks cells cell-id)))
+
+(defn move-up [cells cell-id]
+  (let [cell (lookup cells cell-id)]
+    (when (= ::unlinked (upstream cells cell-id))
+      (throw (ex-info "Cannot move cell up because there is no upstream cell" {:cell cell})))
+    (when-not (= 1 (count (sources cells cell-id)))
+      (throw (ex-info "Only cells with exactly one source can be moved up" {:cell cell})))
+    (when-not (>= 1 (count (sources cells (upstream cells cell-id))))
+      (throw (ex-info "Only cells whose upstream cell has at most one source can be moved up"
+                      {:cell cell
+                       :upstream (lookup cells (upstream cells cell-id))})))
+    (when (input? cells (upstream cells cell-id))
+      (throw (ex-info "Can't move up if its source is an input cell"
+                      {:cell cell
+                       :upstream (lookup cells (upstream cells cell-id))})))
+
+    (let [parent      (upstream cells cell-id)
+          grandparent (upstream cells parent)
+          child       (downstream cells cell-id)]
+      (cond-> cells
+        ;;pull the wires
+        :always     (unlink parent cell-id false)
+        grandparent (unlink grandparent parent false)
+        child       (unlink cell-id child false)
+        ;;connect the wires
+        grandparent (link-slot grandparent cell-id 0)
+        :always     (link-slot cell-id parent 0)
+        child       (link-slot parent child 0)))))
+
+(defn move-up! [cell-id]
+  (core/swap! global-cells move-up cell-id))
+
+(defn move-down [cells cell-id]
+  (let [cell (lookup cells cell-id)]
+    (when-not (downstream cells cell-id)
+      (throw (ex-info "Cannot move cell down because there is no downstream cell" {:cell cell})))
+    (when-not (= 1 (count (sinks cells cell-id)))
+      (throw (ex-info "Only cells with exactly one sink can be moved down" {:cell cell})))
+    (when-not (>= 1 (count (sinks cells (downstream cells cell-id))))
+      (throw (ex-info "Only cells whose downstream cell has at most one sink can be moved down"
+                      {:cell cell
+                       :downstream (lookup cells (downstream cells cell-id))})))
+    (let [child      (downstream cells cell-id)
+          grandchild (downstream cells child)
+          parent     (upstream cells cell-id)]
+      (cond-> cells
+        ;;pull the wires
+        :always    (unlink cell-id child)
+        grandchild (unlink child grandchild)
+        parent     (unlink parent cell-id)
+        ;;connect the wires
+        parent     (link-slot parent child 0)
+        :always    (link-slot child cell-id 0)
+        grandchild (link-slot cell-id grandchild 0)))))
+
+(defn move-down! [cell-id]
+  (core/swap! global-cells move-down cell-id))
 
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
   (let [id        (.-id cell-id)
@@ -230,7 +362,11 @@
                                :code     code}))]
     (if-not (seq sources)
       new-cells
-      (reduce (fn [cells source] (link cells source cell-id)) new-cells sources))))
+      (reduce (fn [cells source]
+                (if (= ::unlinked source)
+                  cells
+                  (link cells source cell-id)))
+              new-cells sources))))
 
 (defn- new-cell-id []
   (CellID. (core/swap! cell-counter inc)))
@@ -241,9 +377,9 @@
    (let [id (new-cell-id)]
      [id (register-cell cells id x {:formula? false :label label})])))
 (s/fdef make-cell
-  :args (s/alt :unlabeled (s/cat :cells-graph ::cells-graph :value any?)
-               :labeled   (s/cat :cells-graph ::cells-graph :label (s/nilable keyword?) :value any?))
-  :ret  (s/cat :id cell-id? :new-cells ::cells-graph))
+  :args (s/alt :unlabeled (s/cat :cells ::cells-graph :value any?)
+               :labeled   (s/cat :cells ::cells-graph :label (s/nilable keyword?) :value any?))
+  :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn cell
   ([x]
@@ -255,7 +391,7 @@
 (s/fdef cell
   :args (s/alt :unlabeled (s/cat :value any?)
                :labeled   (s/cat :label (s/nilable keyword?) :value any?))
-  :ret  cell-id?)
+  :ret  ::cell-id)
 
 (defmacro defcell [name x]
   `(def ~name (cell ~(keyword name) ~x)))
@@ -271,11 +407,11 @@
       [id (register-cell cells id fun (merge options {:formula? true
                                                       :sources  sources}))])))
 (s/fdef make-formula
-  :args (s/cat :cells-graph ::cells-graph
+  :args (s/cat :cells ::cells-graph
                :function ifn?
-               :sources (s/+ cell-id?)
+               :sources (s/+ ::cell-id)
                :options (s/? option-map?))
-  :ret  (s/cat :id cell-id? :new-cells ::cells-graph))
+  :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn formula
   [fun & sources]
@@ -286,8 +422,11 @@
                                                                     :sources  sources}))
       id)))
 (s/fdef formula
-  :args (s/cat :function ifn? :sources (s/+ cell-id?) :options (s/? option-map?))
-  :ret  cell-id?)
+  :args (s/cat :function ifn?
+               :sources (s/+ (s/or :source ::cell-id
+                                   :unlinked #{::unlinked}))
+               :options (s/? option-map?))
+  :ret  ::cell-id)
 
 (defmacro deformula
   [name fun & cells]
@@ -317,6 +456,9 @@
           (assoc-in [:cells cell-id] new-cell)
           (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
                                (get-in cells [:sinks cell-id])))))))
+(s/fdef touch
+  :args (s/cat :cells ::cells-graph :cell ::cell-id)
+  :ret ::cells-graph)
 
 (defn touch! [cell-id]
   (core/swap! global-cells touch cell-id))
@@ -355,25 +497,3 @@
 
 (defn reset! [cell value]
   (swap! cell (fn [& _] value)))
-
-(comment
-  (defcell foo 100)
-  (defcell bar 2)
-  (defcell= baz
-    (prn "calc baz!" (* 2 @foo @bar))
-    (* 2 @foo @bar))
-  (defcell= boo
-    (prn "calc boo!" (* 2 @foo))
-    (* 2 @foo))
-  (defcell= boz
-    (/ 10 @bar))
-
-  ;;or
-  (def baz (formula #(do
-                       (prn "calc baz!" (* 2 @foo @bar))
-                       (* 2 @foo @bar))))
-  @baz
-
-  (swap! foo inc)
-  (swap! bar inc)
-  )

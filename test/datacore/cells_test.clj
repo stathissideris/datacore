@@ -6,6 +6,9 @@
             [clojure.spec :as s]
             [clojure.spec.test :as stest]))
 
+(def global-cells @#'datacore.cells/global-cells)
+(core/swap! global-cells (fn [_] (make-cells)))
+
 (doseq [s (stest/instrumentable-syms)]
   (stest/instrument s))
 
@@ -163,14 +166,26 @@
       (swap! a inc)
       (is (= [:b :c :d] @log))))
 
-  (testing "muting 1"
+  (testing "lazy seqs"
+    (let [a (cell :a (range 10))
+          b (formula (partial map inc) a {:label :b})
+          c (formula (partial map inc) b {:label :c})]
+      (value c)
+      (is (not (realized? (value b))))
+      (is (not (realized? (value c))))
+      (doall (value c))
+      (is (realized? (value b)))
+      (is (realized? (value c))))))
+
+(deftest test-altering-graph
+  (testing "mute 1"
     (let [cells     (make-cells)
           [a cells] (make-cell cells 100)
           [b cells] (make-formula cells (fn [x] (+ x 3)) a)
           cells     (mute cells b)]
       (is (false? (some-> cells :cells (get b) :enabled?)))))
 
-  (testing "muting 2"
+  (testing "mute 2"
     (let [a (cell :a 100)
           b (formula (partial * 10) a)
           c (formula (partial + 1) b)]
@@ -180,29 +195,174 @@
       (unmute! b)
       (is (= 1001 (value c)))))
 
-  (comment
-   (testing "destroying"
-     (let [a (cell :a 100)
-           b (formula (partial * 10) a)
-           c (formula (partial + 1) b)]
-       (destroy! b)
-       (is (= :datacore.cells/destroyed (value b)))
-       (is (= :datacore.cells/destroyed (value c))))))
+  (testing "destroy 1"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a)
+          c (formula (partial + 1) b)]
+      (destroy! b)
+      (is (= :datacore.cells/destroyed (value b)))
+      (is (nil? (value c)))
+      (is (= :datacore.cells/unlinked (-> @global-cells :cells (get c) :sources-list first)))))
 
-  (testing "lazy seqs"
-    (let [a (cell (range 10))
-          b (formula (partial map inc) a)
-          c (formula (partial map inc) b)]
-      (value c)
-      (is (not (realized? (value b))))
-      (is (not (realized? (value c))))
-      (doall (value c))
-      (is (realized? (value b)))
-      (is (realized? (value c))))))
+  (testing "destroy 2 - destruction is propagated"
+    ;; can't test by looking putting side-effects in e's function,
+    ;; because the function is not called one of the sources has no
+    ;; value, value is set directly to ::no-value. We'd need effect
+    ;; cells for that. Or should we be calling the function anyway?
+    (let [safe-fn (fn [fun]
+                    (fn [& args]
+                      (try (apply fun args)
+                           (catch Exception _ nil))))
+          a       (cell :a 100)
+          b       (formula (safe-fn +) a)
+          c       (formula (safe-fn -) b)
+          d       (formula (safe-fn *) c)
+          e       (formula (safe-fn /) d)]
+      (is (= -1/100 (value e)))
+      (destroy! b)
+      (is (nil? (-> @global-cells :cells (get e) :value)))
+      (is (= :datacore.cells/destroyed (value b)))
+      (is (nil? (value c)))
+      (is (= :datacore.cells/unlinked (-> @global-cells :cells (get c) :sources-list first)))
+      (is (nil? (value d)))
+      (is (nil? (value e)))))
 
+  (testing "destroy 3"
+    (let [a (cell :a 100)
+          b (formula (partial * 100) a)
+          c (formula (partial * 10) a)
+          d (formula (partial + 1) b c)]
+      (destroy! c)
+      (is (= 100 (value a)))
+      (is (= 10000 (value b)))
+      (is (= :datacore.cells/destroyed (value c)))
+      (is (nil? (value d)))
+      (is (= b (-> @global-cells :cells (get d) :sources-list first)))
+      (is (= :datacore.cells/unlinked (-> @global-cells :cells (get d) :sources-list second)))))
 
-(comment
-  (do
-    (def a (cell :a 100))
-    (def b (formula (partial * 10) a))
-    (def c (formula (partial + 1) b))))
+  (testing "recover well from destruction"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
+      (destroy! b)
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))))
+
+  (testing "recover well from unlinking cells"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
+      (unlink! b sum)
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))))
+
+  (testing "recover well from unlinking slot"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
+      (unlink-slot! sum 1)
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))))
+
+  (testing "unlink twice"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
+      (unlink-slot! sum 1)
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))
+      (unlink-slot! sum 1)
+      (is (= 400 (value res)))))
+
+  (testing "relinking"
+    (let [a     (cell :a 100)
+          b     (cell :b 200)
+          alt-b (cell :alt-b 1000)
+          c     (cell :c 300)
+          sum   (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res   (formula identity sum)]
+      (is (= 600 (value res)))
+      (link-slot! alt-b sum 1)
+      (is (= 1400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1400 (value res)))))
+
+  (testing "relinking and unlinking and linking something else"
+    (let [a     (cell :a 100)
+          b     (cell :b 200)
+          alt-b (cell :alt-b 1000)
+          c     (cell :c 300)
+          sum   (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res   (formula identity sum)]
+      (is (= 600 (value res)))
+      (link-slot! alt-b sum 1)
+      (is (= 1400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1400 (value res)))
+      (unlink-slot! sum 0)
+      (is (= 1300 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1300 (value res)))
+      (link-slot! b sum 0)
+      (is (= 1500 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1500 (value res)))))
+
+  (testing "move-up 1"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a {:label :b})
+          c (formula (partial + 1) b {:label :c})
+          d (formula (partial / 20) c {:label :d})]
+      (is (= (->> 100 (* 10) (+ 1) (/ 20)) (value d)))
+      ;;change graph from:
+      ;; a->b->c->d
+      ;; to:
+      ;; a->c->b->d
+      (move-up! c)
+      (is (= (->> 100 (+ 1) (* 10) (/ 20)) (value d)))))
+
+  (testing "move-up 2"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a {:label :b})
+          c (formula (partial + 1) b {:label :c})]
+      (is (thrown? Exception (move-up! b)))))
+
+  (testing "move-up 3"
+    (let [b (formula (partial * 10) :datacore.cells/unlinked {:label :b})
+          c (formula (partial + 1) b {:label :c})]
+      (is (thrown? Exception (move-up! b)))))
+
+  (testing "move-down 1"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a {:label :b})
+          c (formula (partial + 1) b {:label :c})
+          d (formula (partial / 20) c {:label :d})]
+      (is (= (->> 100 (* 10) (+ 1) (/ 20)) (value d)))
+      ;;change graph from:
+      ;; a->b->c->d
+      ;; to:
+      ;; a->c->b->d
+      (move-down! b)
+      (is (= (->> 100 (+ 1) (* 10) (/ 20)) (value d)))))
+
+  (testing "move-down 2"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a {:label :b})
+          c (formula (partial + 1) b {:label :c})]
+      (is (= (->> 100 (* 10) (+ 1)) (value c)))
+      (move-down! b)
+      (is (= (->> 100 (+ 1) (* 10)) (value b)))))
+
+  (testing "move-down 3"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a {:label :b})
+          c (formula (partial + 1) b {:label :c})]
+      (is (thrown? Exception (move-down! c))))))
