@@ -320,6 +320,8 @@
 
 (defn move-down [cells cell-id]
   (let [cell (lookup cells cell-id)]
+    (when-not (downstream cells cell-id)
+      (throw (ex-info "Cannot move cell down because there is no downstream cell" {:cell cell})))
     (when-not (= 1 (count (sinks cells cell-id)))
       (throw (ex-info "Only cells with exactly one sink can be moved down" {:cell cell})))
     (when-not (>= 1 (count (sinks cells (downstream cells cell-id))))
