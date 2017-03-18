@@ -244,18 +244,74 @@
     (let [a   (cell :a 100)
           b   (cell :b 200)
           c   (cell :c 300)
-          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)]
-      (is (= 600 (value sum)))
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
       (destroy! b)
-      (is (= 400 (-> @global-cells :cells (get sum) :value))) ;; make sure a push happens
-      (is (= 400 (value sum)))))
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))))
 
-  (testing "recover well from unlinking"
+  (testing "recover well from unlinking cells"
     (let [a   (cell :a 100)
           b   (cell :b 200)
           c   (cell :c 300)
-          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)]
-      (is (= 600 (value sum)))
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
       (unlink! b sum)
-      (is (= 400 (-> @global-cells :cells (get sum) :value))) ;; make sure a push happens
-      (is (= 400 (value sum))))))
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))))
+
+  (testing "recover well from unlinking slot"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
+      (unlink-slot! sum 1)
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))))
+
+  (testing "unlink twice"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res (formula identity sum)]
+      (is (= 600 (value res)))
+      (unlink-slot! sum 1)
+      (is (= 400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 400 (value res)))
+      (unlink-slot! sum 1)
+      (is (= 400 (value res)))))
+
+  (testing "relinking"
+    (let [a     (cell :a 100)
+          b     (cell :b 200)
+          alt-b (cell :alt-b 1000)
+          c     (cell :c 300)
+          sum   (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res   (formula identity sum)]
+      (is (= 600 (value res)))
+      (link-slot! alt-b sum 1)
+      (is (= 1400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1400 (value res)))))
+
+  (testing "relinking and unlinking and linking something else"
+    (let [a     (cell :a 100)
+          b     (cell :b 200)
+          alt-b (cell :alt-b 1000)
+          c     (cell :c 300)
+          sum   (formula (fn [& args] (apply + (remove nil? args))) a b c)
+          res   (formula identity sum)]
+      (is (= 600 (value res)))
+      (link-slot! alt-b sum 1)
+      (is (= 1400 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1400 (value res)))
+      (unlink-slot! sum 0)
+      (is (= 1300 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1300 (value res)))
+      (link-slot! b sum 0)
+      (is (= 1500 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
+      (is (= 1500 (value res))))))

@@ -219,16 +219,22 @@
   ([cells source sink]
    (unlink cells source sink true))
   ([cells source sink push?]
-   (as-> cells $
-     (update-in $ [:sinks source] disj sink)
-     (update-in $ [:sources sink] disj source)
-     (update-in $ [:cells sink :sources-list]
-                (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
-     (update-in $ [:cells sink] dissoc :value)
-     (if-not push? $ (touch $ sink)))))
+   (if (= source ::unlinked)
+     cells
+     (as-> cells $
+       (update-in $ [:sinks source] disj sink)
+       (update-in $ [:sources sink] disj source)
+       (update-in $ [:cells sink :sources-list]
+                  (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
+       (update-in $ [:cells sink] dissoc :value)
+       (if-not push? $ (touch $ sink))))))
 (s/fdef unlink
- :args (s/cat :cells-graph ::cells-graph :source ::cell-id :sink ::cell-id :push? (s/? boolean?))
- :ret  ::cells-graph)
+  :args (s/cat :cells-graph ::cells-graph
+               :source (s/or :source ::cell-id
+                             :unlinked #{::unlinked})
+               :sink ::cell-id
+               :push? (s/? boolean?))
+  :ret  ::cells-graph)
 
 (defn unlink! [source sink]
   (core/swap! global-cells unlink source sink))
@@ -250,19 +256,29 @@
 (defn destroy! [cell-id]
   (core/swap! global-cells destroy cell-id))
 
-(defn unlink-slot [cells sink-id slot-idx]
-  (let [sink   (lookup cells sink-id)
-        source (nth (:sources-list sink) slot-idx)]
-    (unlink cells source sink))) ;;TODO touch at the end?
+(defn unlink-slot
+  ([cells sink-id slot-idx]
+   (unlink-slot cells sink-id slot-idx true))
+  ([cells sink-id slot-idx push?]
+   (let [sink   (lookup cells sink-id)
+         source (nth (:sources-list sink) slot-idx)]
+     (unlink cells source sink-id push?))))
+(s/fdef unlink-slot
+  :args (s/cat :cells-graph ::cells-graph :sink ::cell-id :slot nat-int? :push? (s/? boolean?))
+  :ret ::cells-graph)
 
 (defn unlink-slot! [sink-id slot-idx]
-  (core/swap! global-cells sink-id slot-idx))
+  (core/swap! global-cells unlink-slot sink-id slot-idx))
 
 (defn link-slot [cells source-id sink-id slot-idx]
   (-> cells
-      ;;TODO unlink existing link if any
+      (unlink-slot sink-id slot-idx false)
       (link source-id sink-id)
-      (assoc-in [:cells sink-id :sources-list slot-idx] source-id))) ;;TODO touch at the end?
+      (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
+      (touch sink-id)))
+(s/fdef link-slot
+  :args (s/cat :cells-graph ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
+  :ret ::cells-graph)
 
 (defn link-slot! [source-id sink-id slot-idx]
   (core/swap! global-cells link-slot source-id sink-id slot-idx))
