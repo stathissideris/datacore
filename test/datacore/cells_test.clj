@@ -238,4 +238,24 @@
       (is (= :datacore.cells/destroyed (value c)))
       (is (nil? (value d)))
       (is (= b (-> @global-cells :cells (get d) :sources-list first)))
-      (is (= :datacore.cells/unlinked (-> @global-cells :cells (get d) :sources-list second))))))
+      (is (= :datacore.cells/unlinked (-> @global-cells :cells (get d) :sources-list second)))))
+
+  (testing "recover well from destruction"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)]
+      (is (= 600 (value sum)))
+      (destroy! b)
+      (is (= 400 (-> @global-cells :cells (get sum) :value))) ;; make sure a push happens
+      (is (= 400 (value sum)))))
+
+  (testing "recover well from unlinking"
+    (let [a   (cell :a 100)
+          b   (cell :b 200)
+          c   (cell :c 300)
+          sum (formula (fn [& args] (apply + (remove nil? args))) a b c)]
+      (is (= 600 (value sum)))
+      (unlink! b sum)
+      (is (= 400 (-> @global-cells :cells (get sum) :value))) ;; make sure a push happens
+      (is (= 400 (value sum))))))

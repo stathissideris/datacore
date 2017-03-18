@@ -214,26 +214,30 @@
 (defn- sinks [cells cell-id]
   (get-in cells [:sinks cell-id]))
 
-(defn unlink [cells source sink]
-  (-> cells
-      (update-in [:sinks source] disj sink)
-      (update-in [:sources sink] disj source)
-      (update-in [:cells sink :sources-list]
-                 (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
-      (update-in [:cells sink] dissoc :value)))
+(declare touch)
+(defn unlink
+  ([cells source sink]
+   (unlink cells source sink true))
+  ([cells source sink push?]
+   (as-> cells $
+     (update-in $ [:sinks source] disj sink)
+     (update-in $ [:sources sink] disj source)
+     (update-in $ [:cells sink :sources-list]
+                (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
+     (update-in $ [:cells sink] dissoc :value)
+     (if-not push? $ (touch $ sink)))))
 (s/fdef unlink
- :args (s/cat :cells-graph ::cells-graph :source ::cell-id :sink ::cell-id)
+ :args (s/cat :cells-graph ::cells-graph :source ::cell-id :sink ::cell-id :push? (s/? boolean?))
  :ret  ::cells-graph)
 
 (defn unlink! [source sink]
   (core/swap! global-cells unlink source sink))
 
-(declare touch)
 (defn destroy [cells cell-id]
   (as-> cells $
-    (reduce (fn [cells sink-id] (unlink cells cell-id sink-id))
+    (reduce (fn [cells sink-id] (unlink cells cell-id sink-id false))
             $ (sinks cells cell-id))
-    (reduce (fn [cells source-id] (unlink cells source-id cell-id))
+    (reduce (fn [cells source-id] (unlink cells source-id cell-id false))
             $ (sources cells cell-id))
     (update $ :sinks dissoc cell-id)
     (update $ :cells dissoc cell-id)
