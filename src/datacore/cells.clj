@@ -8,10 +8,8 @@
             [clojure.spec :as s]))
 
 ;; TODO
+;; mutation for labels and meta map
 ;; effect cells
-;; move up
-;; move down
-;; tests for unlinking
 ;; pluggable caching strategy
 ;; pluggabe execution strategy
 
@@ -282,6 +280,60 @@
 
 (defn link-slot! [source-id sink-id slot-idx]
   (core/swap! global-cells link-slot source-id sink-id slot-idx))
+
+(defn- upstream [cells cell-id]
+  (first (sources cells cell-id)))
+
+(defn- downstream [cells cell-id]
+  (first (sinks cells cell-id)))
+
+(defn move-up [cells cell-id]
+  (let [cell (lookup cells cell-id)]
+    (when-not (= 1 (count (sources cells cell-id)))
+      (throw (ex-info "Only cells with exactly one source can be moved up" {:cell cell})))
+    (when-not (>= 1 (count (sources cells (upstream cells cell-id))))
+      (throw (ex-info "Only cells whose upstream cell has at most one source can be moved up"
+                      {:cell cell
+                       :upstream (lookup cells (upstream cells cell-id))})))
+    (let [parent      (upstream cells cell-id)
+          grandparent (upstream cells parent)
+          child       (downstream cells cell-id)]
+      (cond-> cells
+        ;;pull the wires
+        :always     (unlink parent cell-id false)
+        grandparent (unlink grandparent parent false)
+        child       (unlink cell-id child false)
+        ;;connect the wires
+        grandparent (link-slot grandparent cell-id 0)
+        :always     (link-slot cell-id parent 0)
+        child       (link-slot parent child 0)))))
+
+(defn move-up! [cell-id]
+  (core/swap! global-cells move-up cell-id))
+
+(defn move-down [cells cell-id]
+  (let [cell (lookup cells cell-id)]
+    (when-not (= 1 (count (sinks cells cell-id)))
+      (throw (ex-info "Only cells with exactly one sink can be moved down" {:cell cell})))
+    (when-not (>= 1 (count (sinks cells (downstream cells cell-id))))
+      (throw (ex-info "Only cells whose downstream cell has at most one sink can be moved down"
+                      {:cell cell
+                       :downstream (lookup cells (downstream cells cell-id))})))
+    (let [child      (downstream cells cell-id)
+          grandchild (downstream cells child)
+          parent     (upstream cells cell-id)]
+      (cond-> cells
+        ;;pull the wires
+        :always    (unlink cell-id child)
+        grandchild (unlink child grandchild)
+        parent     (unlink parent cell-id)
+        ;;connect the wires
+        parent     (link-slot parent child 0)
+        :always    (link-slot child cell-id 0)
+        grandchild (link-slot cell-id grandchild 0)))))
+
+(defn move-down! [cell-id]
+  (core/swap! global-cells move-down cell-id))
 
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
   (let [id        (.-id cell-id)
