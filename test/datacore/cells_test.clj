@@ -374,4 +374,31 @@
       (is (= 101 (value c)))
       (linear-insert! a b c)
       (is (= (->> 100 (* 10) (+ 1)) (-> @global-cells :cells (get c) :value)))
-      (is (= (->> 100 (* 10) (+ 1)) (value c))))))
+      (is (= (->> 100 (* 10) (+ 1)) (value c)))))
+
+  (testing "swap-function 1"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) a)]
+      (is (= 1000 (value b)))
+      (swap-function! b (fn [a b c] (+ a b c)))
+      (is (= [a :datacore.cells/unlinked :datacore.cells/unlinked]
+             (-> @global-cells :cells (get b) :sources-list)))
+      (let [in2 (cell 200)
+            in3 (cell 300)]
+        (link-slot! in2 b 1)
+        (link-slot! in3 b 2)
+        (is (= (+ 100 200 300) (value b))))))
+
+  (testing "swap-function 2"
+    (let [a   (cell :a 10)
+          b   (cell :b 20)
+          c   (cell :c 30)
+          d   (cell :d 40)
+          res (formula (partial +) a b c d)]
+      (is (= (+ 10 20 30 40) (value res)))
+      (swap-function! res (fn [a b] (* a b)))
+      (is (= [a b] (-> @global-cells :cells (get res) :sources-list)))
+      (is (= (* 10 20) (-> @global-cells :cells (get res) :value)))
+      (is (= (* 10 20) (value res)))
+      (is (not (linked? c res)))
+      (is (not (linked? d res))))))

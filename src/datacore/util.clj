@@ -26,6 +26,13 @@
         :else
         (last vals)))
 
+(defn take-exactly
+  "Will always return n number of items, and if coll is shorter will
+  compensate with repeated missing items."
+  [n coll missing]
+  (concat (take n coll)
+          (repeat (- n (count coll)) missing)))
+
 (comment
   ;;incomplete diff impl
 

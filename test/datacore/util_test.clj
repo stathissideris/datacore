@@ -2,6 +2,11 @@
   (:require [datacore.util :refer :all]
             [clojure.test :refer :all]))
 
+(deftest take-exactly-test
+  (is (= [1 2] (take-exactly 2 [1 2 3] :x)))
+  (is (= [1 2 3] (take-exactly 3 [1 2 3] :x)))
+  (is (= [1 2 3 :x :x :x] (take-exactly 6 [1 2 3] :x))))
+
 (deftest diff-test
   (is (= [[:delete 0]
           [:same 1]

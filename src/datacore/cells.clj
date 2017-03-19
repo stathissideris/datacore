@@ -5,7 +5,9 @@
             [clojure.pprint :refer [print-table pprint] :as pp]
             [clojure.walk :as walk]
             [clojure.core :as core]
-            [clojure.spec :as s]))
+            [clojure.spec :as s]
+            [datacore.util :as util]
+            [datacore.reflection :as reflection]))
 
 ;; TODO
 ;; mutation for labels and meta map
@@ -499,6 +501,36 @@
 (defn unmute! [cell-id]
   (core/swap! global-cells unmute cell-id))
 
+(defn- new-sources [old-sources fun]
+  (let [arities (set (reflection/arities fun))]
+    (if (contains? arities :rest)
+      old-sources
+      (vec (util/take-exactly (apply max (disj arities :rest))
+                              old-sources
+                              ::unlinked)))))
+
+(defn swap-function [cells cell-id fun]
+  (when-not (formula? cells cell-id)
+    (throw (ex-info "Cannot swap-function, cell is not a formula" {:cell cell-id})))
+  (let [current-fun     (get-in cells [:cells cell-id :fun])
+        sources         (get-in cells [:cells cell-id :sources-list])
+        new-sources     (new-sources sources fun)
+        removed-sources (set/difference (set sources) (set new-sources))]
+    (if (= fun current-fun)
+      cells
+      (as-> cells $
+          (assoc-in $ [:cells cell-id :fun] fun)
+          (assoc-in $ [:cells cell-id :sources-list] new-sources)
+          (reduce (fn [cells removed] (unlink cells removed cell-id false))
+                  $ removed-sources)
+          (touch $ cell-id)))))
+(s/fdef swap-function
+  :args (s/cat :cells ::cells-graph :cell ::cell-id :fun ifn?)
+  :ret ::cells-graph)
+
+(defn swap-function! [cell-id fun]
+  (core/swap! global-cells swap-function cell-id fun))
+
 (defn swap [cells cell-id fun args]
   (if (formula? cells cell-id)
     (throw (ex-info "Cannot swap, cell is a formula" {:cell cell-id}))
@@ -517,3 +549,9 @@
 
 (defn reset! [cell value]
   (swap! cell (fn [& _] value)))
+
+(defn linked?
+  ([source sink]
+   (linked? @global-cells source sink))
+  ([cells source sink]
+   (some? (get-in cells [:sinks source sink]))))
