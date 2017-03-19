@@ -316,7 +316,7 @@
       (is (= 1500 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
       (is (= 1500 (value res)))))
 
-  (testing "move-up 1"
+  (testing "linear-move-up 1"
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})
@@ -326,21 +326,21 @@
       ;; a->b->c->d
       ;; to:
       ;; a->c->b->d
-      (move-up! c)
+      (linear-move-up! c)
       (is (= (->> 100 (+ 1) (* 10) (/ 20)) (value d)))))
 
-  (testing "move-up 2"
+  (testing "linear-move-up 2"
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})]
-      (is (thrown? Exception (move-up! b)))))
+      (is (thrown? Exception (linear-move-up! b)))))
 
-  (testing "move-up 3"
+  (testing "linear-move-up 3"
     (let [b (formula (partial * 10) :datacore.cells/unlinked {:label :b})
           c (formula (partial + 1) b {:label :c})]
-      (is (thrown? Exception (move-up! b)))))
+      (is (thrown? Exception (linear-move-up! b)))))
 
-  (testing "move-down 1"
+  (testing "linear-move-down 1"
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})
@@ -350,19 +350,19 @@
       ;; a->b->c->d
       ;; to:
       ;; a->c->b->d
-      (move-down! b)
+      (linear-move-down! b)
       (is (= (->> 100 (+ 1) (* 10) (/ 20)) (value d)))))
 
-  (testing "move-down 2"
+  (testing "linear-move-down 2"
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})]
       (is (= (->> 100 (* 10) (+ 1)) (value c)))
-      (move-down! b)
+      (linear-move-down! b)
       (is (= (->> 100 (+ 1) (* 10)) (value b)))))
 
-  (testing "move-down 3"
+  (testing "linear-move-down 3"
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})]
-      (is (thrown? Exception (move-down! c))))))
+      (is (thrown? Exception (linear-move-down! c))))))

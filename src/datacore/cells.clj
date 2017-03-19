@@ -287,7 +287,7 @@
 (defn- downstream [cells cell-id]
   (first (sinks cells cell-id)))
 
-(defn move-up [cells cell-id]
+(defn linear-move-up [cells cell-id]
   (let [cell (lookup cells cell-id)]
     (when (= ::unlinked (upstream cells cell-id))
       (throw (ex-info "Cannot move cell up because there is no upstream cell" {:cell cell})))
@@ -315,10 +315,10 @@
         :always     (link-slot cell-id parent 0)
         child       (link-slot parent child 0)))))
 
-(defn move-up! [cell-id]
-  (core/swap! global-cells move-up cell-id))
+(defn linear-move-up! [cell-id]
+  (core/swap! global-cells linear-move-up cell-id))
 
-(defn move-down [cells cell-id]
+(defn linear-move-down [cells cell-id]
   (let [cell (lookup cells cell-id)]
     (when-not (downstream cells cell-id)
       (throw (ex-info "Cannot move cell down because there is no downstream cell" {:cell cell})))
@@ -341,8 +341,8 @@
         :always    (link-slot child cell-id 0)
         grandchild (link-slot cell-id grandchild 0)))))
 
-(defn move-down! [cell-id]
-  (core/swap! global-cells move-down cell-id))
+(defn linear-move-down! [cell-id]
+  (core/swap! global-cells linear-move-down cell-id))
 
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
   (let [id        (.-id cell-id)
