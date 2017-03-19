@@ -365,4 +365,13 @@
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
           c (formula (partial + 1) b {:label :c})]
-      (is (thrown? Exception (linear-move-down! c))))))
+      (is (thrown? Exception (linear-move-down! c)))))
+
+  (testing "linear-insert"
+    (let [a (cell :a 100)
+          b (formula (partial * 10) :datacore.cells/unlinked {:label :b})
+          c (formula (partial + 1) a {:label :c})]
+      (is (= 101 (value c)))
+      (linear-insert! a b c)
+      (is (= (->> 100 (* 10) (+ 1)) (-> @global-cells :cells (get c) :value)))
+      (is (= (->> 100 (* 10) (+ 1)) (value c))))))

@@ -344,6 +344,26 @@
 (defn linear-move-down! [cell-id]
   (core/swap! global-cells linear-move-down cell-id))
 
+(defn linear-insert [cells parent cell child]
+  (when-not (= 1 (count (sinks cells parent)))
+    (throw (ex-info "Linear insert parent has to have one sink only"
+                    {:parent (lookup cells parent)
+                     :cell   (lookup cells cell)
+                     :child  (lookup cells child)})))
+  (when-not (= 1 (count (sources cells child)))
+    (throw (ex-info "Linear insert child has to have one source only"
+                    {:parent (lookup cells parent)
+                     :cell   (lookup cells cell)
+                     :child  (lookup cells child)})))
+
+  (-> cells
+      (unlink parent child false)
+      (link-slot parent cell 0)
+      (link-slot cell child 0)))
+
+(defn linear-insert! [parent cell child]
+  (core/swap! global-cells linear-insert parent cell child))
+
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
   (let [id        (.-id cell-id)
         new-cells (assoc-in cells [:cells cell-id]
