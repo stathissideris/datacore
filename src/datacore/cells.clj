@@ -60,8 +60,9 @@
 (s/def ::sources (s/map-of ::cell-id (s/coll-of ::cell-id)))
 (s/def ::watches (s/map-of ::cell-id (s/map-of any? ifn?)))
 
-(s/def ::cell (s/or :input ::input-cell
-                    :formula ::formula-cell))
+(s/def ::cell (s/and (s/or :input ::input-cell
+                           :formula ::formula-cell)
+                     (s/conformer second)))
 (s/def ::input-cell (s/keys :req-un [::id ::value ::formula? ::label ::code]))
 (s/def ::formula-cell (s/keys :req-un [::id ::fun ::sources-list ::formula? ::enabled? ::label ::code]
                               :opt-un [::value]))
@@ -143,7 +144,8 @@
                          :sink sink}))
         new-cells))))
 (s/fdef link
- :args (s/cat :cells ::cells-graph :source ::cell-id :sink ::cell-id)
+ :args (s/& (s/cat :cells ::cells-graph :source ::cell-id :sink ::cell-id)
+            (fn [{:keys [cells sink]}] (formula? cells sink)))
  :ret  ::cells-graph)
 
 (defn link! [source sink]
@@ -187,7 +189,8 @@
       (catch Exception e
         (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
 (s/fdef calc-formula
-  :args (s/cat :cells ::cells-graph :formula ::formula-cell)
+  :args (s/& (s/cat :cells ::cells-graph :formula ::formula-cell)
+             (fn [{:keys [formula]}] (s/valid? ::formula-cell formula)))
   :ret  ::formula-cell)
 
 (defn- pull [cells cell-id]
@@ -283,7 +286,8 @@
          source (nth (:sources-list sink) slot-idx)]
      (unlink cells source sink-id push?))))
 (s/fdef unlink-slot
-  :args (s/cat :cells ::cells-graph :sink ::cell-id :slot nat-int? :push? (s/? boolean?))
+  :args (s/& (s/cat :cells ::cells-graph :sink ::cell-id :slot nat-int? :push? (s/? boolean?))
+             (fn [{:keys [cells sink]}] (formula? cells sink)))
   :ret ::cells-graph)
 
 (defn unlink-slot! [sink-id slot-idx]
@@ -296,7 +300,8 @@
       (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
       (touch sink-id)))
 (s/fdef link-slot
-  :args (s/cat :cells ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
+  :args (s/& (s/cat :cells ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
+             (fn [{:keys [cells sink]}] (formula? cells sink)))
   :ret ::cells-graph)
 
 (defn link-slot! [source-id sink-id slot-idx]
@@ -413,6 +418,7 @@
   (CellID. (core/swap! cell-counter inc)))
 
 (defn make-cell
+  "Add new cell to cells. Pure function."
   ([cells x] (make-cell cells nil x))
   ([cells label x]
    (let [id (new-cell-id)]
@@ -423,6 +429,7 @@
   :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn cell
+  "Make new global cell, this is side-effecty."
   ([x]
    (cell nil x))
   ([label x]
@@ -434,13 +441,17 @@
                :labeled   (s/cat :label (s/nilable keyword?) :value any?))
   :ret  ::cell-id)
 
-(defmacro defcell [name x]
+(defmacro defcell
+  "Make new global cell, the keywordized name becomes the label (has
+  side-effects)."
+  [name x]
   `(def ~name (cell ~(keyword name) ~x)))
 
 (defn option-map? [x]
   (and (not (cell-id? x)) (map? x)))
 
 (defn make-formula
+  "Add new formula cell to cells. Pure function."
   [cells fun & sources]
   (let [options (if (not (cell-id? (last sources))) (last sources) {})
         sources (if (not (cell-id? (last sources))) (butlast sources) sources)]
@@ -455,6 +466,7 @@
   :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
 (defn formula
+  "Make new global formula cell, this is side-effecty."
   [fun & sources]
   (let [options (if (not (cell-id? (last sources))) (last sources) {})
         sources (if (not (cell-id? (last sources))) (butlast sources) sources)]
@@ -470,6 +482,8 @@
   :ret  ::cell-id)
 
 (defmacro deformula
+  "Make new global formula cell, this is side-effecty. The keywordized
+  name becomes the label."
   [name fun & cells]
   `(def ~name (formula ~fun ~@cells {:label ~(keyword name)})))
 
@@ -490,15 +504,16 @@
     cells))
 
 (defn touch [cells cell-id]
-  (if-not (formula? cells cell-id)
-    (throw (ex-info "Cannot touch, cell is not a formula" {:cell cell-id}))
-    (let [new-cell (calc-formula cells (lookup cells cell-id))]
-      (-> cells
-          (assoc-in [:cells cell-id] new-cell)
-          (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
-                               (get-in cells [:sinks cell-id])))))))
+  (when-not (formula? cells cell-id)
+    (throw (ex-info "Cannot touch, cell is not a formula" {:cell cell-id})))
+  (let [new-cell (calc-formula cells (lookup cells cell-id))]
+    (-> cells
+        (assoc-in [:cells cell-id] new-cell)
+        (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
+                             (get-in cells [:sinks cell-id]))))))
 (s/fdef touch
-  :args (s/cat :cells ::cells-graph :cell ::cell-id)
+  :args (s/& (s/cat :cells ::cells-graph :cell-id ::cell-id)
+             (fn [{:keys [cells cell-id]}] (formula? cells cell-id)))
   :ret ::cells-graph)
 
 (defn touch! [cell-id]
@@ -544,7 +559,8 @@
                   $ removed-sources)
           (touch $ cell-id)))))
 (s/fdef swap-function
-  :args (s/cat :cells ::cells-graph :cell ::cell-id :fun ifn?)
+  :args (s/& (s/cat :cells ::cells-graph :cell-id ::cell-id :fun ifn?)
+             (fn [{:keys [cells cell-id]}] (formula? cell-id)))
   :ret ::cells-graph)
 
 (defn swap-function! [cell-id fun]
