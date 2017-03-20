@@ -33,6 +33,13 @@
   (concat (take n coll)
           (repeat (- n (count coll)) missing)))
 
+(defn time-in-millis [] (System/currentTimeMillis))
+
+(defn truncate-string [s len]
+  (if (> (count s) len)
+    (str (subs s 0 (- len 3)) "...")
+    s))
+
 (comment
   ;;incomplete diff impl
 

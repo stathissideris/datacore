@@ -1,5 +1,5 @@
 (ns datacore.cells
-  (:refer-clojure :exclude [swap! reset!])
+  (:refer-clojure :exclude [swap! reset! add-watch remove-watch])
   (:require [clojure.data.priority-map :as pm]
             [clojure.set :as set]
             [clojure.pprint :refer [print-table pprint] :as pp]
@@ -11,7 +11,7 @@
 
 ;; TODO
 ;; mutation for labels and meta map
-;; effect cells
+;; watches
 ;; pluggable caching strategy
 ;; pluggabe execution strategy
 
@@ -24,10 +24,25 @@
 (defn make-cells []
   {:cells {}     ;;map of cell IDs to cell values
    :sinks {}     ;;map of cell IDs to sets of sinks
-   :sources {}}) ;;map of cell IDs to sets of sources
+   :sources {}   ;;map of cell IDs to sets of sources
+})
 
-(def ^:private global-cells
-  (atom (make-cells)))
+(def ^:private global-cells (atom (make-cells)))
+(def watches (atom {}))
+(core/add-watch
+ global-cells ::global
+ (fn [_ _ old new]
+   (let [w        @watches
+         cell-ids (keys (:cells new))]
+     (doseq [cell-id cell-ids]
+       (when-let [cell-watches (get w cell-id)]
+         (let [old-value (-> old :cells (get cell-id) :value)
+               new-value (-> new :cells (get cell-id) :value)]
+           (when-not (= old-value new-value)
+             (doseq [[key fun] cell-watches]
+               (fun key old-value new-value)))))))))
+
+(def ^:private global-watches (atom {}))
 
 (defn formula?
   ([cell-id]
@@ -43,6 +58,7 @@
 (s/def ::cells (s/map-of ::cell-id ::cell))
 (s/def ::sinks (s/map-of ::cell-id (s/coll-of ::cell-id)))
 (s/def ::sources (s/map-of ::cell-id (s/coll-of ::cell-id)))
+(s/def ::watches (s/map-of ::cell-id (s/map-of any? ifn?)))
 
 (s/def ::cell (s/or :input ::input-cell
                     :formula ::formula-cell))
@@ -95,7 +111,10 @@
       (cell->debug cells ids))))
 
 (defn print-cells [cells]
-  (print-table (map #(update % :error (fn [e] (when e (.getMessage e)))) cells)))
+  (print-table
+   (map #(-> %
+             (update :value (fn [v] (util/truncate-string (pr-str v) 35)))
+             (update :error (fn [e] (when e (.getMessage e))))) cells)))
 
 (defn- cycles? [sink-map cell]
   (loop [sinks   (get sink-map cell)
@@ -555,3 +574,9 @@
    (linked? @global-cells source sink))
   ([cells source sink]
    (some? (get-in cells [:sinks source sink]))))
+
+(defn add-watch! [cell-id key fun]
+  (core/swap! watches assoc-in [cell-id key] fun))
+
+(defn remove-watch! [cell-id key]
+  (core/swap! watches update cell-id dissoc key))
