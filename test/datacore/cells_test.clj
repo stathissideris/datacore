@@ -407,19 +407,19 @@
   (testing "watches 1 - watches work on input cells"
     (let [a     (cell 10)
           touch (atom false)]
-      (add-watch! a :a (fn [_ _ _] (core/swap! touch not)))
+      (add-watch! a :a (fn [_ _ new] (core/reset! touch new)))
       (is (false? @touch))
       (swap! a inc)
-      (is (true? @touch))))
+      (is (= 11 @touch))))
 
   (testing "watches 2 - watches work on formula cells"
     (let [a     (cell 10)
           b     (formula inc a)
           touch (atom false)]
-      (add-watch! b :b (fn [_ _ _] (core/swap! touch not)))
+      (add-watch! b :b (fn [_ _ new] (core/reset! touch new)))
       (is (false? @touch))
       (swap! a inc)
-      (is (true? @touch))))
+      (is (= 12 @touch))))
 
   (testing "watches 3 - watches work on multiple formulas"
     (let [a       (cell 10)
@@ -427,14 +427,14 @@
           c       (formula dec a)
           touch-b (atom false)
           touch-c (atom false)]
-      (add-watch! b :b (fn [_ _ _] (core/swap! touch-b not)))
-      (add-watch! c :c (fn [_ _ _] (core/swap! touch-c not)))
+      (add-watch! b :b (fn [_ _ new] (core/reset! touch-b new)))
+      (add-watch! c :c (fn [_ _ new] (core/reset! touch-c new)))
       (is (false? @touch-b))
       (is (false? @touch-c))
 
       (swap! a inc)
-      (is (true? @touch-b))
-      (is (true? @touch-c))))
+      (is (= 12 @touch-b))
+      (is (= 10 @touch-c))))
 
   (testing "watches 4 - watches are independent"
     (let [a       (cell 10)
@@ -443,15 +443,15 @@
           d       (formula dec c)
           touch-b (atom false)
           touch-d (atom false)]
-      (add-watch! b :b (fn [_ _ _] (core/swap! touch-b not)))
-      (add-watch! d :d (fn [_ _ _] (core/swap! touch-d not)))
+      (add-watch! b :b (fn [_ _ new] (core/reset! touch-b new)))
+      (add-watch! d :d (fn [_ _ new] (core/reset! touch-d new)))
       (is (false? @touch-b))
       (is (false? @touch-d))
 
       (swap! a inc)
-      (is (true? @touch-b))
+      (is (= 12 @touch-b))
       (is (false? @touch-d))
 
       (swap! c inc)
-      (is (true? @touch-b))
-      (is (true? @touch-d)))))
+      (is (= 12 @touch-b))
+      (is (= 100 @touch-d)))))
