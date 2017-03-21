@@ -1,12 +1,28 @@
-# datacore
+# Datacore
 
 An emacs-like for data
+
+Datacore:
+
+ * Is currently vaporware, the rest of this list should be read as
+   aspirations rather than a description of Datacore.
+ * Is an EDN viewer, with support for Clojure spec.
+ * Is a small ETL engine.
+ * Uses cell-based programming to keep the UI and the data being
+   processed consistent and constatly up to date throughout the
+   application.
+ * Is a Clojure snippets editor, with structural editing.
+ * Supports simple graphs.
+ * Mimics Emacs in terms of keyboard focus, configurability and
+   extensibility via Lisp.
+ * Is text driven where is makes sense, but can also be extended to
+   include simple UIs by wrapping JavaFX.
 
 ## Design
 
 Current thinking is that all state in the application (both for data
 processing and UI state) will be propagated via cells. This feels
-right because datacore wants to be an spreadsheet for experts and
+right because Datacore wants to be an spreadsheet for experts and
 spreadsheets have cells.
 
 Prior work on cells:
@@ -29,16 +45,23 @@ Still being considered:
 
 Differences to Javelin:
 
- * No support for `cell=` macro, only `formula` so creating formula
-   cells is less convenient.
- * Cycle detection TODO: make error messages more informative.
- * Cells can have labels.
+ * Both immutable and mutable APIs for the cells mechanism.
+ * Cycle detection - TODO: make error messages more informative.
+ * Cells can have labels and metadata.
  * Tabular debug information on all the cells, their state, their
    properties, possible errors etc.
  * Mute/unmute formula cells to make them pass values through -
    without processing.
- * Ability to destroy a cell and all its "orphaned" sinks (if
-   any). TODO: fix potential stack overflow.
+ * Ability to have partially disconnected cells.
+ * Ability to swap the function of a formula cell with a different
+   one.
+ * Ability to "move-up" and "move-down" cells along a linear chain of
+   cells.
+ * Ability to insert new cells in the middle of a linear chain of
+   cells.
+ * Ability to destroy a cell.
+ * No support for `cell=` macro, only `formula` so creating formula
+   cells is less convenient.
 
 ## License
 
