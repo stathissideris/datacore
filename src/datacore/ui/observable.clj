@@ -1,5 +1,6 @@
 (ns datacore.ui.observable
   (:require [datacore.util :as util]
+            [datacore.cells :as c]
             [dev :as dev])
   (:import [javafx.collections FXCollections ObservableList ListChangeListener ListChangeListener$Change]))
 
@@ -53,3 +54,24 @@
     (removeListener [^ListChangeListener listener]
       (when-let [id (get @atom-observable-registry listener)]
         (remove-watch x id)))))
+
+(def cell-observable-list-id (atom -1))
+(def cell-observable-registry (atom {}))
+(defmethod observable-list datacore.cells.CellID
+  [x]
+  (c/value x)
+  (proxy [Object ObservableList] []
+    (get [i] (nth (c/value x) i))
+    (size [] (count (c/value x)))
+    (iterator [] (.iterator (c/value x)))
+    (forEach [consumer] (.forEach (c/value x) consumer))
+    (isEmpty [] (empty? (c/value x)))
+    (setAll [coll] (reset! x coll))
+    (addListener [^ListChangeListener listener]
+      (let [id (str "observable-list-cell-listener" (swap! cell-observable-list-id inc))]
+        (swap! cell-observable-registry {listener id})
+        (c/add-watch! x id (fn [ref old new]
+                             (.onChanged listener (list-change this old new))))))
+    (removeListener [^ListChangeListener listener]
+      (when-let [id (get @cell-observable-registry listener)]
+        (c/remove-watch! x id)))))

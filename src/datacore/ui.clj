@@ -87,15 +87,17 @@
 (def scene (atom nil))
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
-                             {:fx/args  [(main-view (some-> @state/state :views first) message/current-message) 800 800]
+                             {:fx/args  [(main-view nil message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
-    (c/formula
-     #(do
-        (prn "Views have changed!")
-        (.setRoot the-scene (main-view (first %) message/current-message)))
-     {:label :view-obs}
-     state/views)
+    (c/add-watch!
+     state/views
+     :views-watch
+     (fn [_ _ views]
+       (fx/run-later!
+        #(do
+           (prn "Views have changed!" (first views))
+           (.setRoot the-scene (main-view (first views) message/current-message))))))
     (reset! scene the-scene)
     (comment
       (fx/make

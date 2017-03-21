@@ -57,10 +57,13 @@
      (object-array [value]))
     (catch Exception _
       (if (c/cell-id? value)
-        @(c/formula (fn [v]
-                      (run-later! #(set-field! object field-kw v))
-                      v)
-                    {:label :fx/setter} value)
+        (do
+          (run-later! #(set-field! object field-kw (c/value value)))
+          (c/add-watch!
+           value
+           [object field-kw]
+           (fn [_ _ v]
+             (run-later! #(set-field! object field-kw v)))))
         (let [s! (setter (class object) field-kw)]
           (if-not s!
             (throw (ex-info "setter not found"

@@ -2,6 +2,7 @@
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [me.raynes.fs :as fs]
+            [datacore.util :as util]
             [datacore.cells :as c]))
 
 (defn load-csv [{:keys [filename separator quote] :as options}]
@@ -9,15 +10,21 @@
     (doall
      (apply csv/read-csv in-file (mapcat identity options)))))
 
-(defn make [{:keys [filename] :as options}]
+(defn cell [{:keys [filename] :as options}]
   (when-not (fs/exists? filename)
     (throw (ex-info "File does not exist" {:filename filename})))
-  {:label    (fs/base-name filename)
-   :filename filename
-   :data-fn  #(load-csv options)})
+  (c/cell
+   :csv-file
+   {:label        (fs/base-name filename)
+    :filename     filename
+    :last-modifed (util/time-in-millis)
+    :data         (load-csv options)}))
 
-(defn default-view [{:keys [label] :as source}]
-  {:source       source
-   :label        (c/cell :source-label label)
-   :type         :datacore.view/table
-   :transformers (c/cell :transformers [])})
+(defn default-view [csv-cell]
+  (c/formula
+   (fn [{:keys [data label]}]
+     {:data  data
+      :label label
+      :type  :datacore.view/table})
+   csv-cell
+   {:label :table-view}))

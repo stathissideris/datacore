@@ -21,20 +21,19 @@
     #(.setCellValueFactory % (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x))))))}))
 
 (defmethod view/build-view :datacore.view/table
-  [{:keys [label source transformers] :as view}]
-  (if-let [data-fn (:data-fn source)]
-    (let [original-data (data-fn)
-          data          (view/transform original-data @transformers)]
-      (with-status-line
-        (fx/make
-         :scene.control/table-view
-         {:fx/args [(observable-list (view/transform (rest data) @transformers))]
-          :columns (map-indexed (fn [i c] (column (str c) #(nth % i))) (first data))})
-        (c/formula (fn [label tr]
-                     (str label (when-not (empty? tr)
-                                  (str " - " (count tr) " transformers"))))
-                   {:label :table-status-line}
-                   label transformers)))
-    (do
-      (message/error "nil data-fn function")
-      nil)))
+  [view-cell]
+  (with-status-line
+    (fx/make
+     :scene.control/table-view
+     {:fx/args [(observable-list
+                 (c/formula (comp rest :data)
+                            view-cell
+                            {:label :table-view-data}))]
+      :columns (c/formula (fn [source]
+                            (map-indexed
+                             (fn [i c]
+                               (column (str c) #(nth % i)))
+                             (first (:data source))))
+                          view-cell
+                          {:label :table-view-columns})})
+    (c/formula :label view-cell {:label :table-status-line})))
