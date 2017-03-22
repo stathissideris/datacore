@@ -20,7 +20,7 @@
     :fx/setup
     #(.setCellValueFactory % (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x))))))}))
 
-(defmethod view/build-view :datacore.view/table
+#_(defmethod view/build-view :datacore.view/table
   [view-cell]
   (with-status-line
     (fx/make
@@ -37,3 +37,19 @@
                           view-cell
                           {:label :table-view-columns})})
     (c/formula :label view-cell {:label :table-status-line})))
+
+(defmethod view/build-view :datacore.view/table
+  [view-cell]
+  (let [table     (fx/make :scene.control/table-view)
+        set-data! (fn [data] (fx/run-later!
+                              #(doto table
+                                 (fx/set-field! :columns (map-indexed
+                                                          (fn [i c]
+                                                            (column (str c) (fn [row] (nth row i))))
+                                                          (first data)))
+                                 (fx/set-field! :items (observable-list (rest data))))))]
+    (set-data! (:data (c/value view-cell)))
+    (c/add-watch! view-cell :table-view (fn [_ _ {:keys [data] :as new}]
+                                          (set-data! data)))
+    (with-status-line
+      table (c/formula :label view-cell {:label :table-status-line}))))

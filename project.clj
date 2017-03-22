@@ -12,5 +12,5 @@
   :resource-paths ["resources"]
   :profiles {:dev {:source-paths ["dev"]
                    :dependencies [[org.clojure/tools.namespace "0.2.11"]]
-                   :jvm-opts ["-agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
+                   :jvm-opts ["-agentlib:jdwp=transport=dt_socket,server=y,address=8700,suspend=n"
                               "-XX:-OmitStackTraceInFastThrow"]}})
