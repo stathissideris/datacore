@@ -13,7 +13,7 @@
 
 (defn- data-map [options]
   (let [rows    (load-csv options)
-        columns (map util/string->data-key (first rows))]
+        columns (mapv util/string->data-key (first rows))]
     {:columns columns
      :data    (map (partial zipmap columns) (rest rows))}))
 
@@ -37,8 +37,9 @@
 
 (defn default-view [csv-cell]
   (c/formula
-   (fn [contents]
-     (-> contents
-         (assoc :type :datacore.view/table)))
+   (fn [{:keys [columns column-labels] :as contents}]
+     (cond-> contents
+       (not column-labels) (assoc :column-labels (zipmap columns (map util/data-key->label columns)))
+       :always             (assoc :type :datacore.view/table)))
    csv-cell
    {:label :table-view}))

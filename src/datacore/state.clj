@@ -1,5 +1,6 @@
 (ns datacore.state
-  (:require [datacore.cells :as c :refer [cell defcell deformula]]))
+  (:require [datacore.cells :as c :refer [cell defcell deformula]]
+            [datacore.util :as util]))
 
 (defcell state {})
 (deformula views :views state)
@@ -55,12 +56,14 @@
 
    (c/deformula column-selector
      (fn [data]
-       (assoc data :columns [:title :year :title-type :directors :imdb-rating :genres]))
+       (let [columns [:title :year :title-type :directors :imdb-rating :genres]]
+        (-> data
+            (assoc :columns columns)
+            (assoc :column-labels (zipmap columns ["Title" "Year" "Type" "Directors" "IMDB Rating" "Genres"])))))
      ::c/unlinked)
-   (def _ (c/swap-function! column-selector (fn [data]
-                                              (assoc data :columns [:title :year :title-type :directors :imdb-rating :genres]))))
 
    (def _ (c/linear-insert! filter-cell column-selector csv-view))
+   (def _ (c/linear-insert! csv column-selector csv-view))
 
    ))
 

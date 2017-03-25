@@ -41,11 +41,14 @@
 (defmethod view/build-view :datacore.view/table
   [view-cell]
   (let [table     (fx/make :scene.control/table-view)
-        set-data! (fn [{:keys [columns data]}]
+        set-data! (fn [{:keys [columns column-labels data]}]
                     (fx/run-later!
                      #(doto table
                         (fx/set-field!
-                         :columns (map (fn [c] (column (str c) (fn [row] (get row c)))) columns))
+                         :columns (map (fn [c]
+                                         (column (if-let [l (get column-labels c)] l (str c))
+                                                 (fn [row] (get row c))))
+                                       columns))
                         (fx/set-field! :items (observable-list data)))))]
     (set-data! (c/value view-cell))
     (c/add-watch! view-cell :table-view (fn [_ _ new] (set-data! new)))

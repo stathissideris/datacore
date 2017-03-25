@@ -25,6 +25,15 @@
       (str/replace " " "-")
       (str/replace "_" "-")
       keyword))
+
+(defn data-key->label [k]
+  (as-> k $
+      (name $)
+      (str/replace $ "-" " ")
+      (str/split $ #" ")
+      (map str/capitalize $)
+      (str/join " " $)))
+
 (defn deep-merge
   "Recursively merges maps. If keys are not maps, the last value wins."
   [& vals]
