@@ -2,15 +2,41 @@
   (:require [clojure.string :as str]
             [clojure.set :as set]
             [clojure.math.combinatorics :as combo]
-            [datacore.ui.timer :as timer])
+            [datacore.ui.timer :as timer]
+            [datacore.ui.message :as message]
+            [datacore.cells :as c])
   (:import [javafx.scene.input KeyEvent KeyCode]
            [javafx.event Event]))
 
-(def chain (ref []))
-(def timer (ref nil))
-(def last-consumed (ref nil))
-
 (def modifiers [:alt :ctrl :meta :shift :shortcut])
+
+(def initial-state {:chain []
+                    :last-consumed nil
+                    :timer nil})
+
+(c/defcell key-input initial-state)
+;;(c/add-watch! key-input :debug (fn [_ _ new] (prn 'KEYS new)))
+
+(defn press-str [press]
+  (if-not (set? press)
+    (name press)
+    (cond-> ""
+      (press :shift) (str "shift-")
+      (press :ctrl) (str "ctrl-")
+      (press :alt) (str "alt-")
+      (press :meta) (str "meta-")
+      (press :shortcut) (str "shortcut-")
+      :always (str (str/join "-" (map name (apply disj press modifiers)))))))
+
+(defn chain-str [chain]
+  (str/join " " (map press-str chain)))
+
+(c/deformula keys-chain :chain key-input)
+(c/add-watch! keys-chain :key-chain-message
+              (fn [_ _ chain]
+                (when-not (empty? chain)
+                  ;;(prn 'CHAIN--- (chain-str chain))
+                  (message/message (chain-str chain)))))
 
 (defn keycode->keyword [k]
   (-> k .getName str/lower-case (str/replace " " "-") (str/replace "/" "-") keyword))
@@ -23,8 +49,6 @@
      (let [combo (conj mod keycode)
            combo (if (= 1 (count combo)) (first combo) combo)]
        [combo ::propagate]))))
-
-
 
 (defn prefix? [x] (map? x))
 (defn action? [x] (keyword? x))
@@ -57,28 +81,27 @@
       (first press)
       press)))
 
-(defn- clear-chain []
-  (timer/cancel @timer)
-  (alter last-consumed (constantly nil))
-  (alter chain (constantly []))
+(defn- clear-chain! []
+  (timer/cancel (:timer (c/value key-input)))
+  (c/reset! key-input initial-state)
   nil)
-
-(defn- wait-for-next []
-  (dosync
-   (timer/cancel @timer) ;;safe to rerty
-   (alter timer (constantly (timer/delayed 3500 #(do (prn 'KEY-STATE-RESET) (dosync (clear-chain))))))))
 
 ;;(def debug prn)
 (defn debug [& _])
 
+(defn- wait-for-next! []
+  (timer/cancel (:timer (c/value key-input)))
+  (c/swap! key-input assoc :timer (timer/delayed 3500 #(do (debug 'KEY-STATE-RESET) (clear-chain!)))))
+
+
 (defn- consume-event [^Event e press event]
   (debug 'CONSUMED press event)
-  (alter last-consumed (constantly event))
-  (.consume e) ;;safe to retry
+  (c/swap! key-input assoc :last-consumed event)
+  (.consume e)
   nil)
 
 (defn- also-consume-this? [event]
-  (when-let [last-consumed @last-consumed]
+  (when-let [last-consumed (-> key-input c/value :last-consumed)]
     (debug 'last-consumed last-consumed)
     (= (dissoc event :type)
        (dissoc last-consumed :type))))
@@ -88,45 +111,46 @@
     (try
       (let [{:keys [type] :as event} (event->map fx-event)
             press                    (event->press event)
-            new-chain                (conj @chain press)
+            new-chain                (conj (-> key-input c/value :chain) press)
             match                    (get-in keymap new-chain)]
-        (dosync
-         (cond
-           ;;also consume :key-typed and :key-released equivalents of
-           ;;events that have been consumed:
-           (also-consume-this? event)
-           (do
-             (debug 'ALSO-CONSUMING)
-             (consume-event fx-event press event)
-             (when (= type :key-released)
-               (alter last-consumed (constantly nil))) ;;...but stop consuming at :key-released
-             nil)
+        (cond
+          ;;also consume :key-typed and :key-released equivalents of
+          ;;events that have been consumed:
+          (also-consume-this? event)
+          (do
+            (debug 'ALSO-CONSUMING)
+            (consume-event fx-event press event)
+            (when (= type :key-released)
+              (c/swap! key-input assoc :last-consumed nil)) ;;...but stop consuming at :key-released
+            nil)
 
-           (and (= type :key-pressed) (not match))
-           (do
-             (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
-             (clear-chain)
-             (consume-event fx-event press event))
+          (and (= type :key-pressed) (not match))
+          (do
+            (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
+            (message/message (str "Key sequence " (chain-str new-chain) " not mapped to anything"))
+            (clear-chain!)
+            (consume-event fx-event press event))
 
-           (= match ::propagate)
-           (do
-             (debug 'PROPAGATED press event)
-             (clear-chain))
+          (= match ::propagate)
+          (do
+            (debug 'PROPAGATED press event)
+            (clear-chain!))
 
-           :else
-           (cond
-             (prefix? match)
-             (do
-               (alter chain conj press)
-               (prn 'PREFIX @chain)
-               (wait-for-next)
-               (consume-event fx-event press event))
-             (action? match)
-             (do
-               (prn 'COMBO new-chain match)
-               (clear-chain)
-               (consume-event fx-event press event)
-               match)))))
+          :else
+          (cond
+            (prefix? match)
+            (do
+              (c/swap! key-input update :chain conj press)
+              ;;(prn 'PREFIX (-> key-input c/value :chain))
+              (wait-for-next!)
+              (consume-event fx-event press event))
+            (action? match)
+            (do
+              (prn 'COMBO new-chain match)
+              (message/message match)
+              (clear-chain!)
+              (consume-event fx-event press event)
+              match))))
       (catch Exception e
         (.printStackTrace e)
         (throw e)))))

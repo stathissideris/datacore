@@ -19,14 +19,14 @@
     (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
     (c/swap! state add-source csv)
-    (c/swap! state add-view csv-view)
+    (c/swap! state add-view csv-view))
 
-    (defmacro simple-cell [name expr]
-      `(c/deformula ~name
-         (fn [data#]
-           (update data# :data
-                   (fn [~'data] ~expr)))
-         ::c/unlinked)))
+  (defmacro simple-cell [name expr]
+    `(c/deformula ~name
+       (fn [data#]
+         (update data# :data
+                 (fn [~'data] ~expr)))
+       ::c/unlinked))
 
   (do
    (c/deformula filter-cell

@@ -90,7 +90,7 @@
       :formula? (:formula? c)
       :enabled? (if (:formula? c)
                   (:enabled? c)
-                  "N/A")
+                  "")
       :value    (:value c)
       :error    (:error c)
       #_:code     #_(not-empty
@@ -114,6 +114,7 @@
 (defn print-cells [cells]
   (print-table
    (map #(-> %
+             (update :formula? (fn [f] (if f "formula" "input")))
              (update :value (fn [v] (util/truncate-string (pr-str v) 35)))
              (update :error (fn [e] (when e (.getMessage e))))) cells)))
 

@@ -56,7 +56,7 @@
     (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})))
 
 (defn main-view [view message]
-  (let [minibuffer (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})]
+  (let [minibuffer (fx/make :scene.control/text-area {:text message/current-message})]
     ;;(cell= (fx/set-field! minibuffer :text @message))
     #_(fx/make
        :scene.layout/border-pane
