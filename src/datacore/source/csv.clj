@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [me.raynes.fs :as fs]
             [datacore.util :as util]
-            [datacore.cells :as c]))
+            [datacore.cells :as c]
+            [hawk.core :as hawk]))
 
 (defn load-csv [{:keys [filename separator quote] :as options}]
   (with-open [in-file (io/reader filename)]
@@ -13,12 +14,21 @@
 (defn cell [{:keys [filename] :as options}]
   (when-not (fs/exists? filename)
     (throw (ex-info "File does not exist" {:filename filename})))
-  (c/cell
-   :csv-file
-   {:label        (fs/base-name filename)
-    :filename     filename
-    :last-modifed (util/time-in-millis)
-    :data         (load-csv options)}))
+  (let [csv-cell (c/cell
+                  :csv-file
+                  {:label        (fs/base-name filename)
+                   :filename     filename
+                   :last-modifed (util/time-in-millis)
+                   :data         (load-csv options)})]
+    (hawk/watch! [{:paths   [filename]
+                   :handler
+                   (fn [_ _]
+                     (c/swap!
+                      csv-cell
+                      #(-> %
+                           (assoc :data (load-csv options))
+                           (assoc :last-modified (util/time-in-millis)))))}])
+    csv-cell))
 
 (defn default-view [csv-cell]
   (c/formula

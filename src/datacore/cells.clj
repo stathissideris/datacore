@@ -189,8 +189,7 @@
       (catch Exception e
         (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
 (s/fdef calc-formula
-  :args (s/& (s/cat :cells ::cells-graph :formula ::formula-cell)
-             (fn [{:keys [formula]}] (s/valid? ::formula-cell formula)))
+  :args (s/cat :cells ::cells-graph :formula ::formula-cell)
   :ret  ::formula-cell)
 
 (defn- pull [cells cell-id]

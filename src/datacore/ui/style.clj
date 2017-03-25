@@ -23,5 +23,5 @@
                              :file-watcher
                              (when (.isAbsolute uri)
                                (hawk/watch! [{:paths   [(.getPath uri)]
-                                              :handler (fn [_  _] (reload-stylesheets component))}]))}))
+                                              :handler (fn [_ _] (reload-stylesheets component))}]))}))
   component)
