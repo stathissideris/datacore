@@ -2,7 +2,6 @@
   (:require [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.style :as style]
-            [datacore.ui.table :as table]
             [datacore.ui.message :as message]
             [datacore.view :as view]
             [datacore.view.table]
@@ -15,11 +14,6 @@
            [javafx.application Platform]
            [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]))
-
-(def table-data
-  (atom [{:a 6 :b 7 :c 8}
-         {:a 16 :b 17 :c 18}
-         {:a 26 :b 27 :c 28}]))
 
 ;;(set! *warn-on-reflection* true)
 (JFXPanel.)
@@ -37,8 +31,8 @@
    :orientation :horizontal
    :children    [{:type        :split-pane
                   :orientation :vertical
-                  :children    [{:type :table
-                                 :data table-data}
+                  :children    [{:type :text-area
+                                 :text "FOO B"}
                                 {:type :text-area
                                  :text "FOO B"}]}
                  {:type        :split-pane
@@ -60,15 +54,6 @@
   [{:keys [text]}]
   (ui.util/with-status-line
     (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})))
-
-(defmethod view/build-view :table
-  [{:keys [data]}]
-  (ui.util/with-status-line
-    (table/set-columns!
-     (table/view data)
-     [(table/column "foo" :a)
-      (table/column "bar" :b)
-      (table/column "baz" :c)])))
 
 (defn main-view [view message]
   (let [minibuffer (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})]

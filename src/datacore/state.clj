@@ -19,35 +19,35 @@
                         :separator \tab}))
     (def csv-view (csv/default-view csv))
     (c/swap! state add-source csv)
-    (c/swap! state add-view csv-view)
-    (def _ (doall (c/value csv-view)))
+    (c/swap! state add-view csv-view))
 
-    (c/deformula filter-cell
+  (do
+   (c/deformula filter-cell
+     (fn [data]
+       (update data :data
+               (fn [rows] (filter #(= "business-main" (nth % 4)) rows))))
+     ::c/unlinked)
+
+   (def _ (c/linear-insert! csv filter-cell csv-view))
+
+   (def _
+     (c/swap-function!
+      filter-cell
       (fn [data]
         (update data :data
-                (fn [rows] (filter #(= "business-main" (nth % 4)) rows))))
-      ::c/unlinked)
+                (fn [rows] (filter #(= "business-saver" (nth % 4)) rows))))))
 
-    (c/linear-insert! csv filter-cell csv-view)
+   (def _
+     (c/swap-function!
+      filter-cell
+      (fn [data]
+        (update data :data
+                (fn [rows] (filter #(= "CASH" (nth % 2)) rows))))))
 
-    (def _
-      (c/swap-function!
-       filter-cell
-       (fn [data]
-         (update data :data
-                 (fn [rows] (filter #(= "business-saver" (nth % 4)) rows))))))
+   (def _
+     (c/swap-function! filter-cell identity))
 
-    (def _
-      (c/swap-function!
-       filter-cell
-       (fn [data]
-         (update data :data
-                 (fn [rows] (filter #(= "CASH" (nth % 2)) rows))))))
-
-    (def _
-      (c/swap-function! filter-cell identity))
-
-    )
+   )
   )
 
 
