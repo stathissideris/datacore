@@ -65,6 +65,15 @@
    (def _ (c/linear-insert! filter-cell column-selector csv-view))
    (def _ (c/linear-insert! csv column-selector csv-view))
 
+   (c/deformula new-column
+     (fn [data]
+       (-> data
+           (update :columns conj :fake-data)
+           (update :data #(map (fn [row] (assoc row :fake-data (rand-int 10000))) %))))
+     ::c/unlinked)
+
+   (def _ (c/linear-insert! csv new-column csv-view))
+
    ))
 
 

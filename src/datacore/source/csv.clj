@@ -14,8 +14,9 @@
 (defn- data-map [options]
   (let [rows    (load-csv options)
         columns (mapv util/string->data-key (first rows))]
-    {:columns columns
-     :data    (map (partial zipmap columns) (rest rows))}))
+    {:original-column-labels (zipmap columns (first rows))
+     :columns                columns
+     :data                   (map (partial zipmap columns) (rest rows))}))
 
 (defn file [{:keys [filename] :as options}]
   (when-not (fs/exists? filename)
@@ -32,14 +33,21 @@
                    (fn [_ _]
                      (c/swap!
                       csv-cell
-                      #(merge % (data-map options))))}])
+                      #(merge
+                        %
+                        {:last-modified (util/time-in-millis)}
+                        (data-map options))))}])
     csv-cell))
 
 (defn default-view [csv-cell]
   (c/formula
-   (fn [{:keys [columns column-labels] :as contents}]
+   (fn [{:keys [columns column-labels original-column-labels] :as contents}]
      (cond-> contents
-       (not column-labels) (assoc :column-labels (zipmap columns (map util/data-key->label columns)))
+       (not column-labels) (assoc :column-labels
+                                  (zipmap columns
+                                          (map (fn [c]
+                                                 (or (get original-column-labels c)
+                                                     (util/data-key->label c))) columns)))
        :always             (assoc :type :datacore.view/table)))
    csv-cell
    {:label :table-view}))

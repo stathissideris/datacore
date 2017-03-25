@@ -6,7 +6,8 @@
             [datacore.cells :as c]
             [datacore.ui.observable :refer [observable-list]])
   (:import [javafx.util Callback]
-           [javafx.beans.property ReadOnlyObjectWrapper]))
+           [javafx.beans.property ReadOnlyObjectWrapper]
+           [java.util Date]))
 
 (defn callback [fun]
   (reify Callback
@@ -53,4 +54,6 @@
     (set-data! (c/value view-cell))
     (c/add-watch! view-cell :table-view (fn [_ _ new] (set-data! new)))
     (with-status-line
-      table (c/formula #(str (:label %) " - " (:last-modified %)) view-cell {:label :table-status-line}))))
+      table (c/formula #(str (:label %) " - "
+                             (-> % :data count) " rows - "
+                             (Date. (:last-modified %))) view-cell {:label :table-status-line}))))
