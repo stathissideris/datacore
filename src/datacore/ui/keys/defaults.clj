@@ -6,5 +6,12 @@
   (util/deep-merge
    (keys/code-map)
    {#{:ctrl :x}
-    {:2 :split-window-below
-     :3 :split-window-right}}))
+    {:1 :windows/maximize
+     :2 :windows/split-below
+     :3 :windows/split-right
+     :0 :windows/delete
+     #{:ctrl :f} :open-file}}
+   {#{:ctrl :h}
+    {:k :help/describe-key
+     :f :help/describe-function
+     :c :help/describe-cell}}))

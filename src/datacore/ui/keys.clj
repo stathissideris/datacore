@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.set :as set]
             [clojure.math.combinatorics :as combo]
+            [datacore]
             [datacore.ui.timer :as timer]
             [datacore.ui.message :as message]
             [datacore.cells :as c])
@@ -106,6 +107,12 @@
     (= (dissoc event :type)
        (dissoc last-consumed :type))))
 
+(defn handle-key-match [match]
+  (if-let [{:keys [var]} (get datacore/interactive-functions match)]
+    (let [fun (deref var)]
+      (fun))
+    (message/error (str "No interactive function with alias " match " found!"))))
+
 (defn key-handler [keymap]
   (fn [fx-event]
     (try
@@ -146,10 +153,11 @@
               (consume-event fx-event press event))
             (action? match)
             (do
-              (prn 'COMBO new-chain match)
-              (message/message match)
+              (debug 'COMBO new-chain match)
+              (message/message (subs (str match) 1))
               (clear-chain!)
               (consume-event fx-event press event)
+              (handle-key-match match)
               match))))
       (catch Exception e
         (.printStackTrace e)
