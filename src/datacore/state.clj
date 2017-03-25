@@ -19,7 +19,14 @@
     (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
     (c/swap! state add-source csv)
-    (c/swap! state add-view csv-view))
+    (c/swap! state add-view csv-view)
+
+    (defmacro simple-cell [name expr]
+      `(c/deformula ~name
+         (fn [data#]
+           (update data# :data
+                   (fn [~'data] ~expr)))
+         ::c/unlinked)))
 
   (do
    (c/deformula filter-cell
@@ -27,6 +34,8 @@
        (update data :data
                (fn [rows] (filter #(= "Documentary" (:title-type %)) rows))))
      ::c/unlinked)
+   ;;OR
+   (simple-cell filter-cell (filter #(= "Documentary" (:title-type %)) data))
 
    (def _ (c/linear-insert! csv filter-cell csv-view))
 
@@ -49,8 +58,10 @@
      (fn [data]
        (update data :data (partial sort-by :year)))
      ::c/unlinked)
+   ;;OR
+   (simple-cell sort-cell (sort-by :year data))
 
-   (def _ (c/linear-insert! csv sort-cell filter-cell))
+   (def _ (c/linear-insert! csv sort-cell csv-view))
    (def _ (c/mute! sort-cell))
    (def _ (c/unmute! sort-cell))
 
