@@ -41,15 +41,13 @@
 (defmethod view/build-view :datacore.view/table
   [view-cell]
   (let [table     (fx/make :scene.control/table-view)
-        set-data! (fn [data] (fx/run-later!
-                              #(doto table
-                                 (fx/set-field! :columns (map-indexed
-                                                          (fn [i c]
-                                                            (column (str c) (fn [row] (nth row i))))
-                                                          (first data)))
-                                 (fx/set-field! :items (observable-list (rest data))))))]
-    (set-data! (:data (c/value view-cell)))
-    (c/add-watch! view-cell :table-view (fn [_ _ {:keys [data] :as new}]
-                                          (set-data! data)))
+        set-data! (fn [{:keys [columns data]}]
+                    (fx/run-later!
+                     #(doto table
+                        (fx/set-field!
+                         :columns (map (fn [c] (column (str c) (fn [row] (get row c)))) columns))
+                        (fx/set-field! :items (observable-list data)))))]
+    (set-data! (c/value view-cell))
+    (c/add-watch! view-cell :table-view (fn [_ _ new] (set-data! new)))
     (with-status-line
-      table (c/formula :label view-cell {:label :table-status-line}))))
+      table (c/formula #(str (:label %) " - " (:last-modified %)) view-cell {:label :table-status-line}))))

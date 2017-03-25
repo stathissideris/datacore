@@ -11,30 +11,34 @@
     (doall
      (apply csv/read-csv in-file (mapcat identity options)))))
 
-(defn cell [{:keys [filename] :as options}]
+(defn- data-map [options]
+  (let [rows    (load-csv options)
+        columns (map util/string->data-key (first rows))]
+    {:columns columns
+     :data    (map (partial zipmap columns) (rest rows))}))
+
+(defn file [{:keys [filename] :as options}]
   (when-not (fs/exists? filename)
     (throw (ex-info "File does not exist" {:filename filename})))
   (let [csv-cell (c/cell
                   :csv-file
-                  {:label        (fs/base-name filename)
-                   :filename     filename
-                   :last-modifed (util/time-in-millis)
-                   :data         (load-csv options)})]
+                  (merge
+                   (data-map options)
+                   {:label         (fs/base-name filename)
+                    :filename      filename
+                    :last-modified (util/time-in-millis)}))]
     (hawk/watch! [{:paths   [filename]
                    :handler
                    (fn [_ _]
                      (c/swap!
                       csv-cell
-                      #(-> %
-                           (assoc :data (load-csv options))
-                           (assoc :last-modified (util/time-in-millis)))))}])
+                      #(merge % (data-map options))))}])
     csv-cell))
 
 (defn default-view [csv-cell]
   (c/formula
-   (fn [{:keys [data label]}]
-     {:data  data
-      :label label
-      :type  :datacore.view/table})
+   (fn [contents]
+     (-> contents
+         (assoc :type :datacore.view/table)))
    csv-cell
    {:label :table-view}))

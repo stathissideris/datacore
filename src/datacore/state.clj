@@ -15,7 +15,7 @@
     (require '[datacore.source.csv :as csv])
     (require '[datacore.ui.java-fx :as fx])
     (fx/run-later! datacore.ui/make-app)
-    (def csv (csv/cell {:filename "test-resources/watchlist.csv"}))
+    (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
     (c/swap! state add-source csv)
     (c/swap! state add-view csv-view))
@@ -24,7 +24,7 @@
    (c/deformula filter-cell
      (fn [data]
        (update data :data
-               (fn [rows] (filter #(= "Documentary" (nth % 6)) rows))))
+               (fn [rows] (filter #(= "Documentary" (:title-type %)) rows))))
      ::c/unlinked)
 
    (def _ (c/linear-insert! csv filter-cell csv-view))
@@ -34,7 +34,7 @@
       filter-cell
       (fn [data]
         (update data :data
-                (fn [rows] (filter #(= "Mini-Series" (nth % 6)) rows))))))
+                (fn [rows] (filter #(= "Mini-Series" (:title-type %)) rows))))))
 
    (def _ (c/swap-function! filter-cell identity))
 
@@ -46,7 +46,7 @@
 
    (c/deformula sort-cell
      (fn [data]
-       (update data :data (partial sort-by #(nth % 11))))
+       (update data :data (partial sort-by :year)))
      ::c/unlinked)
 
    (def _ (c/linear-insert! csv sort-cell filter-cell))

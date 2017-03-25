@@ -17,6 +17,14 @@
       (str (.toUpperCase (subs s 0 1))
            (subs s 1)))))
 
+(defn string->data-key [s]
+  (-> s
+      str/lower-case
+      (str/replace #"[\(\)\[\]:,{}&^%$#@\.]" "")
+      (str/replace #"[/]" " ")
+      (str/replace " " "-")
+      (str/replace "_" "-")
+      keyword))
 (defn deep-merge
   "Recursively merges maps. If keys are not maps, the last value wins."
   [& vals]

@@ -19,7 +19,7 @@
 
 (defrecord CellID [id])
 
-(defn cell-id? [cell-id] (= (class cell-id) datacore.cells.CellID))
+(defn cell-id? [cell-id] (instance? datacore.cells.CellID cell-id))
 
 (defn make-cells []
   {:cells {}     ;;map of cell IDs to cell values
@@ -188,9 +188,9 @@
                           (input-value (first sources-list)))))
       (catch Exception e
         (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
-(s/fdef calc-formula
-  :args (s/cat :cells ::cells-graph :formula ::formula-cell)
-  :ret  ::formula-cell)
+;; (s/fdef calc-formula
+;;   :args (s/cat :cells ::cells-graph :formula ::formula-cell)
+;;   :ret  ::formula-cell)
 
 (defn- pull [cells cell-id]
   (let [pm (cells-into-pm (pm/priority-map-keyfn #(.-id %))
