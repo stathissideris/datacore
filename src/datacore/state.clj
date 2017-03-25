@@ -52,8 +52,17 @@
    (def _ (c/linear-insert! csv sort-cell filter-cell))
    (def _ (c/mute! sort-cell))
    (def _ (c/unmute! sort-cell))
-   )
-  )
+
+   (c/deformula column-selector
+     (fn [data]
+       (assoc data :columns [:title :year :title-type :directors :imdb-rating :genres]))
+     ::c/unlinked)
+   (def _ (c/swap-function! column-selector (fn [data]
+                                              (assoc data :columns [:title :year :title-type :directors :imdb-rating :genres]))))
+
+   (def _ (c/linear-insert! filter-cell column-selector csv-view))
+
+   ))
 
 
 (comment
