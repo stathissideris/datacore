@@ -15,8 +15,7 @@
     (require '[datacore.source.csv :as csv])
     (require '[datacore.ui.java-fx :as fx])
     (fx/run-later! datacore.ui/make-app)
-    (def csv (csv/cell {:filename "/Users/sideris/devel/pixelated-noise/data/all-barclays.tsv"
-                        :separator \tab}))
+    (def csv (csv/cell {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
     (c/swap! state add-source csv)
     (c/swap! state add-view csv-view))
@@ -25,7 +24,7 @@
    (c/deformula filter-cell
      (fn [data]
        (update data :data
-               (fn [rows] (filter #(= "business-main" (nth % 4)) rows))))
+               (fn [rows] (filter #(= "Documentary" (nth % 6)) rows))))
      ::c/unlinked)
 
    (def _ (c/linear-insert! csv filter-cell csv-view))
@@ -35,18 +34,24 @@
       filter-cell
       (fn [data]
         (update data :data
-                (fn [rows] (filter #(= "business-saver" (nth % 4)) rows))))))
+                (fn [rows] (filter #(= "Mini-Series" (nth % 6)) rows))))))
 
-   (def _
-     (c/swap-function!
-      filter-cell
-      (fn [data]
-        (update data :data
-                (fn [rows] (filter #(= "CASH" (nth % 2)) rows))))))
+   (def _ (c/swap-function! filter-cell identity))
 
-   (def _
-     (c/swap-function! filter-cell identity))
+   ;; OR
 
+   (def _ (c/mute! filter-cell))
+   (def _ (c/unmute! filter-cell))
+
+
+   (c/deformula sort-cell
+     (fn [data]
+       (update data :data (partial sort-by #(nth % 11))))
+     ::c/unlinked)
+
+   (def _ (c/linear-insert! csv sort-cell filter-cell))
+   (def _ (c/mute! sort-cell))
+   (def _ (c/unmute! sort-cell))
    )
   )
 
