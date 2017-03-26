@@ -25,7 +25,7 @@
    {:center (if-not tree
               (view/build-view ::view/nothing)
               (view/build-view tree))
-    :bottom (fx/make :scene.control/text-area {:text message/current-message})}))
+    :bottom (fx/make :scene.control/label {:text message/current-message})}))
 
 (def scene (atom nil))
 (defn make-app []
@@ -38,9 +38,7 @@
      :layout-watch
      (fn [_ _ tree]
        (fx/run-later!
-        #(do
-           (prn "Views have changed!")
-           (.setRoot the-scene (build-layout tree message/current-message))))))
+        #(.setRoot the-scene (build-layout tree message/current-message)))))
     (reset! scene the-scene)
     (comment
       (fx/make

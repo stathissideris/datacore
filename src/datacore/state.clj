@@ -9,7 +9,7 @@
 (defcell layout-tree
   {:type :datacore.view/nothing})
 
-(defcell layout-tree
+#_(defcell layout-tree
   {:type        ::view/split-pane
    :orientation :horizontal
    :children    [{:type        ::view/split-pane

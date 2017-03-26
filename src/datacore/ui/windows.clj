@@ -10,7 +10,7 @@
   (println :maximize))
 
 (defin split-below
-  {:alias :windows/split-right}
+  {:alias :windows/split-below}
   []
   (c/swap!
    state/layout-tree

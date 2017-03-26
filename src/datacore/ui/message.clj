@@ -2,7 +2,7 @@
   (:require [datacore.cells :as c]
             [datacore.ui.timer :as timer]))
 
-(def ^:private message-input (c/cell :message-input nil))
+(def ^:private message-input (c/cell :message-input "Ready"))
 (c/deformula current-message str message-input)
 (def timer (atom nil))
 
