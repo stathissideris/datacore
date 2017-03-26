@@ -57,4 +57,6 @@
       table (c/formula #(str (:label %) " - "
                              (-> % :data count) " rows - "
                              (-> % :columns count) " columns - "
-                             (Date. (:last-modified %))) view-cell {:label :table-status-line}))))
+                             (Date. (:last-modified %)))
+                       view-cell
+                       {:label :table-status-line}))))

@@ -1,15 +1,49 @@
 (ns datacore.state
   (:require [datacore.cells :as c :refer [cell defcell deformula]]
-            [datacore.util :as util]))
+            [datacore.util :as util]
+            [datacore.view :as view]
+            [clojure.walk :as walk]))
 
 (defcell state {})
-(deformula views :views state)
+(defcell ^:private view-to-component {})
+(defcell layout-tree
+  {:type :datacore.view/nothing})
 
-(defn add-source [state source]
-  (update state :sources (fnil conj []) source))
+(defcell layout-tree
+  {:type        ::view/split-pane
+   :orientation :horizontal
+   :children    [{:type        ::view/split-pane
+                  :orientation :vertical
+                  :children    [{:view :foo}
+                                {:view :foo2}]}
+                 {:type        ::view/split-pane
+                  :orientation :vertical
+                  :children    [{:view :foo3}
+                                {:view :foo4}]}]})
 
-(defn add-view [state {:keys [source] :as view}]
-  (update state :views (fnil conj []) view))
+(deformula layout
+  (fn [tree components]
+    (walk/postwalk
+     (fn [x]
+       (if (:view x)
+         (assoc x :component (get components (:view x)))
+         x))
+     tree))
+  layout-tree
+  view-to-component)
+
+(defn view-id [label]
+  ;;TODO produce unique label
+  (keyword label))
+
+(defn register-component! [view-id fx-component]
+  (c/swap! view-to-component assoc view-id fx-component))
+
+(defn add-view! [view-cell]
+  (let [{:keys [id]} (c/value view-cell)]
+    (register-component! id (view/build-view view-cell))))
+
+;;TODO destroy view (also destroy FX component)
 
 (comment
   (do
@@ -18,8 +52,14 @@
     (fx/run-later! datacore.ui/make-app)
     (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
-    (c/swap! state add-source csv)
-    (c/swap! state add-view csv-view))
+    (def _ (add-view! csv-view)))
+
+  (c/reset! layout-tree {:view :watchlist.csv})
+  (c/reset! layout-tree
+            {:type        ::view/split-pane
+             :orientation :vertical
+             :children    [{:view :watchlist.csv}
+                           {:view :watchlist.csv}]})
 
   (defmacro simple-cell [name expr]
     `(c/deformula ~name

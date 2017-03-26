@@ -19,70 +19,28 @@
 (JFXPanel.)
 (Platform/setImplicitExit false)
 
-(defmacro doto-cond-> [x & clauses]
-  (let [comp (gensym)]
-    `(let [~comp ~x]
-       ~@(for [[pred code] (partition 2 clauses)]
-           `(when ~pred (-> ~comp ~code)))
-       ~comp)))
-
-(def panes
-  {:type        :split-pane
-   :orientation :horizontal
-   :children    [{:type        :split-pane
-                  :orientation :vertical
-                  :children    [{:type :text-area
-                                 :text "FOO B"}
-                                {:type :text-area
-                                 :text "FOO B"}]}
-                 {:type        :split-pane
-                  :orientation :vertical
-                  :children    [{:type :text-area
-                                 :text "FOO C"}
-                                {:type :text-area
-                                 :text "FOO D"}]}]})
-
-(defmethod view/build-view :split-pane
-  [{:keys [orientation children]}]
-  (fx/make :scene.control/split-pane
-           {:items       (map view/build-view children)
-            :orientation (if (= orientation :horizontal)
-                           javafx.geometry.Orientation/HORIZONTAL
-                           javafx.geometry.Orientation/VERTICAL)}))
-
-(defmethod view/build-view :text-area
-  [{:keys [text]}]
-  (ui.util/with-status-line
-    (fx/make :scene.control/text-area {:fx/args ["MINIBUFFER"]})))
-
-(defn main-view [view message]
-  (let [minibuffer (fx/make :scene.control/text-area {:text message/current-message})]
-    ;;(cell= (fx/set-field! minibuffer :text @message))
-    #_(fx/make
-       :scene.layout/border-pane
-       {:center (build-view panes)
-        :bottom minibuffer})
-    (fx/make
-     :scene.layout/border-pane
-     {:center (if-not view
-                (fx/make :scene.control/label {:text "Nothing to show"})
-                (view/build-view view))
-      :bottom minibuffer})))
+(defn build-layout [tree message]
+  (fx/make
+   :scene.layout/border-pane
+   {:center (if-not tree
+              (view/build-view ::view/nothing)
+              (view/build-view tree))
+    :bottom (fx/make :scene.control/text-area {:text message/current-message})}))
 
 (def scene (atom nil))
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
-                             {:fx/args  [(main-view nil message/current-message) 800 800]
+                             {:fx/args  [(build-layout ::view/nothing message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
     (c/add-watch!
-     state/views
-     :views-watch
-     (fn [_ _ views]
+     state/layout
+     :layout-watch
+     (fn [_ _ tree]
        (fx/run-later!
         #(do
-           (prn "Views have changed!" (first views))
-           (.setRoot the-scene (main-view (first views) message/current-message))))))
+           (prn "Views have changed!")
+           (.setRoot the-scene (build-layout tree message/current-message))))))
     (reset! scene the-scene)
     (comment
       (fx/make
@@ -103,18 +61,6 @@
          (^void handle [this ^Event event]
           (key-handler event))))
       (.show))))
-
-(comment
-  (fx/run-later! make-app)
-  (do (dev/refresh) (datacore.ui/run-later! datacore.ui/make-app))
-  )
-
-;;to see the table being updated live:
-
-(comment
-  (swap! table-data assoc-in [0 :b] 10000)
-  (swap! table-data assoc-in [2 :a] "fooo")
-  (swap! table-data conj {:a (rand-int 100), :b (rand-int 100), :c (rand-int 100)}))
 
 ;;to see live CSS updates:
 

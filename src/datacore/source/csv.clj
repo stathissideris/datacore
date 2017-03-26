@@ -4,6 +4,7 @@
             [me.raynes.fs :as fs]
             [datacore.util :as util]
             [datacore.cells :as c]
+            [datacore.state :as state]
             [hawk.core :as hawk]))
 
 (defn load-csv [{:keys [filename separator quote] :as options}]
@@ -41,13 +42,16 @@
 
 (defn default-view [csv-cell]
   (c/formula
-   (fn [{:keys [columns column-labels original-column-labels] :as contents}]
-     (cond-> contents
-       (not column-labels) (assoc :column-labels
-                                  (zipmap columns
-                                          (map (fn [c]
-                                                 (or (get original-column-labels c)
-                                                     (util/data-key->label c))) columns)))
-       :always             (assoc :type :datacore.view/table)))
+   (fn [{:keys [label columns column-labels original-column-labels] :as contents}]
+     (merge
+      contents
+      {:id (state/view-id label)
+       :type :datacore.view/table}
+      ;;TODO also uniquify label
+      (when-not (not column-labels)
+        {:column-labels (zipmap columns
+                                (map (fn [c]
+                                       (or (get original-column-labels c)
+                                           (util/data-key->label c))) columns))})))
    csv-cell
    {:label :table-view}))

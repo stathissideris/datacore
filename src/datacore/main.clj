@@ -1,5 +1,5 @@
 (ns datacore.main
-  (:require [clojure.repl :refer [pst]]))
+  (:require [clojure.repl :as repl]))
 
 (defmacro with-err-str
   "Evaluates exprs in a context in which *err* is bound to a fresh
@@ -15,7 +15,7 @@
 (defn- global-exception-handler []
   (reify Thread$UncaughtExceptionHandler
     (uncaughtException [this thread throwable]
-      (let [trace (with-err-str (pst throwable 150))]
+      (let [trace (with-err-str (repl/pst throwable 150))]
         (println "UNCAUGHT EXCEPTION" trace)))))
 
 (defn init []
