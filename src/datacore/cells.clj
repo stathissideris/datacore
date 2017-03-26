@@ -91,7 +91,9 @@
       :enabled? (if (:formula? c)
                   (:enabled? c)
                   "")
-      :value    (:value c)
+      :value    (if (contains? c :value)
+                  (:value c)
+                  ::no-value)
       :error    (:error c)
       #_:code     #_(not-empty
                      (apply
@@ -126,10 +128,12 @@
         true
         (recur (set (mapcat sink-map sinks)) (into visited sinks))))))
 
-(defn- add-link [m from to]
+(defn- add-link-to-mapping [m from to]
   (update m from (fn [x] (if-not x #{to} (conj x to)))))
 
-(defn link [cells source sink]
+(defn add-link
+  "Low-level linking of cells, does not propagate with push"
+  [cells source sink]
   (when-not (formula? cells sink)
     (throw (ex-info "Cannot add link, sink is not a formula"
                     {:source source
@@ -137,20 +141,17 @@
   (if (get-in cells [:sinks source sink])
     cells
     (let [new-cells (-> cells
-                        (update :sinks add-link source sink)
-                        (update :sources add-link sink source))]
+                        (update :sinks add-link-to-mapping source sink)
+                        (update :sources add-link-to-mapping sink source))]
       (if (and *detect-cycles* (cycles? (:sinks new-cells) source))
         (throw (ex-info "Cannot add link, cycle detected"
                         {:source source
                          :sink sink}))
         new-cells))))
-(s/fdef link
+(s/fdef add-link
  :args (s/& (s/cat :cells ::cells-graph :source ::cell-id :sink ::cell-id)
             (fn [{:keys [cells sink]}] (formula? cells sink)))
  :ret  ::cells-graph)
-
-(defn link! [source sink]
-  (core/swap! global-cells link source sink))
 
 (defn- all-blank-sources [cells cell-id]
   (loop [current-cells [cell-id]
@@ -189,6 +190,9 @@
                           (input-value (first sources-list)))))
       (catch Exception e
         (assoc cell :error (ex-info "Error updating formula cell" {:cell cell} e))))))
+;;TODO re-enable spec, for some reason cell-id? test was failing in
+;;some cases whene it shouldn't:
+;;
 ;; (s/fdef calc-formula
 ;;   :args (s/cat :cells ::cells-graph :formula ::formula-cell)
 ;;   :ret  ::formula-cell)
@@ -249,7 +253,7 @@
        (update-in $ [:cells sink :sources-list]
                   (fn [coll] (mapv #(if (= % source) ::unlinked %) coll)))
        (update-in $ [:cells sink] dissoc :value)
-       (if-not push? $ (touch $ sink))))))
+       (if-not push? $ (touch $ sink)))))) ;;TODO maybe should also pull before touching
 (s/fdef unlink
   :args (s/cat :cells ::cells-graph
                :source (s/or :source ::cell-id
@@ -296,8 +300,9 @@
 (defn link-slot [cells source-id sink-id slot-idx]
   (-> cells
       (unlink-slot sink-id slot-idx false)
-      (link source-id sink-id)
+      (add-link source-id sink-id)
       (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
+      ;;TODO should puul here
       (touch sink-id)))
 (s/fdef link-slot
   :args (s/& (s/cat :cells ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
@@ -306,6 +311,23 @@
 
 (defn link-slot! [source-id sink-id slot-idx]
   (core/swap! global-cells link-slot source-id sink-id slot-idx))
+
+(defn link
+  "Attach the source to a new slot at the end of the slots of the
+  sink."
+  [cells source-id sink-id]
+  (-> cells
+      (add-link source-id sink-id)
+      (update-in [:cells sink-id :sources-list] conj source-id)
+      (pull source-id)
+      (touch sink-id)))
+(s/fdef link
+ :args (s/& (s/cat :cells ::cells-graph :source ::cell-id :sink ::cell-id)
+            (fn [{:keys [cells sink]}] (formula? cells sink)))
+ :ret  ::cells-graph)
+
+(defn link! [source-id sink-id]
+  (core/swap! global-cells link source-id sink-id))
 
 (defn- upstream [cells cell-id]
   (first (sources cells cell-id)))
@@ -411,7 +433,7 @@
       (reduce (fn [cells source]
                 (if (= ::unlinked source)
                   cells
-                  (link cells source cell-id)))
+                  (add-link cells source cell-id)))
               new-cells sources))))
 
 (defn- new-cell-id []
@@ -461,7 +483,7 @@
 (s/fdef make-formula
   :args (s/cat :cells ::cells-graph
                :function ifn?
-               :sources (s/+ ::cell-id)
+               :sources (s/* ::cell-id)
                :options (s/? option-map?))
   :ret  (s/cat :id ::cell-id :new-cells ::cells-graph))
 
@@ -476,7 +498,7 @@
       id)))
 (s/fdef formula
   :args (s/cat :function ifn?
-               :sources (s/+ (s/or :source ::cell-id
+               :sources (s/* (s/or :source ::cell-id
                                    :unlinked #{::unlinked}))
                :options (s/? option-map?))
   :ret  ::cell-id)

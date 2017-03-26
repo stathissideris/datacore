@@ -316,6 +316,19 @@
       (is (= 1500 (-> @global-cells :cells (get res) :value))) ;; make sure a push happens
       (is (= 1500 (value res)))))
 
+  (testing "link into formula that didn't have any inputs"
+    (let [a          (cell :a 100)
+          b          (formula (partial + 1) a {:label :b})
+          c          (formula (partial + 50) b {:label :c})
+          d          (formula vector {:label :d})
+          propagated (atom 0)]
+      (add-watch! d :testing (fn [_ _ _] (core/swap! propagated inc)))
+      (link! c d)
+      (is (= 1 @propagated))
+      (is (= 101 (value b)))
+      (is (= 151 (value c)))
+      (is (= [151] (value d)))))
+
   (testing "linear-move-up 1"
     (let [a (cell :a 100)
           b (formula (partial * 10) a {:label :b})
