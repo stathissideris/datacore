@@ -1,5 +1,7 @@
 (ns datacore.main
-  (:require [clojure.repl :as repl]))
+  (:require [clojure.repl :as repl])
+  (:import [javafx.embed.swing JFXPanel]
+           [javafx.application Platform]))
 
 (defmacro with-err-str
   "Evaluates exprs in a context in which *err* is bound to a fresh
@@ -19,6 +21,9 @@
         (println "UNCAUGHT EXCEPTION" trace)))))
 
 (defn init []
+  ;;(set! *warn-on-reflection* true)
+  (JFXPanel.)
+  (Platform/setImplicitExit false)
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler)))
 
 (init)

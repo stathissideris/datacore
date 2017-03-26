@@ -9,15 +9,11 @@
             [datacore.ui.util :as ui.util]
             [datacore.cells :as c]
             [datacore.state :as state])
-  (:import [javafx.embed.swing JFXPanel]
-           [javafx.stage Stage]
-           [javafx.application Platform]
+  (:import [javafx.stage Stage]
            [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]))
 
-;;(set! *warn-on-reflection* true)
-(JFXPanel.)
-(Platform/setImplicitExit false)
+(def scene nil)
 
 (defn build-layout [tree message]
   (fx/make
@@ -27,19 +23,18 @@
               (view/build-view tree))
     :bottom (fx/make :scene.control/label {:text message/current-message})}))
 
-(def scene (atom nil))
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
                              {:fx/args  [(build-layout ::view/nothing message/current-message) 800 800]
                               :fx/setup #(style/add-stylesheet % "css/default.css")})
         key-handler (keys/key-handler default-keys/root-keymap)]
+    (alter-var-root #'scene (constantly the-scene))
     (c/add-watch!
      state/layout
      :layout-watch
      (fn [_ _ tree]
        (fx/run-later!
         #(.setRoot the-scene (build-layout tree message/current-message)))))
-    (reset! scene the-scene)
     (comment
       (fx/make
        :stage/stage
