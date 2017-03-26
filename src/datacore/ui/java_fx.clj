@@ -51,14 +51,17 @@
   (try
     (clojure.lang.Reflector/invokeInstanceMethod
      object
-     (->> (util/kebab->camel field-kw)
-          str/capitalize
+     (->> field-kw
+          util/kebab->camel
+          util/capitalize-first
           (str "set"))
      (object-array [value]))
     (catch Exception _
       (if (c/cell-id? value)
         (do
           (run-later! #(set-field! object field-kw (c/value value)))
+          (when-not (c/label value)
+            (c/set-label! value (keyword (str (.getName (class object)) "-" (name field-kw)))))
           (c/add-watch!
            value
            [object field-kw]

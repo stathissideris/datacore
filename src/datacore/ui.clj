@@ -1,19 +1,26 @@
 (ns datacore.ui
-  (:require [datacore.ui.keys :as keys]
+  (:require [datacore :refer [defin]]
+            [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.style :as style]
             [datacore.ui.message :as message]
             [datacore.view :as view]
-            [datacore.view.table]
             [datacore.ui.java-fx :as fx]
-            [datacore.ui.util :as ui.util]
             [datacore.cells :as c]
             [datacore.state :as state])
   (:import [javafx.stage Stage]
            [javafx.scene.input KeyEvent]
-           [javafx.event EventHandler Event]))
+           [javafx.event EventHandler Event]
+           [javafx.scene.paint Color]))
 
 (def scene nil)
+
+(defn- message-line [message]
+  (fx/make :scene.control/label
+           {:text      (c/formula :msg message)
+            :text-fill (c/formula (comp {:message Color/WHITE
+                                         :error   (Color/web "0xF57000")}
+                                        :type) message)}))
 
 (defn build-layout [tree message]
   (fx/make
@@ -21,7 +28,7 @@
    {:center (if-not tree
               (view/build-view ::view/nothing)
               (view/build-view tree))
-    :bottom (fx/make :scene.control/label {:text message/current-message})}))
+    :bottom (message-line message)}))
 
 (defn make-app []
   (let [the-scene   (fx/make :scene/scene
@@ -54,6 +61,12 @@
          (^void handle [this ^Event event]
           (key-handler event))))
       (.show))))
+
+(defin execute-command
+  {:alias :execute-command
+   :params [{:type :text}]}
+  [function-name]
+  )
 
 ;;to see live CSS updates:
 

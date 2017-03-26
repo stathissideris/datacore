@@ -5,9 +5,9 @@
             [clojure.walk :as walk]))
 
 (defcell state {})
-(defcell ^:private view-to-component {})
+(defcell view-to-component {})
 (defcell layout-tree
-  {:type :datacore.view/nothing})
+  {:type ::view/nothing})
 
 #_(defcell layout-tree
   {:type        ::view/split-pane
@@ -52,7 +52,8 @@
     (fx/run-later! datacore.ui/make-app)
     (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
-    (def _ (add-view! csv-view)))
+    (def _ (add-view! csv-view))
+    )
 
   (c/reset! layout-tree {:view :watchlist.csv})
   (c/reset! layout-tree

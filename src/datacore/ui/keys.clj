@@ -134,7 +134,7 @@
           (and (= type :key-pressed) (not match))
           (do
             (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
-            (message/message (str "Key sequence " (chain-str new-chain) " not mapped to anything"))
+            (message/error (str "Key sequence " (chain-str new-chain) " not mapped to anything"))
             (clear-chain!)
             (consume-event fx-event press event))
 

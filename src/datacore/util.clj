@@ -10,6 +10,7 @@
     (apply str (first s) (map str/capitalize (next s)))))
 
 (defn capitalize-first
+  "Capitalizes first letter and leaves the rest of the string unchanged"
   [^CharSequence s]
   (let [s (.toString s)]
     (if (< (count s) 2)

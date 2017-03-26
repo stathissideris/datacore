@@ -618,3 +618,9 @@
 
 (defn remove-watch! [cell-id key]
   (core/swap! watches update cell-id dissoc key))
+
+(defn set-label! [cell-id label]
+  (core/swap! global-cells assoc-in [:cells cell-id :label] label))
+
+(defn label [cell-id]
+  (get-in @global-cells [:cells cell-id :label]))

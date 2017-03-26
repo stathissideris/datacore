@@ -2,16 +2,22 @@
   (:require [datacore.cells :as c]
             [datacore.ui.timer :as timer]))
 
-(def ^:private message-input (c/cell :message-input "Ready"))
-(c/deformula current-message str message-input)
+(def initial-state
+  {:type :message
+   :msg  "Ready"})
+
+(c/defcell message-input initial-state)
+(c/deformula current-message identity message-input)
 (def timer (atom nil))
 
 (defn message [x]
-  (c/swap! message-input (fn [_] x))
+  (c/reset! message-input {:type :message
+                           :msg  (str x)})
   (when-let [t @timer] (timer/cancel t))
-  (reset! timer (timer/delayed 3000 #(c/reset! message-input nil))))
+  (reset! timer (timer/delayed 3000 #(c/reset! message-input initial-state))))
 
 (defn error [x]
-  (c/swap! message-input (fn [_] x))
+  (c/reset! message-input {:type :error
+                           :msg  (str x)})
   (when-let [t @timer] (timer/cancel t))
-  (reset! timer (timer/delayed 3000 #(c/reset! message-input nil))))
+  (reset! timer (timer/delayed 3000 #(c/reset! message-input initial-state))))
