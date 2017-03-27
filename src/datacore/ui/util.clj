@@ -1,5 +1,11 @@
 (ns datacore.ui.util
-  (:require [datacore.ui.java-fx :as fx]))
+  (:require [datacore.ui.java-fx :as fx])
+  (:import [javafx.util Callback]))
+
+(defn callback [fun]
+  (reify Callback
+    (call [this p]
+      (fun p))))
 
 (defn with-status-line [c label]
   (fx/make

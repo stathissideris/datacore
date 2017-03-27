@@ -1,6 +1,6 @@
 (ns datacore.view.table
   (:require [datacore.view :as view]
-            [datacore.ui.util :refer [with-status-line]]
+            [datacore.ui.util :refer [with-status-line callback]]
             [datacore.ui.java-fx :as fx]
             [datacore.ui.message :as message]
             [datacore.cells :as c]
@@ -8,11 +8,6 @@
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
            [java.util Date]))
-
-(defn callback [fun]
-  (reify Callback
-    (call [this p]
-      (fun p))))
 
 (defn column [name cell-value-fn]
   (fx/make

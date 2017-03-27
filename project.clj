@@ -10,7 +10,8 @@
                  [me.raynes/fs "1.4.6"]
                  [hawk "0.2.11"]]
   :resource-paths ["resources"]
-  :profiles {:dev {:source-paths ["dev"]
-                   :dependencies [[org.clojure/tools.namespace "0.2.11"]]
-                   :jvm-opts ["-agentlib:jdwp=transport=dt_socket,server=y,address=8700,suspend=n"
-                              "-XX:-OmitStackTraceInFastThrow"]}})
+  :profiles {:dev {:source-paths   ["dev"]
+                   :resource-paths ["lib/scenicView.jar"]
+                   :dependencies   [[org.clojure/tools.namespace "0.2.11"]]
+                   :jvm-opts       ["-agentlib:jdwp=transport=dt_socket,server=y,address=8700,suspend=n"
+                                    "-XX:-OmitStackTraceInFastThrow"]}})
