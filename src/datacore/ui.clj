@@ -42,25 +42,17 @@
      (fn [_ _ tree]
        (fx/run-later!
         #(.setRoot the-scene (build-layout tree message/current-message)))))
-    (comment
-      (fx/make
-       :stage/stage
-       {:scene    the-scene
-        :title    "foobar"
-        :fx/setup #(.addEventFilter
-                    % KeyEvent/ANY
-                    (reify EventHandler
-                      (^void handle [this ^Event event]
-                       (key-handler event))))}))
-    (doto (Stage.)
-      (.setScene the-scene)
-      (.setTitle "foobar")
-      (.addEventFilter
-       KeyEvent/ANY
-       (reify EventHandler
-         (^void handle [this ^Event event]
-          (key-handler event))))
-      (.show))))
+    (fx/make
+     :stage/stage
+     [[:scene    the-scene]
+      [:title    "foobar"]
+      [:fx/setup #(doto %
+                    (.addEventFilter
+                     KeyEvent/ANY
+                     (reify EventHandler
+                       (^void handle [this ^Event event]
+                        (key-handler event))))
+                    (.show))]])))
 
 (defin execute-command
   {:alias :execute-command
