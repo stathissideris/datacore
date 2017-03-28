@@ -14,7 +14,8 @@
   (fx/make
    :scene.layout/border-pane
    {:center c
-    :bottom (fx/make :scene.control/label {:text label})}))
+    :bottom (fx/make :scene.control/label {:text  label
+                                           :style "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"})}))
 
 (defn inspect [cell]
   (fx/run-later!

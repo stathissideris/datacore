@@ -8,7 +8,9 @@
 
 (defmethod build-view ::nothing
   [_]
-  (fx/make :scene.control/label {:text "Nothing to show"}))
+  (fx/make
+   :scene.layout/border-pane
+   {:center (fx/label "Nothing to show")}))
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]

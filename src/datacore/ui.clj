@@ -24,6 +24,7 @@
 (defn- message-line [message]
   (fx/make :scene.control/label
            {:text      (c/formula :msg message)
+            :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
             :text-fill (c/formula (comp {:message Color/BLACK
                                          :error   (Color/web "0xF57000")}
                                         :type) message)}))
@@ -79,7 +80,7 @@
       {:style (str "-fx-padding: 0px;"
                    "-fx-background-color: rgba(0,0,0,0);"
                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10)")
-       :pref-width 400
+       :pref-width 400 ;;if not set, :wrap-text does not work on label below
        :children
        [(fx/make :scene.control/label
                  {:text      (str "execute-function\n"
