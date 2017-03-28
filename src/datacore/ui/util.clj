@@ -1,6 +1,9 @@
 (ns datacore.ui.util
-  (:require [datacore.ui.java-fx :as fx])
-  (:import [javafx.util Callback]))
+  (:require [datacore.ui.java-fx :as fx]
+            [datacore.cells :as c])
+  (:import [javafx.util Callback]
+           [javafx.stage StageStyle]
+           [java.util Date]))
 
 (defn callback [fun]
   (reify Callback
@@ -12,3 +15,18 @@
    :scene.layout/border-pane
    {:center c
     :bottom (fx/make :scene.control/label {:text label})}))
+
+(defn inspect [cell]
+  (fx/run-later!
+   (fn []
+     (fx/make
+      :stage/stage
+      [[:title "datacore component inspector"]
+       [:scene
+        (fx/make
+         :scene/scene
+         {:fx/args [(fx/make
+                     :scene.layout/border-pane
+                     {:center cell
+                      :bottom (c/formula (fn [_] (fx/label (Date.) {:style "-fx-padding: 0.5em;"})) cell)})]})]
+       [:fx/setup fx/show]]))))
