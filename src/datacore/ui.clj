@@ -6,6 +6,7 @@
             [datacore.ui.message :as message]
             [datacore.view :as view]
             [datacore.ui.java-fx :as fx]
+            [datacore.ui.util :as uu]
             [datacore.cells :as c]
             [datacore.state :as state]
             [datacore.ui.observable :refer [observable-list]])
@@ -60,54 +61,74 @@
                         (key-handler event))))
                     (.show))]])))
 
-(def popup nil)
+#_(fx/make :scene.effect/drop-shadow
+           {:radius 5.0
+            :offset-y 3.0})
+
+
 (defn make-popup []
   ;;.centerOnScreen
   ;;.setOpacity
-  (let [drop-shadow (fx/make :scene.effect/drop-shadow
-                             {:radius 5.0
-                              :offset-y 3.0})
-        back        (Background.
-                     (into-array
-                      BackgroundFill
-                      [(BackgroundFill.
-                        (Color/color 0 0 0 0)
-                        CornerRadii/EMPTY
-                        Insets/EMPTY)]))
-        s           (fx/make
-                     :stage/stage
-                     [;;[:fx/args [StageStyle/TRANSPARENT]]
-                      [:title "foobar"]
-                      [:always-on-top true]
-                      [:scene
-                       (fx/make
-                        :scene/scene
-                        {:fx/args
-                         [(fx/make
-                           :scene.layout/v-box
-                           {:fx/args [(double 0)]
-                            :background back
-                            :children
-                            [(fx/make
-                              :scene.control/text-field
-                              {:id     "prompt-text-field"
-                               :style  "-fx-font-size: 2.5em;"
-                               :text   "POPU22222!"
-                               :effect drop-shadow
-                               :border Border/EMPTY})
-                             (fx/make
-                              :scene.control/list-view
-                              {:items (observable-list
-                                       ["windows/split-below"
-                                        "windows/split-right"
-                                        "windows/maximize"
-                                        "windows/delete"])})]})
-                          nil]
-                         ;;:fx/setup #(style/add-stylesheet % "css/default.css")
-                         })]
-                      [:fx/setup #(.show %)]])]
-    (alter-var-root #'popup (constantly s))
-    s))
+  (fx/make
+   :scene.layout/v-box
+   {:style (str "-fx-padding: 40px;"
+                "-fx-background-color: rgba(0,0,0,0);")
+    :children
+    [(fx/make
+      :scene.layout/v-box
+      {:style (str "-fx-padding: 0px;"
+                   "-fx-background-color: rgba(0,0,0,0);"
+                   "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10)")
+       :children
+       [(fx/make
+         :scene.layout/v-box
+         {:fill-width true
+          :children
+          [(fx/make :scene.control/label
+                    {:text      "Function to execute:"
+                     :wrap-text true ;;TODO does not work
+                     :style     (str "-fx-padding: 0.9em 0.7em 0.6em 0.8em;"
+                                     "-fx-font-size: 0.85em;"
+                                     "-fx-background-color: #f4f2f3;"
+                                     "-fx-background-radius: 10 10 0 0;"
+                                     "-fx-border-width: 1 1 0 1;"
+                                     "-fx-border-radius: 6 6 0 0;"
+                                     "-fx-border-color: #d5d5d5;"
+                                     "-fx-wrap-text: true;"
+                                     "-fx-text-fill: #887373;")})
+           (fx/make
+            :scene.control/text-field
+            {:id     "prompt-text-field"
+             :style  (str "-fx-font-size: 2.5em;"
+                          "-fx-border-width: 5px;"
+                          "-fx-background-color: #f4f2f3;"
+                          "-fx-border-color: #d5d5d5;"
+                          "-fx-border-style: solid;"
+                          "-fx-border-width: 1px;")
+             :text   "wind"
+             :border Border/EMPTY})
+           (fx/make
+            :scene.control/list-view
+            {:style (str "-fx-font-size: 1.5em;"
+                         "-fx-border-color: white;"
+                         "-fx-border-style: solid;"
+                         "-fx-border-width: 1px;"
+                         "-fx-border-radius: 0 0 5 5;"
+                         "-fx-background-radius: 0 0 2 2;")
+             :items (observable-list
+                     ["windows/split-below"
+                      "windows/split-right"
+                      "windows/maximize"
+                      "windows/delete"])})]})]})]}))
+
+(comment
+  (do
+    (c/defcell popup-preview (make-popup))
+    (uu/inspect popup-preview))
+  )
+;;(def cc (fx/run-later! #(-> (make-popup) fx/transparent-window fx/show)))
+;;(fx/run-later! #(-> cc deref .close))
+;;(c/swap! popup-preview (fn [_] (make-popup)))
 
 (defn scenic-view [node]
   (ScenicView/show node))

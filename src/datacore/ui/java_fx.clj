@@ -3,18 +3,22 @@
             [clojure.string :as str]
             [datacore.cells :as c])
   (:import [javafx.collections ObservableList]
-           [javafx.application Platform]))
+           [javafx.application Platform]
+           [javafx.stage StageStyle]
+           [javafx.scene.paint Color]))
 
 (defn run-later! [fun]
-  (if (Platform/isFxApplicationThread)
-    (fun)
-    (Platform/runLater
-     (fn []
-       (try
-         (fun)
-         (catch Exception e
-           (.printStackTrace e)
-           (throw e)))))))
+  (let [p (promise)]
+    (if (Platform/isFxApplicationThread)
+      (deliver p (fun))
+      (Platform/runLater
+       (fn []
+         (try
+           (deliver p (fun))
+           (catch Exception e
+             (.printStackTrace e)
+             (throw e))))))
+    p))
 
 (defn- getter-method [clazz field-kw]
   (let [method-name (->> (util/kebab->camel field-kw)
@@ -123,6 +127,27 @@
          (value o)
          (set-field! o field value)))
      o)))
+
+(defn label
+  [text & [spec]]
+  (make :scene.control/label (merge {:text (str text)} spec)))
+
+(defn window [title root]
+  (make :stage/stage
+        {:scene (make :scene/scene {:fx/args [root]})}))
+
+(defn transparent-window [root]
+  (make :stage/stage
+        {:fx/args [StageStyle/TRANSPARENT]
+         :scene (make :scene/scene {:fx/args [root]
+                                    :fill Color/TRANSPARENT})}))
+
+(defn undecorated-window [root]
+  (make :stage/stage
+        {:fx/args [StageStyle/UNDECORATED]
+         :scene (make :scene/scene {:fx/args [root]})}))
+
+(defn show [c] (.show c) c)
 
 (comment
   (make
