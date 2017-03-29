@@ -126,6 +126,24 @@
         (is (= (* 101 3 2) (value c)))
         (is (= (* 101 3 2 10) (value d))))))
 
+  (testing "propagation happens once when swapping and reading value"
+    (let [log (atom 0)
+          a   (cell 10)
+          b   (formula (fn [x] (core/swap! log inc) (* 2 x)) a)]
+      (swap! a inc)
+      (is (= 1 @log))
+      (value b)
+      (is (= 1 @log))))
+
+  (testing "propagation happens once when resetting and reading value"
+    (let [log (atom 0)
+          a   (cell 10)
+          b   (formula (fn [x] (core/swap! log inc) (* 2 x)) a)]
+      (reset! a 200)
+      (is (= 1 @log))
+      (value b)
+      (is (= 1 @log))))
+
   (testing "long chain 1"
     (let [chain (reduce (fn [chain _]
                           (conj chain (formula inc (last chain))))
@@ -467,4 +485,40 @@
 
       (swap! c inc)
       (is (= 12 @touch-b))
-      (is (= 100 @touch-d)))))
+      (is (= 100 @touch-d))))
+
+  (testing "watches 5 - multiple watches on the same cell"
+    (let [a  (cell 10)
+          b  (formula (partial * 2) a)
+          w1 (atom 0)
+          w2 (atom 0)
+          w3 (atom 0)]
+      (add-watch! b :w1 (fn [_ _ _] (core/swap! w1 inc)))
+      (add-watch! b :w2 (fn [_ _ _] (core/swap! w2 inc)))
+      (add-watch! b :w3 (fn [_ _ _] (core/swap! w3 inc)))
+      (swap! a inc)
+      (is (= 1 @w1))
+      (is (= 1 @w2))
+      (is (= 1 @w3))))
+
+  (testing "watches 6 - multiple watches on the same cell with reset"
+    (let [a  (cell 10)
+          b  (formula (partial * 2) a)
+          w1 (atom 0)
+          w2 (atom 0)
+          w3 (atom 0)]
+      (add-watch! b :w1 (fn [_ _ _] (core/swap! w1 inc)))
+      (add-watch! b :w2 (fn [_ _ _] (core/swap! w2 inc)))
+      (add-watch! b :w3 (fn [_ _ _] (core/swap! w3 inc)))
+      (reset! a 9000)
+      (is (= 1 @w1))
+      (is (= 1 @w2))
+      (is (= 1 @w3))))
+
+  (testing "watches 7 - propagation happens once for cells with watches"
+    (let [log (atom 0)
+          a   (cell 10)
+          b   (formula (fn [x] (core/swap! log inc) (* 2 x)) a)]
+      (add-watch! b :w (fn [_ _ _] (print "hello!")))
+      (reset! a 9000)
+      (is (= 1 @log)))))
