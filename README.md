@@ -41,7 +41,7 @@ Still being considered:
 
  * A [React](https://facebook.github.io/react/docs/reconciliation.html)-like approach.
 
-## Cells
+## Cells implementation
 
 Differences to Javelin:
 
@@ -62,6 +62,13 @@ Differences to Javelin:
  * Ability to destroy a cell.
  * No support for `cell=` macro, only `formula` so creating formula
    cells is less convenient.
+
+## Reading list
+
+ * [Reactive programming](https://en.wikipedia.org/wiki/Reactive_programming)
+ * [Functional reactive programming](https://en.wikipedia.org/wiki/Functional_reactive_programming)
+ * [FRP - Three principles for GUI elements with bidirectional data flow](http://apfelmus.nfshost.com/blog/2012/03/29-frp-three-principles-bidirectional-gui.html) - very interesting comments too!
+ * [HotDrink JavaScript library](https://github.com/HotDrink/hotdrink)
 
 ## License
 
