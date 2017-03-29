@@ -1,66 +1,69 @@
 (ns datacore.state
   (:require [datacore.cells :as c :refer [cell defcell deformula]]
             [datacore.util :as util]
-            [datacore.view :as view]
             [clojure.walk :as walk]))
 
 (defcell state {})
 (defcell view-to-component {})
-(defcell layout-tree
-  {:type ::view/nothing})
+(defcell layout-tree nil)
 
-#_(defcell layout-tree
-  {:type        ::view/split-pane
-   :orientation :horizontal
-   :children    [{:type        ::view/split-pane
-                  :orientation :vertical
-                  :children    [{:view :foo}
-                                {:view :foo2}]}
-                 {:type        ::view/split-pane
-                  :orientation :vertical
-                  :children    [{:view :foo3}
-                                {:view :foo4}]}]})
+(defn- assign-layout-ids [tree]
+  (walk/postwalk
+   (fn [x]
+     (if (and (map? x) (:type x) (not (:id x)))
+       (assoc x :id (str (java.util.UUID/randomUUID)))
+       x))
+   tree))
 
-(deformula layout
-  (fn [tree components]
-    (walk/postwalk
-     (fn [x]
-       (if (:view x)
-         (assoc x :component (get components (:view x)))
-         x))
-     tree))
-  layout-tree
-  view-to-component)
+(defn swap-layout! [fun & args]
+  (let [old-tree          (c/value layout-tree)
+        new-tree          (apply fun old-tree args)
+        new-tree-with-ids (assign-layout-ids new-tree)]
+    (c/reset! layout-tree new-tree-with-ids)))
 
-(defn view-id [label]
-  ;;TODO produce unique label
-  (keyword label))
-
-(defn register-component! [view-id fx-component]
-  (c/swap! view-to-component assoc view-id fx-component))
-
-(defn add-view! [view-cell]
-  (let [{:keys [id]} (c/value view-cell)]
-    (register-component! id (view/build-view view-cell))))
-
-;;TODO destroy view (also destroy FX component)
+;; {:type ::top-level
+;;  :children
+;;  [{:type ::view/window
+;;     :title "datacore"
+;;     :dimensions [100 800]
+;;     :root
+;;     {:type        ::view/split-pane
+;;      :orientation :horizontal
+;;      :children    [{:type        ::view/split-pane
+;;                     :orientation :vertical
+;;                     :children    [(CellId. 2)
+;;                                   (CellId. 4)]}
+;;                    {:type        ::view/split-pane
+;;                     :orientation :vertical
+;;                     :children    [(CellId. 3)
+;;                                   ::view/nothing]}]}}]}
 
 (comment
   (do
     (require '[datacore.source.csv :as csv])
     (require '[datacore.ui.java-fx :as fx])
-    (fx/run-later! datacore.ui/make-app)
     (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
-    (def _ (add-view! csv-view))
     )
 
-  (c/reset! layout-tree {:view :watchlist.csv})
-  (c/reset! layout-tree
-            {:type        ::view/split-pane
-             :orientation :vertical
-             :children    [{:view :watchlist.csv}
-                           {:view :watchlist.csv}]})
+  ;;show cell in window
+  (swap-layout!
+   (fn [tree]
+     (assoc-in tree [:children 0 :root] csv-view)))
+
+  ;;open extra window
+  (swap-layout!
+   (fn [tree]
+     (update tree :children conj
+             {:type       :datacore.ui.view/window
+              :title      "datacore 2"
+              :dimensions [1000 800]
+              :root       {:type :datacore.ui.view/nothing}})))
+
+  ;;close extra window
+  (swap-layout!
+   (fn [tree]
+     (update tree :children (comp vec butlast))))
 
   (defmacro simple-cell [name expr]
     `(c/deformula ~name
@@ -127,15 +130,3 @@
    (def _ (c/linear-insert! csv new-column csv-view))
 
    ))
-
-
-(comment
-  {:sources []
-   :views   [{:source       source
-              :label        ""
-              :type         :table
-              :transformers [{:label      ""
-                              :expression ()
-                              :function   ()
-                              :active?    true}]}] ;;you can re-order them and turn them on/off
-   })

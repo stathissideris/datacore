@@ -45,8 +45,7 @@
    (fn [{:keys [label columns column-labels original-column-labels] :as contents}]
      (merge
       contents
-      {:id (state/view-id label)
-       :type :datacore.view/table}
+      {:type :datacore.view/table}
       ;;TODO also uniquify label
       (when-not (not column-labels)
         {:column-labels (zipmap columns

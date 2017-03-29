@@ -42,8 +42,6 @@
              (doseq [[key fun] cell-watches]
                (fun key old-value new-value)))))))))
 
-(def ^:private global-watches (atom {}))
-
 (defn formula?
   ([cell-id]
    (and (cell-id? cell-id) (formula? @global-cells cell-id)))

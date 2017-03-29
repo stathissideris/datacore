@@ -1,6 +1,6 @@
 (ns datacore.ui.windows
   (:require [datacore :refer [defin]]
-            [datacore.view :as view]
+            [datacore.ui.view :as view]
             [datacore.cells :as c]
             [datacore.state :as state]))
 
@@ -12,8 +12,7 @@
 (defin split-below
   {:alias :windows/split-below}
   []
-  (c/swap!
-   state/layout-tree
+  (state/swap-layout!
    (fn [tree]
      {:type        ::view/split-pane
       :orientation :vertical
@@ -23,8 +22,7 @@
 (defin split-right
   {:alias :windows/split-right}
   []
-  (c/swap!
-   state/layout-tree
+  (state/swap-layout!
    (fn [tree]
      {:type        ::view/split-pane
       :orientation :horizontal

@@ -1,5 +1,8 @@
 (ns datacore.main
-  (:require [clojure.repl :as repl])
+  (:require [clojure.repl :as repl]
+            [datacore.cells :as c]
+            [datacore.state :as state]
+            [datacore.ui.view :as view])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.application Platform]))
 
@@ -24,6 +27,15 @@
   ;;(set! *warn-on-reflection* true)
   (JFXPanel.)
   (Platform/setImplicitExit false)
-  (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler)))
+  (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))
 
-(init)
+  (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (view/update-layout! old new)))
+
+  (state/swap-layout!
+   (constantly
+    {:type :datacore.ui.view/top-level
+     :children
+     [{:type       :datacore.ui.view/window
+       :title      "datacore"
+       :dimensions [1000 800]
+       :root       {:type :datacore.ui.view/nothing}}]})))

@@ -1,5 +1,5 @@
-(ns datacore.view.table
-  (:require [datacore.view :as view]
+(ns datacore.ui.view.table
+  (:require [datacore.ui.view :as view]
             [datacore.ui.util :refer [with-status-line callback]]
             [datacore.ui.java-fx :as fx]
             [datacore.ui.message :as message]

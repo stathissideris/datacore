@@ -4,11 +4,9 @@
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.style :as style]
             [datacore.ui.message :as message]
-            [datacore.view :as view]
             [datacore.ui.java-fx :as fx]
             [datacore.ui.util :as uu]
             [datacore.cells :as c]
-            [datacore.state :as state]
             [datacore.ui.observable :refer [observable-list]])
   (:import [javafx.stage Stage StageStyle]
            [javafx.scene.input KeyEvent]
@@ -20,52 +18,6 @@
            [org.scenicview ScenicView]))
 
 (def scene nil)
-
-(defn- message-line [message]
-  (fx/make :scene.control/label
-           {:text      (c/formula :msg message)
-            :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
-            :text-fill (c/formula (comp {:message Color/BLACK
-                                         :error   (Color/web "0xF57000")}
-                                        :type) message)}))
-
-(defn build-layout [tree message]
-  (fx/make
-   :scene.layout/border-pane
-   {:center (if-not tree
-              (view/build-view ::view/nothing)
-              (view/build-view tree))
-    :bottom (message-line message)}))
-
-(defn make-app []
-  (let [the-scene   (fx/make :scene/scene
-                             {:fx/args  [(build-layout ::view/nothing message/current-message) 800 800]
-                              ;;:fx/setup #(style/add-stylesheet % "css/default.css")
-                              })
-        key-handler (keys/key-handler default-keys/root-keymap)]
-    (alter-var-root #'scene (constantly the-scene))
-    (c/add-watch!
-     state/layout
-     :layout-watch
-     (fn [_ _ tree]
-       (fx/run-later!
-        #(.setRoot the-scene (build-layout tree message/current-message)))))
-    (fx/make
-     :stage/stage
-     [[:scene    the-scene]
-      [:title    "foobar"]
-      [:fx/setup #(doto %
-                    (.addEventFilter
-                     KeyEvent/ANY
-                     (reify EventHandler
-                       (^void handle [this ^Event event]
-                        (key-handler event))))
-                    (.show))]])))
-
-#_(fx/make :scene.effect/drop-shadow
-           {:radius 5.0
-            :offset-y 3.0})
-
 
 (defn make-popup []
   ;;.centerOnScreen
