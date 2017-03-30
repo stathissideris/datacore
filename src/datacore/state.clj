@@ -60,7 +60,15 @@
               :dimensions [1000 800]
               :root       {:type :datacore.ui.view/nothing}})))
 
-  ;;close extra window
+  ;;open prompt window
+  (swap-layout!
+   (fn [tree]
+     (update tree :children conj
+             {:type         :datacore.ui.view/window
+              :window-style :transparent
+              :root         {:type :datacore.ui.view/prompt}})))
+
+  ;;close last window
   (swap-layout!
    (fn [tree]
      (update tree :children (comp vec butlast))))

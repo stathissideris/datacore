@@ -3,7 +3,8 @@
             [datacore.cells :as c])
   (:import [javafx.util Callback]
            [javafx.stage StageStyle]
-           [java.util Date]))
+           [java.util Date]
+           [org.scenicview ScenicView]))
 
 (defn callback [fun]
   (reify Callback
@@ -16,6 +17,9 @@
    {:center c
     :bottom (fx/make :scene.control/label {:text  label
                                            :style "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"})}))
+
+(defn scenic-view [node]
+  (ScenicView/show node))
 
 (defn inspect [cell]
   (fx/run-later!

@@ -8,7 +8,8 @@
             [datacore.state :as state])
   (:import [javafx.scene.input KeyEvent]
            [javafx.event EventHandler Event]
-           [javafx.scene.paint Color]))
+           [javafx.scene.paint Color]
+           [javafx.stage StageStyle]))
 
 (defn- register-component! [view-id fx-component]
   (c/swap! state/view-to-component assoc view-id fx-component))
@@ -69,15 +70,30 @@
               (build-view tree))
     :bottom (message-line message)}))
 
+(def window-style-map
+  {:normal      StageStyle/DECORATED
+   :undecorated StageStyle/UNDECORATED
+   :transparent StageStyle/TRANSPARENT})
+
 ;;TODO add this to scene: :fx/setup #(style/add-stylesheet % "css/default.css")
 (defmethod build-view ::window
-  [{:keys [title dimensions root]}]
+  [{:keys [title dimensions root window-style]}]
   (let [[width height] dimensions
         key-handler    (keys/key-handler default-keys/root-keymap)
-        scene          (fx/make :scene/scene {:fx/args [(build-window-contents root message/current-message) width height]})]
+        scene-args     (concat
+                        [(if-not (or (nil? window-style) (= :normal window-style))
+                           (build-view (or root ::nothing))
+                           (build-window-contents root message/current-message))]
+                        (when dimensions [width height]))
+        scene          (fx/make :scene/scene
+                                [[:fx/args scene-args]
+                                 (when (= window-style :transparent)
+                                   [:fill Color/TRANSPARENT])])]
     (fx/make
      :stage/stage
-     [[:title title]
+     [(when window-style
+        [:fx/args [(get window-style-map window-style)]])
+      (when title [:title title])
       [:scene scene]
       [:fx/setup #(doto %
                     (.addEventFilter

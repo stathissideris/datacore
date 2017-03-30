@@ -109,7 +109,7 @@
 ;;;;; make ;;;;;
 
 (defn make-args [spec]
-  (second (first (filter #(= (first %) :fx/args) spec))))
+  (vec (second (first (filter #(= (first %) :fx/args) spec)))))
 
 (defn make-other [spec]
   (remove #(= (first %) :fx/args) spec))
@@ -122,10 +122,11 @@
                    (class? class-or-instance))
              (new-instance class-or-instance (make-args spec))
              class-or-instance)]
-     (doseq [[field value] (make-other spec)]
-       (if (= field :fx/setup)
-         (value o)
-         (set-field! o field value)))
+     (doseq [[field value :as entry] (make-other spec)]
+       (when entry
+         (if (= field :fx/setup)
+           (value o)
+           (set-field! o field value))))
      o)))
 
 (defn label
