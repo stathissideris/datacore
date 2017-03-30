@@ -30,8 +30,6 @@
    :scene.layout/border-pane
    {:center (fx/label "Nothing to show")}))
 
-(defmethod build-view ::vector [v] (mapv build-view v))
-
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
   (let [components (map build-view children)]
@@ -46,13 +44,6 @@
               :orientation (if (= orientation :horizontal)
                              javafx.geometry.Orientation/HORIZONTAL
                              javafx.geometry.Orientation/VERTICAL)})))
-
-(defmethod build-view ::existing
-  [{:keys [component view]}]
-  (if component
-    component
-    (fx/make :scene.control/label
-             {:text (str "ERROR! component for view " view " does not exist")})))
 
 (defn- message-line [message]
   (fx/make :scene.control/label

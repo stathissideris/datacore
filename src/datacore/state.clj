@@ -3,7 +3,6 @@
             [datacore.util :as util]
             [clojure.walk :as walk]))
 
-(defcell state {})
 (defcell view-to-component {})
 (defcell layout-tree nil)
 
