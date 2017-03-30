@@ -17,7 +17,8 @@
 
 (defn swap-layout! [fun & args]
   (let [old-tree          (c/value layout-tree)
-        new-tree          (apply fun old-tree args)
+        new-tree          (-> (apply fun old-tree args)
+                              (update :children vec))
         new-tree-with-ids (assign-layout-ids new-tree)]
     (c/reset! layout-tree new-tree-with-ids)))
 
@@ -47,31 +48,23 @@
     )
 
   ;;show cell in window
-  (swap-layout!
-   (fn [tree]
-     (assoc-in tree [:children 0 :root] csv-view)))
+  (swap-layout! assoc-in [:children 0 :root] csv-view)
 
   ;;open extra window
-  (swap-layout!
-   (fn [tree]
-     (update tree :children conj
-             {:type       :datacore.ui.view/window
-              :title      "datacore 2"
-              :dimensions [1000 800]
-              :root       {:type :datacore.ui.view/nothing}})))
+  (swap-layout! update :children conj
+                {:type       :datacore.ui.view/window
+                 :title      "datacore 200"
+                 :dimensions [1000 800]
+                 :root       {:type :datacore.ui.view/nothing}})
 
   ;;open prompt window
-  (swap-layout!
-   (fn [tree]
-     (update tree :children conj
-             {:type         :datacore.ui.view/window
-              :window-style :transparent
-              :root         {:type :datacore.ui.view/prompt}})))
+  (swap-layout! update :children conj
+                {:type         :datacore.ui.view/window
+                 :window-style :transparent
+                 :root         {:type :datacore.ui.view/prompt}})
 
   ;;close last window
-  (swap-layout!
-   (fn [tree]
-     (update tree :children (comp vec butlast))))
+  (swap-layout! update :children (comp vec butlast))
 
   (defmacro simple-cell [name expr]
     `(c/deformula ~name

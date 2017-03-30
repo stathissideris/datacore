@@ -5,6 +5,7 @@
   (:import [javafx.collections ObservableList]
            [javafx.application Platform]
            [javafx.stage StageStyle]
+           [javafx.event EventHandler Event]
            [javafx.scene.paint Color]))
 
 (defn run-later! [fun]
@@ -19,6 +20,11 @@
              (.printStackTrace e)
              (throw e))))))
     p))
+
+(defn event-handler [fun]
+  (reify EventHandler
+    (^void handle [this ^Event event]
+     (fun event))))
 
 (defn- getter-method [clazz field-kw]
   (let [method-name (->> (util/kebab->camel field-kw)

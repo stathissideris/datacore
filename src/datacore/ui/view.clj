@@ -7,14 +7,14 @@
             [datacore.ui.message :as message]
             [datacore.state :as state])
   (:import [javafx.scene.input KeyEvent]
-           [javafx.event EventHandler Event]
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
 (defn- register-component! [view-id fx-component]
   (c/swap! state/view-to-component assoc view-id fx-component))
 
-;;TODO destroy view (also destroy FX component)
+(defn- unregister-component! [view-id]
+  (c/swap! state/view-to-component dissoc view-id))
 
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
@@ -75,9 +75,12 @@
    :undecorated StageStyle/UNDECORATED
    :transparent StageStyle/TRANSPARENT})
 
+(defn close-window! [component-id]
+  (state/swap-layout! update :children (fn [c] (remove #(= component-id (:id %)) c))))
+
 ;;TODO add this to scene: :fx/setup #(style/add-stylesheet % "css/default.css")
 (defmethod build-view ::window
-  [{:keys [title dimensions root window-style]}]
+  [{:keys [title dimensions root window-style id]}]
   (let [[width height] dimensions
         key-handler    (keys/key-handler default-keys/root-keymap)
         scene-args     (concat
@@ -95,12 +98,13 @@
         [:fx/args [(get window-style-map window-style)]])
       (when title [:title title])
       [:scene scene]
+      [:on-close-request (fx/event-handler (fn [event]
+                                             (.consume event)
+                                             (@#'close-window! id)))]
       [:fx/setup #(doto %
                     (.addEventFilter
                      KeyEvent/ANY
-                     (reify EventHandler
-                       (^void handle [this ^Event event]
-                        (key-handler event)))))]])))
+                     (fx/event-handler key-handler)))]])))
 
 ;;;;;;;;;;;;;;;;
 
@@ -112,13 +116,12 @@
     (doseq [[type {:keys [id] :as window-spec} :as diff] diffs]
       (condp = type
         :same   :skip
-        :add    (let [component @(fx/run-later! #(build-view window-spec))
-                      id        (:id window-spec)]
+        :add    (let [component @(fx/run-later! #(build-view window-spec))]
                   (register-component! id component)
                   (fx/run-later! #(fx/show component)))
         :delete (let [component (get (c/value state/view-to-component) id)]
                   (when component
-                    ;;TODO unregister component
+                    (unregister-component! id)
                     (fx/run-later! #(.close component))))
         :edit   (let [[_ old-window new-window] diff]
                   (when-not (= (:root old-window) (:root new-window))
