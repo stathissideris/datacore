@@ -3,6 +3,8 @@
   (:require [datacore.ui.java-fx :refer :all]
             [clojure.test :refer :all]))
 
+(init)
+
 (deftest parents-test
   (let [foo (label "foo")
         c   (make

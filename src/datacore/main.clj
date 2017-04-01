@@ -2,7 +2,8 @@
   (:require [clojure.repl :as repl]
             [datacore.cells :as c]
             [datacore.state :as state]
-            [datacore.ui.view :as view])
+            [datacore.ui.view :as view]
+            [datacore.ui.java-fx :as fx])
   (:import [javafx.embed.swing JFXPanel]
            [javafx.application Platform]))
 
@@ -25,8 +26,8 @@
 
 (defn init []
   ;;(set! *warn-on-reflection* true)
-  (JFXPanel.)
-  (Platform/setImplicitExit false)
+  (fx/init)
+
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))
 
   (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (view/update-layout! old new)))

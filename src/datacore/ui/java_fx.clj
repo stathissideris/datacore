@@ -11,6 +11,10 @@
            [javafx.beans.value ChangeListener]
            [javafx.scene Node]))
 
+(defn init []
+  (JFXPanel.)
+  (Platform/setImplicitExit false))
+
 (defn run-later! [fun]
   (let [p (promise)]
     (if (Platform/isFxApplicationThread)
