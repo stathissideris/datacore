@@ -1,4 +1,5 @@
 (ns datacore.ui.java-fx
+  (:refer-clojure :exclude [parents methods])
   (:require [datacore.util :as util]
             [clojure.string :as str]
             [datacore.cells :as c])
@@ -6,7 +7,9 @@
            [javafx.application Platform]
            [javafx.stage StageStyle]
            [javafx.event EventHandler Event]
-           [javafx.scene.paint Color]))
+           [javafx.scene.paint Color]
+           [javafx.beans.value ChangeListener]
+           [javafx.scene Node]))
 
 (defn run-later! [fun]
   (let [p (promise)]
@@ -26,11 +29,23 @@
     (^void handle [this ^Event event]
      (fun event))))
 
+(defn change-listener [fun]
+  (reify ChangeListener
+    (changed [this observable old new]
+     (fun observable old new))))
+
+(defn- superclasses [clazz]
+  (when-let [super (.getSuperclass clazz)]
+    (cons super (lazy-seq (superclasses super)))))
+
+(defn- methods [^Class class]
+  (.getMethods class))
+
 (defn- getter-method [clazz field-kw]
   (let [method-name (->> (util/kebab->camel field-kw)
-                         str/capitalize
+                         util/capitalize-first
                          (str "get"))]
-    (first (filter #(= (.getName %) method-name) (-> clazz .getMethods seq)))))
+    (first (filter #(= (.getName %) method-name) (mapcat methods (superclasses clazz))))))
 
 (defn- getter [clazz field-kw]
   (when-let [getter (getter-method clazz field-kw)]
@@ -38,9 +53,9 @@
 
 (defn- setter-method [clazz field-kw]
   (let [method-name (->> (util/kebab->camel field-kw)
-                         str/capitalize
+                         util/capitalize-first
                          (str "set"))]
-    (first (filter #(= (.getName %) method-name) (-> clazz .getMethods seq)))))
+    (first (filter #(= (.getName %) method-name) (mapcat methods (superclasses clazz))))))
 
 (defn- setter [clazz field-kw]
   (if-let [setter (setter-method clazz field-kw)]
@@ -48,7 +63,7 @@
       (.invoke setter object (object-array [value]))
       object)
     (when-let [getter-method (getter-method clazz field-kw)]
-      (when (= ObservableList (.getReturnType getter-method))
+      (when (= ObservableList (.getReturnType getter-method)) ;;support for setting observable list fields
         (let [getter (getter clazz field-kw)]
           (fn [object value]
             (.setAll (getter object) value)
@@ -92,6 +107,10 @@
                                  :class  (class object)
                                  :field  field-kw
                                  :value  value}))))))))))
+
+(defn set-fields! [object pairs]
+  (doseq [[field-kw value] pairs]
+    (set-field! object field-kw pairs)))
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)
@@ -155,6 +174,12 @@
          :scene (make :scene/scene {:fx/args [root]})}))
 
 (defn show [c] (.show c) c)
+
+(defn has-style-class? [^Node node ^String c]
+  (some? (not-empty (filter (partial = c) (seq (.getStyleClass node))))))
+
+(defn parents [^Node node]
+  (take-while (complement nil?) (rest (iterate #(when % (.getParent %)) node))))
 
 (comment
   (make
