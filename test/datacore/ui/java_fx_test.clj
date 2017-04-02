@@ -29,3 +29,10 @@
     (is (true? (has-style-class? c "foo")))
     (is (true? (has-style-class? c "bar")))
     (is (false? (has-style-class? c "baz")))))
+
+(deftest set-fields-test
+  (let [l (label "foo")]
+    (set-fields! l {:id          "the-id"
+                    :style-class ["focusable"]})
+    (is (= "the-id" (.getId l)))
+    (is (= ["focusable"] (seq (.getStyleClass l))))))

@@ -50,7 +50,7 @@
   (let [method-name (->> (util/kebab->camel field-kw)
                          util/capitalize-first
                          (str "get"))]
-    (first (filter #(= (.getName %) method-name) (mapcat methods (superclasses clazz))))))
+    (first (filter #(= (.getName %) method-name) (mapcat methods (cons clazz (superclasses clazz)))))))
 
 (defn- getter [clazz field-kw]
   (when-let [getter (getter-method clazz field-kw)]
@@ -60,7 +60,7 @@
   (let [method-name (->> (util/kebab->camel field-kw)
                          util/capitalize-first
                          (str "set"))]
-    (first (filter #(= (.getName %) method-name) (mapcat methods (superclasses clazz))))))
+    (first (filter #(= (.getName %) method-name) (mapcat methods (cons clazz (superclasses clazz)))))))
 
 (defn- setter [clazz field-kw]
   (if-let [setter (setter-method clazz field-kw)]
@@ -115,7 +115,7 @@
 
 (defn set-fields! [object pairs]
   (doseq [[field-kw value] pairs]
-    (set-field! object field-kw pairs)))
+    (set-field! object field-kw value)))
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)
