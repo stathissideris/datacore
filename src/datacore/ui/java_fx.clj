@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [datacore.cells :as c])
   (:import [javafx.collections ObservableList]
+           [javafx.embed.swing JFXPanel]
            [javafx.application Platform]
            [javafx.stage StageStyle]
            [javafx.event EventHandler Event]
