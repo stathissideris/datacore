@@ -3,9 +3,7 @@
             [datacore.cells :as c]
             [datacore.state :as state]
             [datacore.ui.view :as view]
-            [datacore.ui.java-fx :as fx])
-  (:import [javafx.embed.swing JFXPanel]
-           [javafx.application Platform]))
+            [datacore.ui.java-fx :as fx]))
 
 (defmacro with-err-str
   "Evaluates exprs in a context in which *err* is bound to a fresh
