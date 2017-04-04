@@ -6,6 +6,9 @@
 (defcell view-to-component {})
 (defcell layout-tree nil)
 
+(defcell window->focused-component {})
+(defcell focus nil)
+
 (defn- assign-layout-ids [tree]
   (walk/postwalk
    (fn [x]
@@ -47,7 +50,8 @@
     )
 
   ;;show cell in window
-  (swap-layout! assoc-in [:children 0 :root] csv-view)
+  (swap-layout! assoc-in [:children 0 :root] {:type :datacore.ui.view/cell
+                                              :cell csv-view})
 
   ;;open extra window
   (swap-layout! update :children conj

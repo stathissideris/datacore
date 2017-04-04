@@ -1,5 +1,9 @@
 (ns datacore.util
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.spec :as s]
+            [clojure.core.match :refer [match]]
+            [clojure.data :as data]
+            [clojure.set :as set]))
 
 (defn camel->kebab [from]
   (let [s (str/split (name from) #"(?=[A-Z])" )]
@@ -118,11 +122,89 @@
       (cond (= a b c)  (recur ra rb rc (conj diffs [:same a]))
             (and (not= a c) (not= b c)) (recur ra rb common (conj diffs [:edit a b]))
             (not= a c) (recur ra bs common (conj diffs [:delete a]))
-            (not= b c) (recur as rb common (conj diffs [:add b]))))))
+            (not= b c) (recur as rb common (conj diffs [:insert b]))))))
 
 (defn seq-diff [a b]
   (seq-diffs a b (lcs a b)))
 
-#_(pprint (diff [0 1 2 3 4 5 6 7 8] [1 2 3 :a :b :c 4 5 6]))
-#_(pprint (diff [0 1 2 3 :e :f :g 4 5 6 7 8] [1 2 3 :a :b :c 4 5 6]))
-#_(pprint (diff [0 1 2 3 :e :f :g 4 5 6 7 8] [1 2 3 :a :b :c 4 5 10 6]))
+(defn seq-diff-indices
+  "Perform a diff on sequences a and b and output a sequence of edits
+  which when applied to sequence a would result in sequence b."
+  [a b]
+  (loop [diffs    (partition-by first (seq-diff a b))
+         new-diff []
+         index    0]
+    (let [diff (first diffs)]
+      (if-not diff
+        (vec (apply concat new-diff))
+        (condp = (ffirst diff)
+          :delete (recur (next diffs)
+                         (conj new-diff (map #(vector :delete index (last %)) (reverse diff)))
+                         index)
+          :insert (recur (next diffs)
+                         (conj new-diff (map #(vector :insert index (last %)) (reverse diff)))
+                         (+ index (count diff)))
+          :same   (recur (next diffs)
+                         new-diff
+                         (+ index (count diff)))
+          :edit   (recur (next diffs)
+                         (conj new-diff (map-indexed #(vector :edit index (second %2) (last %2)) diff))
+                         (+ index (count diff))))))))
+(s/fdef seq-diff-indices
+  :args (s/cat :a (s/coll-of any?) :b (s/coll-of any?))
+  :ret  (s/or :delete (s/cat :type #{:delete} :index nat-int? :item any?)
+              :insert (s/cat :type #{:insert} :index nat-int? :item any?)
+              :edit   (s/cat :type #{:edit} :index nat-int? :old-item any? :new-item any?)))
+
+(defprotocol TreeDiff
+  (tree-diff [a b]))
+
+(defn- update-path [diff fun & args]
+  (update diff 1 #(apply fun % args)))
+
+(defn- path-conj [diff item]
+  (update diff 1 conj item))
+
+(defn- path-prepend [diff prefix]
+  (update diff 1 #(vec (concat prefix %))))
+
+(extend-protocol TreeDiff
+  Object
+  (tree-diff [a b]
+    [[:edit [] a b]])
+
+  java.util.Map
+  (tree-diff [a b]
+    (let [ka           (set (keys a))
+          kb           (set (keys b))
+          common-keys  (set/intersection ka kb)
+          edited-keys  (filter #(not= (get a %) (get b %)) common-keys)
+          deleted-keys (set/difference ka kb)
+          added-keys   (set/difference kb ka)]
+      (vec
+       (apply concat
+        (map #(vector :delete [%] (get a %)) deleted-keys)
+        (map #(vector :insert [%] (get b %)) added-keys)
+        (map #(map (fn [d] (path-prepend d [%])) (tree-diff (get a %) (get b %))) edited-keys)))))
+
+  java.util.List
+  (tree-diff [a b]
+    (mapcat
+     (fn [diff]
+       (match [diff]
+              [[:edit path old new]]
+              (cond (and (map? old) (map? new))
+                    (map #(path-prepend % path)
+                         (tree-diff old new))
+                    :else
+                    [diff])
+              [[:insert _ _]] [diff]
+              [[:delete _ _]] [diff]))
+     (map #(update-path % vector) (seq-diff-indices a b)))))
+
+(s/def ::tree-path (s/coll-of any?))
+(s/fdef tree-diff
+  :args (s/cat :a any? :b any?)
+  :ret  (s/or :delete (s/cat :type #{:delete} :path ::tree-path :item any?)
+              :insert (s/cat :type #{:insert} :path ::tree-path :item any?)
+              :edit   (s/cat :type #{:edit} :path ::tree-path :old-item any? :new-item any?)))

@@ -7,6 +7,7 @@
                  [org.clojure/math.combinatorics "0.1.4"]
                  [org.clojure/data.priority-map "0.0.7"]
                  [org.clojure/data.csv "0.1.3"]
+                 [org.clojure/core.match "0.3.0-alpha4"]
                  [me.raynes/fs "1.4.6"]
                  [hawk "0.2.11"]]
   :resource-paths ["resources"]

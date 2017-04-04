@@ -10,8 +10,7 @@
             [datacore.reflection :as reflection]))
 
 ;; TODO
-;; mutation for labels and meta map
-;; watches
+;; mutation for meta map
 ;; pluggable caching strategy
 ;; pluggabe execution strategy
 

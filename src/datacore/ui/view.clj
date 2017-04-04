@@ -11,7 +11,8 @@
            [javafx.stage StageStyle]))
 
 (defn- register-component! [view-id fx-component]
-  (c/swap! state/view-to-component assoc view-id fx-component))
+  (c/swap! state/view-to-component assoc view-id fx-component)
+  fx-component)
 
 (defn- unregister-component! [view-id]
   (c/swap! state/view-to-component dissoc view-id))
@@ -19,16 +20,14 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
-(defn- component-id [c]
-  (if (c/cell-id? c)
-    c
-    (:id c)))
-
 (defmethod build-view ::nothing
-  [_]
-  (fx/make
-   :scene.layout/border-pane
-   {:center (fx/label "Nothing to show")}))
+  [{:keys [id]}]
+  (let [component (fx/make
+                   :scene.layout/border-pane
+                   {:id          id
+                    :style-class ["focusable"]
+                    :center      (fx/label "Nothing to show")})]
+    (register-component! id component)))
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
@@ -36,7 +35,7 @@
     (doall
      (map
       (fn [spec component]
-        (register-component! (component-id spec) component))
+        (register-component! (:id spec) component))
       children
       components))
     (fx/make :scene.control/split-pane
@@ -69,9 +68,9 @@
 (defn close-window! [component-id]
   (state/swap-layout! update :children (fn [c] (remove #(= component-id (:id %)) c))))
 
-;;TODO add this to scene: :fx/setup #(style/add-stylesheet % "css/default.css")
+;;TODO add this to scene: [:fx/setup #(style/add-stylesheet % "css/default.css")]
 (defmethod build-view ::window
-  [{:keys [title dimensions root window-style id]}]
+  [{:keys [id title dimensions root window-style]}]
   (let [[width height] dimensions
         key-handler    (keys/key-handler default-keys/root-keymap)
         scene-args     (concat
@@ -82,24 +81,53 @@
         scene          (fx/make :scene/scene
                                 [[:fx/args scene-args]
                                  (when (= window-style :transparent)
-                                   [:fill Color/TRANSPARENT])])]
-    (fx/make
-     :stage/stage
-     [(when window-style
-        [:fx/args [(get window-style-map window-style)]])
-      (when title [:title title])
-      [:scene scene]
-      [:on-close-request (fx/event-handler (fn [event]
-                                             (.consume event)
-                                             (@#'close-window! id)))]
-      [:fx/setup #(doto %
-                    (.addEventFilter
-                     KeyEvent/ANY
-                     (fx/event-handler key-handler)))]])))
+                                   [:fill Color/TRANSPARENT])])
+        stage          (fx/make
+                        :stage/stage
+                        [(when window-style
+                           [:fx/args [(get window-style-map window-style)]])
+                         (when title [:title title])
+                         [:scene scene]
+                         [:on-close-request (fx/event-handler (fn [event]
+                                                                (.consume event)
+                                                                (close-window! id)))]
+                         [:fx/setup #(doto %
+                                       (.addEventFilter
+                                        KeyEvent/ANY
+                                        (fx/event-handler key-handler)))]])]
+    (-> scene
+        .focusOwnerProperty
+        (.addListener
+         (fx/change-listener
+          (fn [_ old new]
+            (when-let [component-id (some->> (cons new (fx/parents new))
+                                             (filter #(fx/has-style-class? % "focusable"))
+                                             first
+                                             .getId)]
+              (c/swap! state/window->focused-component assoc id component-id)
+              (c/reset! state/focus component-id))
+            (println "COMPONENT FOCUSED:" new)))))
+    (-> stage
+        .focusedProperty
+        (.addListener
+         (fx/change-listener
+          (fn [_ _ new]
+            (when new
+              (when-let [component-id (-> state/window->focused-component c/value (get id))]
+                (c/reset! state/focus component-id))
+              (println "WINDOW FOCUSED:" id title))))))
+    stage))
+
+(defmethod build-view ::cell
+  [{:keys [id cell]}]
+  (let [component (build-view cell)]
+    (fx/set-fields! component {:id          id
+                               :style-class ["focusable"]}) ;;TODO add style-class instead of replacing the whole list
+    (register-component! id component)
+    component))
 
 ;;;;;;;;;;;;;;;;
 
-(require '[clojure.pprint :as pp])
 (defn update-layout! [old-tree new-tree]
   (let [old-windows (:children old-tree)
         new-windows (:children new-tree)
@@ -107,7 +135,7 @@
     (doseq [[type {:keys [id] :as window-spec} :as diff] diffs]
       (condp = type
         :same   :skip
-        :add    (let [component @(fx/run-later! #(build-view window-spec))]
+        :insert (let [component @(fx/run-later! #(build-view window-spec))]
                   (register-component! id component)
                   (fx/run-later! #(fx/show component)))
         :delete (let [component (get (c/value state/view-to-component) id)]
