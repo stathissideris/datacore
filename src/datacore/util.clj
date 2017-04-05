@@ -183,8 +183,8 @@
           added-keys   (set/difference kb ka)]
       (vec
        (apply concat
-        (map #(vector :delete [%] (get a %)) deleted-keys)
-        (map #(vector :insert [%] (get b %)) added-keys)
+        (map #(vector :dissoc [%] (get a %)) deleted-keys)
+        (map #(vector :assoc [%] (get b %)) added-keys)
         (map #(map (fn [d] (path-prepend d [%])) (tree-diff (get a %) (get b %))) edited-keys)))))
 
   java.util.List
@@ -203,8 +203,37 @@
      (map #(update-path % vector) (seq-diff-indices a b)))))
 
 (s/def ::tree-path (s/coll-of any?))
+(s/def ::diff-item (s/or :delete (s/cat :type #{:delete} :path ::tree-path :item any?)
+                         :insert (s/cat :type #{:insert} :path ::tree-path :item any?)
+                         :assoc  (s/cat :type #{:assoc}  :path ::tree-path :item any?)
+                         :dissoc (s/cat :type #{:dissoc} :path ::tree-path :item any?)
+                         :edit   (s/cat :type #{:edit}   :path ::tree-path :old-item any? :new-item any?)))
 (s/fdef tree-diff
   :args (s/cat :a any? :b any?)
-  :ret  (s/or :delete (s/cat :type #{:delete} :path ::tree-path :item any?)
-              :insert (s/cat :type #{:insert} :path ::tree-path :item any?)
-              :edit   (s/cat :type #{:edit} :path ::tree-path :old-item any? :new-item any?)))
+  :ret  (s/coll-of ::diff-item))
+
+(defn- vec-dissoc [v idx]
+  (vec
+   (concat
+    (subvec v 0 idx)
+    (subvec v (inc idx) (count v)))))
+
+(defn- vec-insert [v idx value]
+  (vec
+   (concat
+    (subvec v 0 idx)
+    [value]
+    (subvec v idx (count v)))))
+
+(defn- patch-diff-item [x diff-item]
+  (match [diff-item]
+    [[:delete path v]] (update-in x (butlast path) vec-dissoc (last path))
+    [[:insert path v]] (update-in x (butlast path) vec-insert (last path) v)
+    [[:assoc path v]]  (assoc-in x path v)
+    [[:dissoc path v]] (update-in x (butlast path) dissoc (last path))
+    [[:edit path _ v]] (assoc-in x path v)))
+
+(defn patch [x diff]
+  (reduce patch-diff-item x diff))
+(s/fdef patch
+  :args (s/cat :x any? :diff (s/coll-of ::diff-item)))
