@@ -1,14 +1,19 @@
 (ns dev
   (:refer-clojure :exclude [method-sig])
   (:require [clojure.tools.namespace.repl :as repl :refer (clear refresh-all)]
-            [datacore.util :as util]))
+            [datacore.util :as util]
+            [clojure.spec.test :as stest]))
 
 (defn refresh []
   (repl/refresh))
 
+(defn instrument-all []
+  (doseq [s (stest/instrumentable-syms)]
+    (stest/instrument s)))
+
 #_(defn run-all-my-tests []
     (reset)
-    (test/run-all-tests #"osio.website-publisher.*test$"))
+    (test/run-all-tests #"datacore.*test$"))
 
 #_(defn run-selected-tests [& namespaces]
     (reset)

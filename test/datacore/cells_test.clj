@@ -9,9 +9,6 @@
 (def global-cells @#'datacore.cells/global-cells)
 (core/swap! global-cells (fn [_] (make-cells)))
 
-(doseq [s (stest/instrumentable-syms)]
-  (stest/instrument s))
-
 (deftest test-specs
   (is (true?
        (s/valid? :datacore.cells/cell
@@ -519,6 +516,5 @@
     (let [log (atom 0)
           a   (cell 10)
           b   (formula (fn [x] (core/swap! log inc) (* 2 x)) a)]
-      (add-watch! b :w (fn [_ _ _] (print "hello!")))
       (reset! a 9000)
       (is (= 1 @log)))))

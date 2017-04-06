@@ -173,7 +173,30 @@
             [:insert [:a :b 4] 80]
             [:insert [:a :b 4] 70]
             [:delete [:a :b 9] 6]]
-           (tree-diff tree-a tree-b)))))
+           (tree-diff tree-a tree-b))))
+
+  (let [a    [{:t [{:t 2, :v 7} 9 [2 8 8]]
+               :u {:h 6}}
+              3
+              []
+              {:x
+               {:r [],
+                :u {:b 6, :k 4, :i 1, :a 2},
+                :h {:k 0, :a 2, :l 1},
+                :o {:a 3, :x 4, :u 9, :q 2},
+                :i 8},
+               :t 6,
+               :y [{} [1 5 5 7 1] 3],
+               :b {:l [6 5 3], :k 1, :r 9, :c 6}}]
+
+        b    [{:t {:y {:v 5, :y 8}, :l 8, :p {:s 8, :m 9}}
+               :y [0]}
+              5
+              8
+              {:k {:q [2 0], :v {:l 5, :r 5, :x 9}},
+               :z {:p {:x 3, :k 7, :r 4, :m 9}, :w {:z 8}, :t {}, :u [2 7]}}]
+        diff (tree-diff a b)]
+    (is (= b (patch a diff)))))
 
 (deftest patch-test
   (is (= {:a {:b [0 1 {:f 100 :g 10} 2 70 80 3 4 5]
@@ -187,39 +210,6 @@
                  [:delete [:a :b 9] 6]])))
   (is (= {:foo "bar"}
          (patch 2 [[:edit [] 2 {:foo "bar"}]]))))
-
-(def a [{:t [{:t 2, :v 7} 9 [2 8 8]]
-         :u {:h 6}}
-        3
-        []
-        {:x
-         {:r [],
-          :u {:b 6, :k 4, :i 1, :a 2},
-          :h {:k 0, :a 2, :l 1},
-          :o {:a 3, :x 4, :u 9, :q 2},
-          :i 8},
-         :t 6,
-         :y [{} [1 5 5 7 1] 3],
-         :b {:l [6 5 3], :k 1, :r 9, :c 6}}])
-
-(def b [{:t {:y {:v 5, :y 8}, :l 8, :p {:s 8, :m 9}}
-         :y [0]}
-        5
-        8
-        {:k {:q [2 0], :v {:l 5, :r 5, :x 9}},
-         :z {:p {:x 3, :k 7, :r 4, :m 9}, :w {:z 8}, :t {}, :u [2 7]}}])
-
-(def dd [[:dissoc [0 :u] {:h 6}]
-         [:assoc [0 :y] [0]]
-         [:edit [0 :t] [{:t 2, :v 7} 9 [2 8 8]] {:y {:v 5, :y 8}, :l 8, :p {:s 8, :m 9}}]
-         [:edit [0] 3 5]
-         [:edit [0] [] 8]
-         [:dissoc [0 :y] [{} [1 5 5 7 1] 3]]
-         [:dissoc [0 :b] {:l [6 5 3], :k 1, :r 9, :c 6}]
-         [:dissoc [0 :t] 6]
-         [:dissoc [0 :x] {:r [], :u {:b 6, :k 4, :i 1, :a 2}, :h {:k 0, :a 2, :l 1}, :o {:a 3, :x 4, :u 9, :q 2}, :i 8}]
-         [:assoc [0 :k] {:q [2 0], :v {:l 5, :r 5, :x 9}}]
-         [:assoc [0 :z] {:p {:x 3, :k 7, :r 4, :m 9}, :w {:z 8}, :t {}, :u [2 7]}]])
 
 (s/def ::limited-key
   (s/with-gen
