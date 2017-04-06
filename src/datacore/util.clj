@@ -139,7 +139,7 @@
         (vec (apply concat new-diff))
         (condp = (ffirst diff)
           :delete (recur (next diffs)
-                         (conj new-diff (map #(vector :delete index (last %)) (reverse diff)))
+                         (conj new-diff (map #(vector :delete index (last %)) diff))
                          index)
           :insert (recur (next diffs)
                          (conj new-diff (map #(vector :insert index (last %)) (reverse diff)))
@@ -148,7 +148,7 @@
                          new-diff
                          (+ index (count diff)))
           :edit   (recur (next diffs)
-                         (conj new-diff (map-indexed #(vector :edit index (second %2) (last %2)) diff))
+                         (conj new-diff (map-indexed #(vector :edit (+ index %1) (second %2) (last %2)) diff))
                          (+ index (count diff))))))))
 (s/fdef seq-diff-indices
   :args (s/cat :a (s/coll-of any?) :b (s/coll-of any?))
@@ -169,48 +169,73 @@
   (update diff 1 #(vec (concat prefix %))))
 
 (extend-protocol TreeDiff
-  Object
+  nil
   (tree-diff [a b]
     [[:edit [] a b]])
 
+  Object
+  (tree-diff [a b]
+    (if (= a b)
+      [[:same [] a]]
+      [[:edit [] a b]]))
+
   java.util.Map
   (tree-diff [a b]
-    (let [ka           (set (keys a))
-          kb           (set (keys b))
-          common-keys  (set/intersection ka kb)
-          edited-keys  (filter #(not= (get a %) (get b %)) common-keys)
-          deleted-keys (set/difference ka kb)
-          added-keys   (set/difference kb ka)]
-      (vec
-       (apply concat
-        (map #(vector :dissoc [%] (get a %)) deleted-keys)
-        (map #(vector :assoc [%] (get b %)) added-keys)
-        (map #(map (fn [d] (path-prepend d [%])) (tree-diff (get a %) (get b %))) edited-keys)))))
+    (cond
+      (not (map? b))
+      [[:edit [] a b]]
+      (= a b)
+      [[:same [] a]]
+      :else
+      (let [ka           (set (keys a))
+            kb           (set (keys b))
+            common-keys  (set/intersection ka kb)
+            edited-keys  (filter #(not= (get a %) (get b %)) common-keys)
+            deleted-keys (set/difference ka kb)
+            added-keys   (set/difference kb ka)]
+        (vec
+         (apply concat
+                (map #(vector :dissoc [%] (get a %)) deleted-keys)
+                (map #(vector :assoc [%] (get b %)) added-keys)
+                (map #(map (fn [d] (path-prepend d [%])) (tree-diff (get a %) (get b %))) edited-keys))))))
 
   java.util.List
   (tree-diff [a b]
-    (mapcat
-     (fn [diff]
-       (match [diff]
-              [[:edit path old new]]
-              (cond (and (map? old) (map? new))
-                    (map #(path-prepend % path)
-                         (tree-diff old new))
-                    :else
-                    [diff])
-              [[:insert _ _]] [diff]
-              [[:delete _ _]] [diff]))
-     (map #(update-path % vector) (seq-diff-indices a b)))))
+    (cond
+      (not (instance? java.util.List b))
+      [[:edit [] a b]]
+      (= a b)
+      [[:same [] a]]
+      :else
+      (vec
+       (mapcat
+        (fn [diff]
+          (match [diff]
+                 [[:edit path old new]]
+                 (cond (and (map? old) (map? new))
+                       (map #(path-prepend % path) (tree-diff old new))
+                       (and (sequential? old) (sequential? new))
+                       (map #(path-prepend % path) (tree-diff old new))
+                       :else
+                       [(path-prepend diff [0])])
+                 [[:insert _ _]] [diff]
+                 [[:delete _ _]] [diff]))
+        (map #(update-path % vector) (seq-diff-indices a b)))))))
 
 (s/def ::tree-path (s/coll-of any?))
-(s/def ::diff-item (s/or :delete (s/cat :type #{:delete} :path ::tree-path :item any?)
+(s/def ::diff-item (s/or :same   (s/cat :type #{:same}   :path ::tree-path :item any?)
+                         :delete (s/cat :type #{:delete} :path ::tree-path :item any?)
                          :insert (s/cat :type #{:insert} :path ::tree-path :item any?)
                          :assoc  (s/cat :type #{:assoc}  :path ::tree-path :item any?)
                          :dissoc (s/cat :type #{:dissoc} :path ::tree-path :item any?)
-                         :edit   (s/cat :type #{:edit}   :path ::tree-path :old-item any? :new-item any?)))
+                         :edit   (s/cat :type #{:edit}   :path ::tree-path :old any? :new any?)))
+(declare patch)
+(s/def ::tree-diff-input any?)
 (s/fdef tree-diff
-  :args (s/cat :a any? :b any?)
-  :ret  (s/coll-of ::diff-item))
+  :args (s/cat :a ::tree-diff-input, :b ::tree-diff-input)
+  :ret  (s/coll-of ::diff-item)
+  :fn   (fn [{:keys [args ret]}]
+          (= (:b args) (patch (:a args) (mapv #(vec (s/unform ::diff-item %)) ret)))))
 
 (defn- vec-dissoc [v idx]
   (vec
@@ -227,11 +252,18 @@
 
 (defn- patch-diff-item [x diff-item]
   (match [diff-item]
-    [[:delete path v]] (update-in x (butlast path) vec-dissoc (last path))
-    [[:insert path v]] (update-in x (butlast path) vec-insert (last path) v)
+    [[:same _ _]]      x
+    [[:delete path v]] (if (= 1 (count path))
+                         (vec-dissoc x (first path))
+                         (update-in x (butlast path) vec-dissoc (last path)))
+    [[:insert path v]] (if (= 1 (count path))
+                         (vec-insert x (first path) v)
+                         (update-in x (butlast path) vec-insert (last path) v))
     [[:assoc path v]]  (assoc-in x path v)
-    [[:dissoc path v]] (update-in x (butlast path) dissoc (last path))
-    [[:edit path _ v]] (assoc-in x path v)))
+    [[:dissoc path v]] (if (= 1 (count path))
+                         (dissoc x (first path))
+                         (update-in x (butlast path) dissoc (last path)))
+    [[:edit path _ v]] (if (empty? path) v (assoc-in x path v))))
 
 (defn patch [x diff]
   (reduce patch-diff-item x diff))

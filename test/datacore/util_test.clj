@@ -1,6 +1,9 @@
 (ns datacore.util-test
   (:require [datacore.util :refer :all]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [clojure.spec :as s]
+            [clojure.spec.test :as stest]
+            [clojure.spec.gen :as gen]))
 
 (deftest take-exactly-test
   (is (= [1 2] (take-exactly 2 [1 2 3] :x)))
@@ -66,7 +69,22 @@
           [:insert 4 70]
           [:delete 9 6]]
          (seq-diff-indices [0 1 {:f 9   :g 10} 2       3 4 5 6]
-                           [0 1 {:f 100 :g 10} 2 70 80 3 4 5]))))
+                           [0 1 {:f 100 :g 10} 2 70 80 3 4 5])))
+
+  (is (= [[:insert 0 3]
+          [:insert 0 2]
+          [:insert 0 1]]
+         (seq-diff-indices [] [1 2 3])))
+
+  (is (= [[:delete 0 1]
+          [:delete 0 2]
+          [:delete 0 3]]
+         (seq-diff-indices [1 2 3] [])))
+
+  (is (= [[:delete 0 []]
+          [:delete 0 5]
+          [:delete 0 {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}]]
+         (seq-diff-indices [[] 5 {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}] []))))
 
 (deftest tree-diff-test
   (is (= [[:dissoc [:a] 6]
@@ -157,4 +175,62 @@
                  [:edit   [:a :b 2 :f] 9 100]
                  [:insert [:a :b 4] 80]
                  [:insert [:a :b 4] 70]
-                 [:delete [:a :b 9] 6]]))))
+                 [:delete [:a :b 9] 6]])))
+  (is (= {:foo "bar"}
+         (patch 2 [[:edit [] 2 {:foo "bar"}]]))))
+
+(def a [{:t [{:t 2, :v 7} 9 [2 8 8]]
+         :u {:h 6}}
+        3
+        []
+        {:x
+         {:r [],
+          :u {:b 6, :k 4, :i 1, :a 2},
+          :h {:k 0, :a 2, :l 1},
+          :o {:a 3, :x 4, :u 9, :q 2},
+          :i 8},
+         :t 6,
+         :y [{} [1 5 5 7 1] 3],
+         :b {:l [6 5 3], :k 1, :r 9, :c 6}}])
+
+(def b [{:t {:y {:v 5, :y 8}, :l 8, :p {:s 8, :m 9}}
+         :y [0]}
+        5
+        8
+        {:k {:q [2 0], :v {:l 5, :r 5, :x 9}},
+         :z {:p {:x 3, :k 7, :r 4, :m 9}, :w {:z 8}, :t {}, :u [2 7]}}])
+
+(def dd [[:dissoc [0 :u] {:h 6}]
+         [:assoc [0 :y] [0]]
+         [:edit [0 :t] [{:t 2, :v 7} 9 [2 8 8]] {:y {:v 5, :y 8}, :l 8, :p {:s 8, :m 9}}]
+         [:edit [0] 3 5]
+         [:edit [0] [] 8]
+         [:dissoc [0 :y] [{} [1 5 5 7 1] 3]]
+         [:dissoc [0 :b] {:l [6 5 3], :k 1, :r 9, :c 6}]
+         [:dissoc [0 :t] 6]
+         [:dissoc [0 :x] {:r [], :u {:b 6, :k 4, :i 1, :a 2}, :h {:k 0, :a 2, :l 1}, :o {:a 3, :x 4, :u 9, :q 2}, :i 8}]
+         [:assoc [0 :k] {:q [2 0], :v {:l 5, :r 5, :x 9}}]
+         [:assoc [0 :z] {:p {:x 3, :k 7, :r 4, :m 9}, :w {:z 8}, :t {}, :u [2 7]}]])
+
+(s/def ::limited-key
+  (s/with-gen
+    keyword?
+    #(gen/elements [:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t :u :v :w :x :y :z])))
+(s/def ::limited-number #{0 1 2 3 4 5 6 7 8 9})
+(s/def ::limited-map (s/map-of ::limited-key ::limited-value, :min-count 0 :max-count 5))
+(s/def ::limited-vector (s/coll-of ::limited-value, :kind vector? :min-count 0 :max-count 5))
+(s/def ::limited-value (s/or :number ::limited-number
+                             :map    ::limited-map
+                             :vector ::limited-vector))
+
+(deftest diff-tree-test-check
+  (stest/check
+   [`tree-diff]
+   {:gen {:datacore.util/tree-diff-input #(s/gen ::limited-value)}}))
+
+(comment
+  (first
+   (stest/check
+    [`tree-diff]
+    {:gen {:datacore.util/tree-diff-input #(s/gen ::limited-value)}}))q
+  )
