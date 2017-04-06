@@ -165,8 +165,19 @@
 (defn- path-conj [diff item]
   (update diff 1 conj item))
 
-(defn- path-prepend [diff prefix]
+(defn- prepend-path [prefix diff]
   (update diff 1 #(vec (concat prefix %))))
+
+(def ^:dynamic ^:private tree-diff-path [])
+
+(defn- set-path [diff]
+  (if (< (count tree-diff-path) (count (get diff 1)))
+    diff
+    (assoc diff 1 tree-diff-path)))
+
+(defmacro with-path [path & code]
+  `(binding [~'tree-diff-path ~path]
+     ~@code))
 
 (extend-protocol TreeDiff
   nil
@@ -175,17 +186,18 @@
 
   Object
   (tree-diff [a b]
-    (if (= a b)
-      [[:same [] a]]
-      [[:edit [] a b]]))
+    [(if (= a b)
+       [:same [] a]
+       [:edit [] a b])])
 
   java.util.Map
   (tree-diff [a b]
+    ;;(prn 'map 'tree-diff-path tree-diff-path)
     (cond
       (not (map? b))
-      [[:edit [] a b]]
+      [(set-path [:edit [] a b])]
       (= a b)
-      [[:same [] a]]
+      [(set-path [:same [] a])]
       :else
       (let [ka           (set (keys a))
             kb           (set (keys b))
@@ -193,31 +205,31 @@
             edited-keys  (filter #(not= (get a %) (get b %)) common-keys)
             deleted-keys (set/difference ka kb)
             added-keys   (set/difference kb ka)]
-        (vec
-         (apply concat
-                (map #(vector :dissoc [%] (get a %)) deleted-keys)
-                (map #(vector :assoc [%] (get b %)) added-keys)
-                (map #(map (fn [d] (path-prepend d [%])) (tree-diff (get a %) (get b %))) edited-keys))))))
+        (apply concat
+               (map #(vector :dissoc [%] (get a %)) deleted-keys)
+               (map #(vector :assoc [%] (get b %)) added-keys)
+               (map #(map (partial prepend-path [%]) (tree-diff (get a %) (get b %))) edited-keys)))))
 
   java.util.List
   (tree-diff [a b]
+    ;;(prn 'list 'tree-diff-path tree-diff-path)
     (cond
       (not (instance? java.util.List b))
-      [[:edit [] a b]]
+      [(set-path [:edit [] a b])]
       (= a b)
-      [[:same [] a]]
+      [(set-path [:same [] a])]
       :else
-      (vec
+      (doall
        (mapcat
         (fn [diff]
           (match [diff]
                  [[:edit path old new]]
                  (cond (and (map? old) (map? new))
-                       (map #(path-prepend % path) (tree-diff old new))
+                       (map (partial prepend-path path) (tree-diff old new))
                        (and (sequential? old) (sequential? new))
-                       (map #(path-prepend % path) (tree-diff old new))
+                       (map (partial prepend-path path) (tree-diff old new))
                        :else
-                       [(path-prepend diff [0])])
+                       [diff])
                  [[:insert _ _]] [diff]
                  [[:delete _ _]] [diff]))
         (map #(update-path % vector) (seq-diff-indices a b)))))))

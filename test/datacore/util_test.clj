@@ -87,13 +87,22 @@
          (seq-diff-indices [[] 5 {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}] []))))
 
 (deftest tree-diff-test
+  (is (= [[:delete [1] :b]]
+         (tree-diff [:a :b :c :d :e]
+                    [:a    :c :d :e])))
+
+  (is (= [[:edit [:c] "foo" "bar"]
+          [:edit [:b] 1 10]]
+         (tree-diff {:b 1  :c "foo"}
+                    {:b 10 :c "bar"})))
+
   (is (= [[:dissoc [:a] 6]
           [:assoc [:g] 900]
           [:assoc [:h] 100]
           [:edit [:b] 10 11]
           [:edit [:d] 40 41]]
          (tree-diff {:a 6 :b 10 :c 90 :d 40 :e 100 :f 900}
-                   {     :b 11 :c 90 :d 41 :e 100 :f 900 :g 900 :h 100})))
+                    {     :b 11 :c 90 :d 41 :e 100 :f 900 :g 900 :h 100})))
 
   (let [tree-a {:type :datacore.ui.view/top-level
                 :children
@@ -153,7 +162,7 @@
           [:insert [4]    70]
           [:delete [9]    6]]
          (tree-diff [0 1 {:f 9   :g 10} 2       3 4 5 6]
-                    [0 1 {:f 100} 2 70 80 3 4 5])))
+                    [0 1 {:f 100}       2 70 80 3 4 5])))
 
   (let [tree-a {:a {:b [0 1 {:f 9   :g 10} 2       3 4 5 6]
                     :c "foo"}}
