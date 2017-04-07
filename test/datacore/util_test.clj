@@ -223,12 +223,13 @@
     #(gen/elements [:a :b :c :d :e :f :g :h :i :j ;;:k :l :m :n :o :p :q :r :s :t :u :v :w :x :y :z
                     ])))
 (s/def ::limited-number #{0 1 2 3 4 5 6 7 8 9})
-(s/def ::limited-map (s/map-of ::limited-key ::limited-value, :min-count 0 :max-count 5))
-(s/def ::limited-vector (s/coll-of ::limited-value, :kind vector? :min-count 0 :max-count 5))
-(s/def ::limited-value (s/or :number ::limited-number
-                             :map    ::limited-map
-                             :vector ::limited-vector
-                             :nil     nil?))
+(s/def ::limited-map (s/map-of (s/nilable ::limited-key)
+                               (s/nilable ::limited-value) :min-count 0 :max-count 10))
+(s/def ::limited-vector (s/coll-of (s/nilable ::limited-value) :kind vector? :min-count 0 :max-count 10))
+(s/def ::limited-value (s/nilable
+                        (s/or :number ::limited-number
+                              :map    ::limited-map
+                              :vector ::limited-vector)))
 
 (comment
   (stest/summarize-results
@@ -236,4 +237,4 @@
      (stest/check
       [`tree-diff]
       {:gen                          {:datacore.util/tree-diff-input #(s/gen ::limited-value)}
-       :clojure.spec.test.check/opts {:num-tests 100}}))))
+       :clojure.spec.test.check/opts {:num-tests 75}}))))
