@@ -3,7 +3,9 @@
             [clojure.test :refer :all]
             [clojure.spec :as s]
             [clojure.spec.test :as stest]
-            [clojure.spec.gen :as gen]))
+            [clojure.spec.gen :as gen]
+            ;;[clojure.test.check :as tc]
+            ))
 
 (deftest take-exactly-test
   (is (= [1 2] (take-exactly 2 [1 2 3] :x)))
@@ -214,7 +216,8 @@
 (s/def ::limited-key
   (s/with-gen
     keyword?
-    #(gen/elements [:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t :u :v :w :x :y :z])))
+    #(gen/elements [:a :b :c :d :e :f :g :h :i :j ;;:k :l :m :n :o :p :q :r :s :t :u :v :w :x :y :z
+                    ])))
 (s/def ::limited-number #{0 1 2 3 4 5 6 7 8 9})
 (s/def ::limited-map (s/map-of ::limited-key ::limited-value, :min-count 0 :max-count 5))
 (s/def ::limited-vector (s/coll-of ::limited-value, :kind vector? :min-count 0 :max-count 5))
@@ -223,9 +226,12 @@
                              :vector ::limited-vector))
 
 (deftest diff-tree-test-check
-  (stest/check
-   [`tree-diff]
-   {:gen {:datacore.util/tree-diff-input #(s/gen ::limited-value)}}))
+  (stest/summarize-results
+   (binding [clojure.spec/*recursion-limit* 3]
+     (stest/check
+      [`tree-diff]
+      {:gen                          {:datacore.util/tree-diff-input #(s/gen ::limited-value)}
+       :clojure.spec.test.check/opts {:num-tests 100}}))))
 
 (comment
   (first
