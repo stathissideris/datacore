@@ -12,7 +12,11 @@
   (is (= [1 2 3] (take-exactly 3 [1 2 3] :x)))
   (is (= [1 2 3 :x :x :x] (take-exactly 6 [1 2 3] :x))))
 
-(deftest diff-test
+(deftest seq-diff-test
+  (is (= [[:delete :a]]
+         (seq-diff [:a] [])))
+  (is (= [[:delete nil]]
+         (seq-diff [nil] [])))
   (is (= [[:delete 0]
           [:same 1]
           [:same 2]
@@ -223,19 +227,13 @@
 (s/def ::limited-vector (s/coll-of ::limited-value, :kind vector? :min-count 0 :max-count 5))
 (s/def ::limited-value (s/or :number ::limited-number
                              :map    ::limited-map
-                             :vector ::limited-vector))
+                             :vector ::limited-vector
+                             :nil     nil?))
 
-(deftest diff-tree-test-check
+(comment
   (stest/summarize-results
    (binding [clojure.spec/*recursion-limit* 3]
      (stest/check
       [`tree-diff]
       {:gen                          {:datacore.util/tree-diff-input #(s/gen ::limited-value)}
        :clojure.spec.test.check/opts {:num-tests 100}}))))
-
-(comment
-  (first
-   (stest/check
-    [`tree-diff]
-    {:gen {:datacore.util/tree-diff-input #(s/gen ::limited-value)}}))q
-  )

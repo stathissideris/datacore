@@ -100,7 +100,7 @@
       (swap! cache-atom assoc k ret)
       ret)))
 
-(defn lcs [x y]
+(defn- lcs [x y]
   (let [cache (atom {}) ;;local memoization, new cache for every call of lcs
         lcs*  (fn lcs* [[x & xs :as xx] [y & ys :as yy]]
                 (memoize-with
@@ -112,17 +112,18 @@
     (lcs* x y)))
 
 (defn- seq-diffs [as bs common]
-  (loop [[a & ra :as as]     as
-         [b & rb :as bs]     bs
-         [c & rc :as common] common
-         diffs               []]
-    ;;(prn 'a a '- 'b b '- 'c c)
-    (if (and (not a) (not b))
-      diffs
-      (cond (= a b c)  (recur ra rb rc (conj diffs [:same a]))
-            (and (not= a c) (not= b c)) (recur ra rb common (conj diffs [:edit a b]))
-            (not= a c) (recur ra bs common (conj diffs [:delete a]))
-            (not= b c) (recur as rb common (conj diffs [:insert b]))))))
+  (let [fix-nil (fn [x] (if (= ::nil x) nil x))]
+    (loop [[a & ra :as as]     (map (fnil identity ::nil) as)
+           [b & rb :as bs]     (map (fnil identity ::nil) bs)
+           [c & rc :as common] common
+           diffs               []]
+      ;;(prn 'a a '- 'b b '- 'c c)
+      (if (and (not a) (not b))
+        diffs
+        (cond (= a b c)  (recur ra rb rc (conj diffs [:same (fix-nil a)]))
+              (and (not= a c) (not= b c)) (recur ra rb common (conj diffs [:edit (fix-nil a) (fix-nil b)]))
+              (not= a c) (recur ra bs common (conj diffs [:delete (fix-nil a)]))
+              (not= b c) (recur as rb common (conj diffs [:insert (fix-nil b)])))))))
 
 (defn seq-diff [a b]
   (seq-diffs a b (lcs a b)))
@@ -192,7 +193,6 @@
 
   java.util.Map
   (tree-diff [a b]
-    ;;(prn 'map 'tree-diff-path tree-diff-path)
     (cond
       (not (map? b))
       [(set-path [:edit [] a b])]
@@ -212,7 +212,6 @@
 
   java.util.List
   (tree-diff [a b]
-    ;;(prn 'list 'tree-diff-path tree-diff-path)
     (cond
       (not (instance? java.util.List b))
       [(set-path [:edit [] a b])]
