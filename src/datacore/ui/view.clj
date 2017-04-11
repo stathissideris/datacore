@@ -1,5 +1,6 @@
 (ns datacore.ui.view
-  (:require [datacore.ui.java-fx :as fx]
+  (:require [clojure.core.match :as m :refer [match]]
+            [datacore.ui.java-fx :as fx]
             [datacore.util :as util]
             [datacore.cells :as c]
             [datacore.ui.keys :as keys]
@@ -129,22 +130,33 @@
 ;;;;;;;;;;;;;;;;
 
 (defn update-layout! [old-tree new-tree]
-  (let [old-windows (:children old-tree)
-        new-windows (:children new-tree)
-        diffs       (util/seq-diff old-windows new-windows)]
-    (doseq [[type {:keys [id] :as window-spec} :as diff] diffs]
-      (condp = type
-        :same   :skip
-        :insert (let [component @(fx/run-later! #(build-view window-spec))]
-                  (register-component! id component)
-                  (fx/run-later! #(fx/show component)))
-        :delete (let [component (get (c/value state/view-to-component) id)]
-                  (when component
-                    (unregister-component! id)
-                    (fx/run-later! #(.close component))))
-        :edit   (let [[_ old-window new-window] diff]
-                  (when-not (= (:root old-window) (:root new-window))
-                    (let [stage-component (get (c/value state/view-to-component) id)
-                          scene           (.getScene stage-component)]
-                      (fx/run-later!
-                       #(.setRoot scene (build-window-contents (:root new-window) message/current-message))))))))))
+  (let [diffs (util/tree-diff old-tree new-tree)]
+    (doseq [diff diffs]
+      (prn diff)
+      (match
+       [diff]
+
+       [[:same _ _]]
+       :skip
+
+       [[:insert [:children _] window]]
+       (let [component @(fx/run-later! #(build-view window))]
+         (register-component! (:id window) component)
+         (fx/run-later! #(fx/show component)))
+
+       [[:delete [:children _] window]]
+       (let [component (get (c/value state/view-to-component) (:id window))]
+         (when component
+           (unregister-component! (:id window))
+           (fx/run-later! #(.close component))))
+
+       [[:edit path old new]]
+       (when-not (= old new)
+         (let [stage-component (get (c/value state/view-to-component) (:id new))
+               scene           (some-> stage-component .getScene)]
+
+           (fx/run-later!
+            #(.setRoot scene (build-window-contents new message/current-message)))))
+
+       [[:assoc path value]]
+       ))))

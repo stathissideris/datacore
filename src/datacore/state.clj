@@ -18,11 +18,11 @@
    tree))
 
 (defn swap-layout! [fun & args]
-  (let [old-tree          (c/value layout-tree)
-        new-tree          (-> (apply fun old-tree args)
-                              (update :children vec))
-        new-tree-with-ids (assign-layout-ids new-tree)]
-    (c/reset! layout-tree new-tree-with-ids)))
+  (c/swap! layout-tree
+           (fn [old-tree]
+             (-> (apply fun old-tree args)
+                 (update :children vec)
+                 (assign-layout-ids)))))
 
 ;; {:type ::top-level
 ;;  :children
@@ -48,6 +48,8 @@
     (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
     (def csv-view (csv/default-view csv))
     )
+
+  (swap-layout! identity)
 
   ;;show cell in window
   (swap-layout! assoc-in [:children 0 :root] {:type :datacore.ui.view/cell

@@ -32,9 +32,10 @@
 
   (state/swap-layout!
    (constantly
-    {:type :datacore.ui.view/top-level
-     :children
-     [{:type       :datacore.ui.view/window
-       :title      "datacore"
-       :dimensions [1000 800]
-       :root       {:type :datacore.ui.view/nothing}}]})))
+    {:type     :datacore.ui.view/top-level
+     :children []}))
+  (state/swap-layout! update :children conj
+                      {:type       :datacore.ui.view/window
+                       :title      "datacore"
+                       :dimensions [1000 800]
+                       :root       {:type :datacore.ui.view/nothing}}))

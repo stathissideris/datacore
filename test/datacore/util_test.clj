@@ -215,7 +215,9 @@
                  [:insert [:a :b 4] 70]
                  [:delete [:a :b 9] 6]])))
   (is (= {:foo "bar"}
-         (patch 2 [[:edit [] 2 {:foo "bar"}]]))))
+         (patch 2 [[:edit [] 2 {:foo "bar"}]])))
+  (is (= {:a "foo"}
+         (patch nil[[:edit [] nil {:a "foo"}]]))))
 
 (s/def ::limited-key
   (s/with-gen
