@@ -8,8 +8,10 @@
   (repl/refresh))
 
 (defn instrument-all []
-  (doseq [s (stest/instrumentable-syms)]
-    (stest/instrument s)))
+  (doall
+   (sort
+    (for [s (stest/instrumentable-syms)]
+      (stest/instrument s)))))
 
 #_(defn run-all-my-tests []
     (reset)

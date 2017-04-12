@@ -59,54 +59,57 @@
          (seq-diff [0 1 2 3 :e :f :g 4 5 6 7 8] [1 2 3 :a :b :c 4 5 10 6]))))
 
 (deftest seq-diff-indices-test
-  (is (= [[:delete 0 0]
-          [:insert 2 80]
-          [:insert 2 70]
-          [:delete 7 6]]
+  (is (= [{:type :delete :index 0 :value 0}
+          {:type :insert :index 2 :value 80}
+          {:type :insert :index 2 :value 70}
+          {:type :delete :index 7 :value 6}]
          (seq-diff-indices [0 1 2       3 4 5 6 7]
                            [  1 2 70 80 3 4 5 7])))
 
-  (is (= [[:edit 2 2 10]]
+  (is (= [{:type :edit :index 2 :old 2 :new 10}]
          (seq-diff-indices [0 1 2  3 4 5 6 7]
                            [0 1 10 3 4 5 6 7])))
 
-  (is (= [[:edit   2 {:f 9, :g 10} {:f 100, :g 10}]
-          [:insert 4 80]
-          [:insert 4 70]
-          [:delete 9 6]]
+  (is (= [{:type :edit :index 2 :old {:f 9, :g 10} :new {:f 100, :g 10}}
+          {:type :insert :index 4 :value 80}
+          {:type :insert :index 4 :value 70}
+          {:type :delete :index 9 :value 6}]
          (seq-diff-indices [0 1 {:f 9   :g 10} 2       3 4 5 6]
                            [0 1 {:f 100 :g 10} 2 70 80 3 4 5])))
 
-  (is (= [[:insert 0 3]
-          [:insert 0 2]
-          [:insert 0 1]]
+  (is (= [{:type :insert :index 0 :value 3}
+          {:type :insert :index 0 :value 2}
+          {:type :insert :index 0 :value 1}]
          (seq-diff-indices [] [1 2 3])))
 
-  (is (= [[:delete 0 1]
-          [:delete 0 2]
-          [:delete 0 3]]
+  (is (= [{:type :delete :index 0 :value 1}
+          {:type :delete :index 0 :value 2}
+          {:type :delete :index 0 :value 3}]
          (seq-diff-indices [1 2 3] [])))
 
-  (is (= [[:delete 0 []]
-          [:delete 0 5]
-          [:delete 0 {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}]]
+  (is (= [{:type :delete :index 0 :value []}
+          {:type :delete :index 0 :value 5}
+          {:type :delete :index 0 :value {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}}]
          (seq-diff-indices [[] 5 {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}] []))))
 
 (deftest tree-diff-test
-  (is (= [[:delete [1] :b]]
+  (is (= [{:type :insert :path [1] :value 1}]
+         (tree-diff [0] [0 1])))
+
+  (is (= [{:type :delete :path [1] :value :b}]
          (tree-diff [:a :b :c :d :e]
                     [:a    :c :d :e])))
 
-  (is (= [[:edit [:c] "foo" "bar"]
-          [:edit [:b] 1 10]]
+  (is (= [{:type :edit :path [:c] :old "foo" :new "bar"}
+          {:type :edit :path [:b] :old 1 :new 10}]
          (tree-diff {:b 1  :c "foo"}
                     {:b 10 :c "bar"})))
 
-  (is (= [[:dissoc [:a] 6]
-          [:assoc [:g] 900]
-          [:assoc [:h] 100]
-          [:edit [:b] 10 11]
-          [:edit [:d] 40 41]]
+  (is (= [{:type :dissoc :path [:a] :value 6}
+          {:type :assoc :path [:g] :value 900}
+          {:type :assoc :path [:h] :value 100}
+          {:type :edit :path [:b] :old 10 :new 11}
+          {:type :edit :path [:d] :old 40 :new 41}]
          (tree-diff {:a 6 :b 10 :c 90 :d 40 :e 100 :f 900}
                     {     :b 11 :c 90 :d 41 :e 100 :f 900 :g 900 :h 100})))
 
@@ -136,37 +139,37 @@
                    :id "87d3ba15-16f6-434d-8707-e34f34cbc9cf"}
                   :id "a4b55b75-3156-444d-af49-5b8657886859"}]
                 :id "39d4c029-0df5-4daa-8e65-1bad38474504"}]
-    (is (= [[:assoc [:children 0 :root :confused?] false]
-            [:assoc [:children 0 :root :focused?] true]
-            [:delete [:children 1] {:type         :datacore.ui.view/window
-                                    :window-style :transparent
-                                    :root         {:type :datacore.ui.view/prompt
-                                                   :id   "fec825ac-8419-4f32-b445-17d6e21cbbe9"}
-                                    :id           "e931ae63-439c-48c4-a4fa-161fbd354de0"}]]
+    (is (= [{:type :assoc :path [:children 0 :root :confused?] :value false}
+            {:type :assoc :path [:children 0 :root :focused?] :value true}
+            {:type :delete :path [:children 1] :value {:type         :datacore.ui.view/window
+                                                       :window-style :transparent
+                                                       :root         {:type :datacore.ui.view/prompt
+                                                                      :id   "fec825ac-8419-4f32-b445-17d6e21cbbe9"}
+                                                       :id           "e931ae63-439c-48c4-a4fa-161fbd354de0"}}]
            (tree-diff tree-a tree-b))))
 
-  (is (= [[:edit   [:a :c] "foo" "bar"]
-          [:delete [:a :b 0] 0]
-          [:insert [:a :b 2] 80]
-          [:insert [:a :b 2] 70]
-          [:delete [:a :b 7] 6]]
+  (is (= [{:type :edit   :path [:a :c] :old "foo" :new "bar"}
+          {:type :delete :path [:a :b 0] :value 0}
+          {:type :insert :path [:a :b 2] :value 80}
+          {:type :insert :path [:a :b 2] :value 70}
+          {:type :delete :path [:a :b 7] :value 6}]
          (tree-diff {:a {:b [0 1 2       3 4 5 6]
                          :c "foo"}}
                     {:a {:b [  1 2 70 80 3 4 5]
                          :c "bar"}})))
 
-  (is (= [[:edit   [2 :f] 9 100]
-          [:insert [4]    80]
-          [:insert [4]    70]
-          [:delete [9]    6]]
+  (is (= [{:type :edit   :path [2 :f] :old 9 :new 100}
+          {:type :insert :path [4] :value 80}
+          {:type :insert :path [4] :value 70}
+          {:type :delete :path [9] :value 6}]
          (tree-diff [0 1 {:f 9   :g 10} 2       3 4 5 6]
                     [0 1 {:f 100 :g 10} 2 70 80 3 4 5])))
 
-  (is (= [[:dissoc [2 :g] 10]
-          [:edit   [2 :f] 9 100]
-          [:insert [4]    80]
-          [:insert [4]    70]
-          [:delete [9]    6]]
+  (is (= [{:type :dissoc :path [2 :g] :value 10}
+          {:type :edit   :path [2 :f] :old 9 :new 100}
+          {:type :insert :path [4] :value 80}
+          {:type :insert :path [4] :value 70}
+          {:type :delete :path [9] :value 6}]
          (tree-diff [0 1 {:f 9   :g 10} 2       3 4 5 6]
                     [0 1 {:f 100}       2 70 80 3 4 5])))
 
@@ -174,11 +177,11 @@
                     :c "foo"}}
         tree-b {:a {:b [0 1 {:f 100 :g 10} 2 70 80 3 4 5]
                     :c "bar"}}]
-    (is (= [[:edit   [:a :c] "foo" "bar"]
-            [:edit   [:a :b 2 :f] 9 100]
-            [:insert [:a :b 4] 80]
-            [:insert [:a :b 4] 70]
-            [:delete [:a :b 9] 6]]
+    (is (= [{:type :edit   :path [:a :c] :old "foo" :new "bar"}
+            {:type :edit   :path [:a :b 2 :f] :old 9 :new 100}
+            {:type :insert :path [:a :b 4] :value 80}
+            {:type :insert :path [:a :b 4] :value 70}
+            {:type :delete :path [:a :b 9] :value 6}]
            (tree-diff tree-a tree-b))))
 
   (let [a    [{:t [{:t 2, :v 7} 9 [2 8 8]]
@@ -209,15 +212,15 @@
               :c "bar"}}
          (patch {:a {:b [0 1 {:f 9 :g 10} 2 3 4 5 6]
                      :c "foo"}}
-                [[:edit   [:a :c] "foo" "bar"]
-                 [:edit   [:a :b 2 :f] 9 100]
-                 [:insert [:a :b 4] 80]
-                 [:insert [:a :b 4] 70]
-                 [:delete [:a :b 9] 6]])))
+                [{:type :edit   :path [:a :c] :old "foo" :new "bar"}
+                 {:type :edit   :path [:a :b 2 :f] :old 9 :new 100}
+                 {:type :insert :path [:a :b 4] :value 80}
+                 {:type :insert :path [:a :b 4] :value 70}
+                 {:type :delete :path [:a :b 9] :value 6}])))
   (is (= {:foo "bar"}
-         (patch 2 [[:edit [] 2 {:foo "bar"}]])))
+         (patch 2 [{:type :edit :path [] :old 2 :new {:foo "bar"}}])))
   (is (= {:a "foo"}
-         (patch nil[[:edit [] nil {:a "foo"}]]))))
+         (patch nil [{:type :edit :path [] :old nil :new {:a "foo"}}]))))
 
 (s/def ::limited-key
   (s/with-gen
