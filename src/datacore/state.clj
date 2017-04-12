@@ -55,6 +55,9 @@
   (swap-layout! assoc-in [:children 0 :root] {:type :datacore.ui.view/cell
                                               :cell csv-view})
 
+  ;;set window title
+  (swap-layout! assoc-in [:children 0 :title] "foobar33")
+
   ;;open extra window
   (swap-layout! update :children conj
                 {:type       :datacore.ui.view/window

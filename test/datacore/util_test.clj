@@ -66,11 +66,11 @@
          (seq-diff-indices [0 1 2       3 4 5 6 7]
                            [  1 2 70 80 3 4 5 7])))
 
-  (is (= [{:type :edit :index 2 :old 2 :new 10}]
+  (is (= [{:type :edit :index 2 :old 2 :value 10}]
          (seq-diff-indices [0 1 2  3 4 5 6 7]
                            [0 1 10 3 4 5 6 7])))
 
-  (is (= [{:type :edit :index 2 :old {:f 9, :g 10} :new {:f 100, :g 10}}
+  (is (= [{:type :edit :index 2 :old {:f 9, :g 10} :value {:f 100, :g 10}}
           {:type :insert :index 4 :value 80}
           {:type :insert :index 4 :value 70}
           {:type :delete :index 9 :value 6}]
@@ -100,16 +100,16 @@
          (tree-diff [:a :b :c :d :e]
                     [:a    :c :d :e])))
 
-  (is (= [{:type :edit :path [:c] :old "foo" :new "bar"}
-          {:type :edit :path [:b] :old 1 :new 10}]
+  (is (= [{:type :edit :path [:c] :old "foo" :value "bar"}
+          {:type :edit :path [:b] :old 1 :value 10}]
          (tree-diff {:b 1  :c "foo"}
                     {:b 10 :c "bar"})))
 
   (is (= [{:type :dissoc :path [:a] :value 6}
           {:type :assoc :path [:g] :value 900}
           {:type :assoc :path [:h] :value 100}
-          {:type :edit :path [:b] :old 10 :new 11}
-          {:type :edit :path [:d] :old 40 :new 41}]
+          {:type :edit :path [:b] :old 10 :value 11}
+          {:type :edit :path [:d] :old 40 :value 41}]
          (tree-diff {:a 6 :b 10 :c 90 :d 40 :e 100 :f 900}
                     {     :b 11 :c 90 :d 41 :e 100 :f 900 :g 900 :h 100})))
 
@@ -148,7 +148,7 @@
                                                        :id           "e931ae63-439c-48c4-a4fa-161fbd354de0"}}]
            (tree-diff tree-a tree-b))))
 
-  (is (= [{:type :edit   :path [:a :c] :old "foo" :new "bar"}
+  (is (= [{:type :edit   :path [:a :c] :old "foo" :value "bar"}
           {:type :delete :path [:a :b 0] :value 0}
           {:type :insert :path [:a :b 2] :value 80}
           {:type :insert :path [:a :b 2] :value 70}
@@ -158,7 +158,7 @@
                     {:a {:b [  1 2 70 80 3 4 5]
                          :c "bar"}})))
 
-  (is (= [{:type :edit   :path [2 :f] :old 9 :new 100}
+  (is (= [{:type :edit   :path [2 :f] :old 9 :value 100}
           {:type :insert :path [4] :value 80}
           {:type :insert :path [4] :value 70}
           {:type :delete :path [9] :value 6}]
@@ -166,7 +166,7 @@
                     [0 1 {:f 100 :g 10} 2 70 80 3 4 5])))
 
   (is (= [{:type :dissoc :path [2 :g] :value 10}
-          {:type :edit   :path [2 :f] :old 9 :new 100}
+          {:type :edit   :path [2 :f] :old 9 :value 100}
           {:type :insert :path [4] :value 80}
           {:type :insert :path [4] :value 70}
           {:type :delete :path [9] :value 6}]
@@ -177,8 +177,8 @@
                     :c "foo"}}
         tree-b {:a {:b [0 1 {:f 100 :g 10} 2 70 80 3 4 5]
                     :c "bar"}}]
-    (is (= [{:type :edit   :path [:a :c] :old "foo" :new "bar"}
-            {:type :edit   :path [:a :b 2 :f] :old 9 :new 100}
+    (is (= [{:type :edit   :path [:a :c] :old "foo" :value "bar"}
+            {:type :edit   :path [:a :b 2 :f] :old 9 :value 100}
             {:type :insert :path [:a :b 4] :value 80}
             {:type :insert :path [:a :b 4] :value 70}
             {:type :delete :path [:a :b 9] :value 6}]
@@ -212,15 +212,15 @@
               :c "bar"}}
          (patch {:a {:b [0 1 {:f 9 :g 10} 2 3 4 5 6]
                      :c "foo"}}
-                [{:type :edit   :path [:a :c] :old "foo" :new "bar"}
-                 {:type :edit   :path [:a :b 2 :f] :old 9 :new 100}
+                [{:type :edit   :path [:a :c] :old "foo" :value "bar"}
+                 {:type :edit   :path [:a :b 2 :f] :old 9 :value 100}
                  {:type :insert :path [:a :b 4] :value 80}
                  {:type :insert :path [:a :b 4] :value 70}
                  {:type :delete :path [:a :b 9] :value 6}])))
   (is (= {:foo "bar"}
-         (patch 2 [{:type :edit :path [] :old 2 :new {:foo "bar"}}])))
+         (patch 2 [{:type :edit :path [] :old 2 :value {:foo "bar"}}])))
   (is (= {:a "foo"}
-         (patch nil [{:type :edit :path [] :old nil :new {:a "foo"}}]))))
+         (patch nil [{:type :edit :path [] :old nil :value {:a "foo"}}]))))
 
 (s/def ::limited-key
   (s/with-gen

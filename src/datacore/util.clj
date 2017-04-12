@@ -114,6 +114,7 @@
                       :else (longest (lcs* (cons x xs) ys) (lcs* xs (cons y ys))))))]
     (map fix-nil (lcs* x y))))
 
+;;TODO replace this with a more performant implementation
 (defn- seq-diffs [as bs common]
   (let [fix-nil (fn [x] (if (= ::nil x) nil x))]
     (loop [[a & ra :as as]     (map (fnil identity ::nil) as)
@@ -159,7 +160,7 @@
                          (conj new-diff (map-indexed #(hash-map :type :edit
                                                                 :index (+ index %1)
                                                                 :old (second %2)
-                                                                :new (last %2)) diff))
+                                                                :value (last %2)) diff))
                          (+ index (count diff))))))))
 
 (defprotocol TreeDiff
@@ -180,19 +181,19 @@
   (tree-diff [a b]
     (if (nil? b)
       [{:type :same :path [] :value nil}]
-      [{:type :edit :path [] :old a :new b}]))
+      [{:type :edit :path [] :old a :value b}]))
 
   Object
   (tree-diff [a b]
     (if (= a b)
       [{:type :same :path [] :value a}]
-      [{:type :edit :path [] :old a :new b}]))
+      [{:type :edit :path [] :old a :value b}]))
 
   java.util.Map
   (tree-diff [a b]
     (cond
       (not (map? b))
-      [(set-path {:type :edit :path [] :old a :new b})]
+      [(set-path {:type :edit :path [] :old a :value b})]
       (= a b)
       [(set-path {:type :same :path [] :value a})]
       :else
@@ -212,19 +213,19 @@
   (tree-diff [a b]
     (cond
       (not (instance? java.util.List b))
-      [(set-path {:type :edit :path [] :old a :new b})]
+      [(set-path {:type :edit :path [] :old a :value b})]
       (= a b)
       [(set-path {:type :same :path [] :value a})]
       :else
       (doall
        (mapcat
-        (fn [{:keys [type path old new value] :as diff}]
+        (fn [{:keys [type path old value] :as diff}]
           (condp = type
                  :edit
-                 (cond (and (map? old) (map? new))
-                       (map (partial prepend-path path) (tree-diff old new))
-                       (and (sequential? old) (sequential? new))
-                       (map (partial prepend-path path) (tree-diff old new))
+                 (cond (and (map? old) (map? value))
+                       (map (partial prepend-path path) (tree-diff old value))
+                       (and (sequential? old) (sequential? value))
+                       (map (partial prepend-path path) (tree-diff old value))
                        :else
                        [diff])
                  :insert [diff]
@@ -237,7 +238,6 @@
 (s/def ::path (s/coll-of any?))
 (s/def ::value (s/nilable any?))
 (s/def ::old (s/nilable any?))
-(s/def ::new (s/nilable any?))
 (s/def ::type #{:same :delete :insert :assoc :dissoc :edit})
 (defn- vector-path? [path] (-> path last nat-int?))
 (let [d (fn [type spec] (s/and spec #(= type (:type %))))]
@@ -248,8 +248,8 @@
                                           #(vector-path? (:path %)))
                            :assoc  (d :assoc (s/keys :req-un [::type ::path ::value]))
                            :dissoc (d :dissoc (s/keys :req-un [::type ::path ::value]))
-                           :edit   (s/and (d :edit (s/keys :req-un [::type ::path ::old ::new]))
-                                          #(not= (:old %) (:new %))))))
+                           :edit   (s/and (d :edit (s/keys :req-un [::type ::path ::old ::value]))
+                                          #(not= (:old %) (:value %))))))
 (declare patch)
 (s/def ::tree-diff-input any?)
 (s/fdef tree-diff
@@ -271,7 +271,7 @@
     [value]
     (subvec v idx (count v)))))
 
-(defn- patch-diff-item [x {:keys [type path value old new]}]
+(defn- patch-diff-item [x {:keys [type path old value]}]
   (condp = type
     :same   x
     :delete (if (= 1 (count path))
@@ -284,7 +284,7 @@
     :dissoc (if (= 1 (count path))
               (dissoc x (first path))
               (update-in x (butlast path) dissoc (last path)))
-    :edit   (if (empty? path) new (assoc-in x path new))))
+    :edit   (if (empty? path) value (assoc-in x path value))))
 
 (defn patch [x diff]
   (reduce patch-diff-item x diff))

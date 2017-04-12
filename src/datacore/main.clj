@@ -28,7 +28,7 @@
 
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))
 
-  (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (view/update-layout! old new)))
+  (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (@#'view/update-layout! old new)))
 
   (state/swap-layout!
    (constantly

@@ -129,34 +129,61 @@
 
 ;;;;;;;;;;;;;;;;
 
+(defn- stage-component-for-path [path]
+  (let [window-index (second path)
+        id           (some-> state/layout-tree c/value (get-in [:children window-index :id]))]
+    (get (c/value state/view-to-component) id)))
+
+(defn- diff-type [{:keys [type path] :as diff}]
+  (cond (= :root (-> path butlast last))
+        :set-root
+
+        (and (= type :insert)
+             (= :children (first path)))
+        :add-window
+
+        (and (= type :delete)
+             (= :children (first path)))
+        :delete-window
+
+        (and (= :children (first path))
+             (= :title (last path))
+             (= 3 (count path)))
+        :set-window-title
+
+        :else
+        :default))
+
+(require '[clojure.pprint :as pp])
 (defn update-layout! [old-tree new-tree]
-  (let [diffs (util/tree-diff old-tree new-tree)]
-    (doseq [diff diffs]
-      (prn diff)
-      (match
-       [diff]
+  (let [diffs (->> (util/tree-diff old-tree new-tree)
+                   (map #(assoc % :diff-type (diff-type %)))
+                   (partition-by :diff-type))]
+    (pp/pprint diffs)
+    (doseq [diff-group diffs]
+      (let [{:keys [diff-type path old value] :as diff} (first diff-group)]
+        (condp = diff-type
 
-       [[:same _ _]]
-       :skip
+          :add-window
+          (let [component @(fx/run-later! #(build-view value))]
+            (register-component! (:id value) component)
+            (fx/run-later! #(fx/show component)))
 
-       [[:insert [:children _] window]]
-       (let [component @(fx/run-later! #(build-view window))]
-         (register-component! (:id window) component)
-         (fx/run-later! #(fx/show component)))
+          :delete-window
+          (let [component (get (c/value state/view-to-component) (:id value))]
+            (when component
+              (unregister-component! (:id value))
+              (fx/run-later! #(.close component))))
 
-       [[:delete [:children _] window]]
-       (let [component (get (c/value state/view-to-component) (:id window))]
-         (when component
-           (unregister-component! (:id window))
-           (fx/run-later! #(.close component))))
+          :set-root
+          (let [component-map   (zipmap (map (comp last :path) diff-group)
+                                        (map :value diff-group))
+                stage-component (stage-component-for-path path)
+                scene           (some-> stage-component .getScene)]
+            (fx/run-later!
+             #(.setRoot scene (build-window-contents component-map message/current-message))))
 
-       [[:edit path old new]]
-       (when-not (= old new)
-         (let [stage-component (get (c/value state/view-to-component) (:id new))
-               scene           (some-> stage-component .getScene)]
+          :set-window-title
+          (fx/run-later! #(.setTitle (stage-component-for-path path) value))
 
-           (fx/run-later!
-            #(.setRoot scene (build-window-contents new message/current-message)))))
-
-       [[:assoc path value]]
-       ))))
+          :skip)))))
