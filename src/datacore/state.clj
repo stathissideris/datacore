@@ -52,11 +52,13 @@
   (swap-layout! identity)
 
   ;;show cell in window
-  (swap-layout! assoc-in [:children 0 :root] {:type :datacore.ui.view/cell
-                                              :cell csv-view})
+  (swap-layout! update-in [:children 0 :root]
+                merge {:type :datacore.ui.view/cell
+                       :cell csv-view})
 
   ;;set window title
-  (swap-layout! assoc-in [:children 0 :title] "foobar33")
+  (swap-layout! assoc-in [:children 0 :title] "foobar3300")
+  (swap-layout! assoc-in [:children 1 :title] "foobar222333")
 
   ;;open extra window
   (swap-layout! update :children conj

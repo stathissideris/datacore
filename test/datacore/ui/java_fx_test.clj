@@ -22,6 +22,41 @@
                                             :center foo})})})})]
     (is (= ["d" "c" "b" "a"] (map #(.getId %) (parents foo))))))
 
+(deftest get-field-in-test
+  (let [foo (label "foo")
+        c   (make
+             :scene.layout/border-pane
+             {:id     "a"
+              :center (make
+                       :scene.layout/border-pane
+                       {:id     "b"
+                        :center (make
+                                 :scene.layout/border-pane
+                                 {:id     "c"
+                                  :center (make
+                                           :scene.layout/border-pane
+                                           {:id     "d"
+                                            :center foo})})})})]
+    (is (= "foo" (get-field-in c [:center :center :center :center :text])))))
+
+(deftest set-field-in!-test
+  (let [foo (label "foo")
+        c   (make
+             :scene.layout/border-pane
+             {:id     "a"
+              :center (make
+                       :scene.layout/border-pane
+                       {:id     "b"
+                        :center (make
+                                 :scene.layout/border-pane
+                                 {:id     "c"
+                                  :center (make
+                                           :scene.layout/border-pane
+                                           {:id     "d"
+                                            :center foo})})})})]
+    (set-field-in! c [:center :center :center :center :text] "bar")
+    (is (= "bar" (get-field-in c [:center :center :center :center :text])))))
+
 (deftest has-style-class?-test
   (let [c (make :scene.control/label
                 {:style-class ["foo" "bar"]

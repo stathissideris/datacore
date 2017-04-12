@@ -38,4 +38,5 @@
                       {:type       :datacore.ui.view/window
                        :title      "datacore"
                        :dimensions [1000 800]
-                       :root       {:type :datacore.ui.view/nothing}}))
+                       :root       {:type     :datacore.ui.view/nothing
+                                    :focused? true}}))

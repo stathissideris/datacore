@@ -1,7 +1,8 @@
 (ns datacore.ui.java-fx
   (:refer-clojure :exclude [parents methods])
-  (:require [datacore.util :as util]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
+            [clojure.spec :as s]
+            [datacore.util :as util]
             [datacore.cells :as c])
   (:import [javafx.collections ObservableList]
            [javafx.embed.swing JFXPanel]
@@ -77,45 +78,91 @@
 (defn get-field [object field-kw]
   ((getter (class object) field-kw) object))
 
-(defn set-field! [object field-kw value]
-  (try
+(defn set-field! [object field value]
+  (if (int? field) ;;ObservableList
+    (.set object value)
+    (try
+      (clojure.lang.Reflector/invokeInstanceMethod
+       object
+       (->> field
+            util/kebab->camel
+            util/capitalize-first
+            (str "set"))
+       (object-array [value]))
+      object
+      (catch Exception _
+        (if (c/cell-id? value)
+          (do
+            (run-later! #(set-field! object field (c/value value)))
+            (when-not (c/label value)
+              (c/set-label! value (keyword (str (.getName (class object)) "-" (name field)))))
+            (c/add-watch!
+             value
+             [object field]
+             (fn [_ _ v]
+               (run-later! #(set-field! object field v))))
+            object)
+          (let [s! (setter (class object) field)]
+            (if-not s!
+              (throw (ex-info "setter not found"
+                              {:object object
+                               :class  (class object)
+                               :field  field
+                               :value  value}))
+              (try
+                (s! object value)
+                object
+                (catch Exception e
+                  (throw (ex-info "error while calling setter"
+                                  {:object object
+                                   :class  (class object)
+                                   :field  field
+                                   :value  value})))))))))))
+
+(defn get-field [object field]
+  (if (int? field) ;;ObservableList
+    (.get object field)
     (clojure.lang.Reflector/invokeInstanceMethod
      object
-     (->> field-kw
+     (->> field
           util/kebab->camel
           util/capitalize-first
-          (str "set"))
-     (object-array [value]))
-    (catch Exception _
-      (if (c/cell-id? value)
-        (do
-          (run-later! #(set-field! object field-kw (c/value value)))
-          (when-not (c/label value)
-            (c/set-label! value (keyword (str (.getName (class object)) "-" (name field-kw)))))
-          (c/add-watch!
-           value
-           [object field-kw]
-           (fn [_ _ v]
-             (run-later! #(set-field! object field-kw v)))))
-        (let [s! (setter (class object) field-kw)]
-          (if-not s!
-            (throw (ex-info "setter not found"
-                            {:object object
-                             :class  (class object)
-                             :field  field-kw
-                             :value  value}))
+          (str "get"))
+     (object-array []))))
+
+(s/def ::path (s/coll-of (s/or :field-name keyword? :index nat-int?)))
+(defn get-field-in [root path]
+  (reduce (fn [o field]
             (try
-              (s! object value)
+              (get-field o field)
               (catch Exception e
-                (throw (ex-info "error while calling setter"
-                                {:object object
-                                 :class  (class object)
-                                 :field  field-kw
-                                 :value  value}))))))))))
+                (throw (ex-info "get-field-in failed"
+                                {:path           path
+                                 :root           root
+                                 :current-object o
+                                 :current-field  field}
+                                e))))) root path))
+(s/fdef get-field-in
+  :args (s/cat :root some? :path ::path))
+
+(defn set-field-in! [root path value]
+  (let [field       (last path)
+        parent-path (butlast path)]
+    (try
+      (set-field! (get-field-in root parent-path) field value)
+      (catch Exception e
+        (throw (ex-info "set-field-in! failed"
+                        {:path  path
+                         :value value
+                         :root  root}
+                        e))))))
+(s/fdef set-field-in!
+  :args (s/cat :root some? :path ::path :value any?))
 
 (defn set-fields! [object pairs]
-  (doseq [[field-kw value] pairs]
-    (set-field! object field-kw value)))
+  (doseq [[field value] pairs]
+    (set-field! object field value))
+  object)
 
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)

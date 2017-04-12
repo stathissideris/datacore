@@ -1,5 +1,6 @@
 (ns datacore.ui.view
   (:require [clojure.core.match :as m :refer [match]]
+            [clojure.spec :as s]
             [datacore.ui.java-fx :as fx]
             [datacore.util :as util]
             [datacore.cells :as c]
@@ -14,6 +15,8 @@
 (defn- register-component! [view-id fx-component]
   (c/swap! state/view-to-component assoc view-id fx-component)
   fx-component)
+(s/fdef register-component!
+  :args (s/cat :view-id string? :fx-component any?))
 
 (defn- unregister-component! [view-id]
   (c/swap! state/view-to-component dissoc view-id))
@@ -53,13 +56,22 @@
                                          :error   (Color/web "0xF57000")}
                                         :type) message)}))
 
-(defn build-window-contents [tree message]
-  (fx/make
-   :scene.layout/border-pane
-   {:center (if-not tree
-              (build-view ::nothing)
-              (build-view tree))
-    :bottom (message-line message)}))
+(defn set-focus-border! [component focused?]
+  (fx/set-field!
+   component :style
+   (if focused?
+     (str "-fx-border-width: 4 4 4 4;"
+          "-fx-border-color: #155477;")
+     (str "-fx-border-width: 0 0 0 0;"))))
+
+(defn build-window-contents [{:keys [focused?] :as tree} message]
+  (let [component (if-not tree
+                    (build-view ::nothing)
+                    (build-view tree))]
+   (fx/make
+    :scene.layout/border-pane
+    {:center (set-focus-border! component focused?)
+     :bottom (message-line message)})))
 
 (def window-style-map
   {:normal      StageStyle/DECORATED
@@ -134,6 +146,10 @@
         id           (some-> state/layout-tree c/value (get-in [:children window-index :id]))]
     (get (c/value state/view-to-component) id)))
 
+(defn- get-or-build-view [{:keys [id] :as component-map}]
+  (or (-> state/view-to-component c/value (get id))
+      (build-view component-map)))
+
 (defn- diff-type [{:keys [type path] :as diff}]
   (cond (= :root (-> path butlast last))
         :set-root
@@ -150,6 +166,13 @@
              (= :title (last path))
              (= 3 (count path)))
         :set-window-title
+
+        (= :focused? (last path))
+        :set-focus
+
+        (and (#{:assoc :edit} type)
+             (int? (-> path butlast last)))
+        :set-fields
 
         :else
         :default))
@@ -176,12 +199,21 @@
               (fx/run-later! #(.close component))))
 
           :set-root
-          (let [component-map   (zipmap (map (comp last :path) diff-group)
-                                        (map :value diff-group))
+          (let [component-map   (get-in new-tree (butlast path))
                 stage-component (stage-component-for-path path)
                 scene           (some-> stage-component .getScene)]
+            (pp/pprint component-map)
             (fx/run-later!
              #(.setRoot scene (build-window-contents component-map message/current-message))))
+
+          :set-fields
+          (let [component-map (get-in new-tree (butlast path))]
+            (pp/pprint component-map)
+            (fx/run-later!
+             #(fx/set-field-in! (.getScene (stage-component-for-path path)) (nnext (butlast path))
+                                (get-or-build-view component-map))))
+
+          ;;:set-focus
 
           :set-window-title
           (fx/run-later! #(.setTitle (stage-component-for-path path) value))
