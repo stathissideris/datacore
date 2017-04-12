@@ -23,21 +23,42 @@
     (is (= ["d" "c" "b" "a"] (map #(.getId %) (parents foo))))))
 
 (deftest get-field-in-test
-  (let [foo (label "foo")
-        c   (make
-             :scene.layout/border-pane
-             {:id     "a"
-              :center (make
-                       :scene.layout/border-pane
-                       {:id     "b"
-                        :center (make
-                                 :scene.layout/border-pane
-                                 {:id     "c"
-                                  :center (make
-                                           :scene.layout/border-pane
-                                           {:id     "d"
-                                            :center foo})})})})]
-    (is (= "foo" (get-field-in c [:center :center :center :center :text])))))
+  (testing "simple"
+    (let [foo (label "foo")
+          c   (make
+               :scene.layout/border-pane
+               {:id     "a"
+                :center (make
+                         :scene.layout/border-pane
+                         {:id     "b"
+                          :center (make
+                                   :scene.layout/border-pane
+                                   {:id     "c"
+                                    :center (make
+                                             :scene.layout/border-pane
+                                             {:id     "d"
+                                              :center foo})})})})]
+      (is (= "foo" (get-field-in c [:center :center :center :center :text])))))
+  (testing "with indexes"
+    (let [foo (label "foo")
+          c   (make
+               :scene.control/split-pane
+               {:items
+                [(make
+                  :scene.control/split-pane
+                  {:items
+                   [(make
+                     :scene.control/split-pane
+                     {:items
+                      [(make
+                        :scene.control/split-pane
+                        {:items
+                         [foo]})]})]})]})]
+      (is (= "foo" (get-field-in c [:items 0
+                                    :items 0
+                                    :items 0
+                                    :items 0
+                                    :text]))))))
 
 (deftest set-field-in!-test
   (let [foo (label "foo")

@@ -80,7 +80,7 @@
 
 (defn set-field! [object field value]
   (if (int? field) ;;ObservableList
-    (.set object value)
+    (.set object field value)
     (try
       (clojure.lang.Reflector/invokeInstanceMethod
        object

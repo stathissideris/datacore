@@ -210,8 +210,13 @@
           (let [component-map (get-in new-tree (butlast path))]
             (pp/pprint component-map)
             (fx/run-later!
-             #(fx/set-field-in! (.getScene (stage-component-for-path path)) (nnext (butlast path))
-                                (get-or-build-view component-map))))
+             (fn []
+               (fx/set-field-in! (.getScene (stage-component-for-path path))
+                                 (mapcat #(cond (= % :root) [:root :center]
+                                                (= % :children) [:items]
+                                                :else [%])
+                                         (nnext (butlast path)))
+                                 (get-or-build-view component-map)))))
 
           ;;:set-focus
 
