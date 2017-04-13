@@ -10,6 +10,13 @@
   []
   (println :maximize))
 
+(defin delete
+  {:alias :windows/delete}
+  []
+  (println :delete))
+
+;;split
+
 (defn- split [orientation]
   (state/swap-layout!
    (fn [tree]
@@ -33,7 +40,38 @@
   []
   (split :horizontal))
 
-(defin delete
-  {:alias :windows/delete}
-  []
-  (println :delete))
+;;focus
+
+(defin focus-left
+  {:alias :windows/focus-left}
+  [])
+
+(defin focus-right
+  {:alias :windows/focus-right}
+  [])
+
+(defin focus-up
+  {:alias :windows/focus-up}
+  [])
+
+(defin focus-down
+  {:alias :windows/focus-down}
+  [])
+
+;;swap
+
+(defin swap-left
+  {:alias :windows/swap-left}
+  [])
+
+(defin swap-right
+  {:alias :windows/swap-right}
+  [])
+
+(defin swap-up
+  {:alias :windows/swap-up}
+  [])
+
+(defin swap-down
+  {:alias :windows/swap-down}
+  [])

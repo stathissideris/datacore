@@ -7,7 +7,8 @@
             [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.message :as message]
-            [datacore.state :as state])
+            [datacore.state :as state]
+            [clojure.walk :as walk])
   (:import [javafx.scene.input KeyEvent]
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
@@ -57,12 +58,14 @@
                                         :type) message)}))
 
 (defn set-focus-border! [component focused?]
-  (fx/set-field!
-   component :style
-   (if focused?
-     (str "-fx-border-width: 4 4 4 4;"
-          "-fx-border-color: #155477;")
-     (str "-fx-border-width: 0 0 0 0;"))))
+  (when component
+    (fx/set-field!
+     component :style
+     (if focused?
+       (str "-fx-border-width: 4 4 4 4;"
+            "-fx-border-color: #155477;")
+       (str "-fx-border-width: 0 0 0 0;")))
+    component))
 
 (defn build-window-contents [{:keys [focused?] :as tree} message]
   (let [component (if-not tree
@@ -113,10 +116,11 @@
         (.addListener
          (fx/change-listener
           (fn [_ old new]
-            (when-let [component-id (some->> (cons new (fx/parents new))
-                                             (filter #(fx/has-style-class? % "focusable"))
-                                             first
-                                             .getId)]
+            (when-let [component-id (when new
+                                      (some->> (cons new (fx/parents new))
+                                               (filter #(fx/has-style-class? % "focusable"))
+                                               first
+                                               .getId))]
               (c/swap! state/window->focused-component assoc id component-id)
               (c/reset! state/focus component-id))
             (println "COMPONENT FOCUSED:" new)))))
@@ -141,10 +145,26 @@
 
 ;;;;;;;;;;;;;;;;
 
-(defn- stage-component-for-path [path]
+(defn- layout-children [{:keys [children root] :as node}]
+  (or children (when root [root])))
+
+(defn- find-focused [tree]
+  (some->> (tree-seq layout-children layout-children tree)
+           (filter :focused?)
+           first))
+
+(defn- apply-focus! [tree]
+  (when-let [focused-id (:id (find-focused tree))]
+    (set-focus-border!
+     (-> state/view-to-component c/value (get focused-id))
+     true)))
+
+(defn- scene-for-path [path]
   (let [window-index (second path)
         id           (some-> state/layout-tree c/value (get-in [:children window-index :id]))]
-    (get (c/value state/view-to-component) id)))
+    (some-> (c/value state/view-to-component)
+            (get id)
+            .getScene)))
 
 (defn- get-or-build-view [{:keys [id] :as component-map}]
   (or (-> state/view-to-component c/value (get id))
@@ -199,9 +219,8 @@
               (fx/run-later! #(.close component))))
 
           :set-root
-          (let [component-map   (get-in new-tree (butlast path))
-                stage-component (stage-component-for-path path)
-                scene           (some-> stage-component .getScene)]
+          (let [component-map (get-in new-tree (butlast path))
+                scene         (scene-for-path path)]
             (pp/pprint component-map)
             (fx/run-later!
              #(.setRoot scene (build-window-contents component-map message/current-message))))
@@ -211,8 +230,8 @@
             (pp/pprint component-map)
             (fx/run-later!
              (fn []
-               (fx/set-field-in! (.getScene (stage-component-for-path path))
-                                 (mapcat #(cond (= % :root) [:root :center]
+               (fx/set-field-in! (scene-for-path path)
+                                 (mapcat #(cond (= % :root) [:root :center] ;;translate datacore path to javafx path
                                                 (= % :children) [:items]
                                                 :else [%])
                                          (nnext (butlast path)))
@@ -221,6 +240,9 @@
           ;;:set-focus
 
           :set-window-title
-          (fx/run-later! #(.setTitle (stage-component-for-path path) value))
+          (fx/run-later! #(-> (scene-for-path path)
+                              .getWindow
+                              (.setTitle value)))
 
-          :skip)))))
+          :skip)))
+    (apply-focus! new-tree)))
