@@ -17,6 +17,7 @@
        x))
    tree))
 
+;;TODO make swap-layout! remember focus - unless there is a new focus
 (defn swap-layout! [fun & args]
   (c/swap! layout-tree
            (fn [old-tree]
@@ -42,6 +43,8 @@
 ;;                                   ::view/nothing]}]}}]}
 
 (comment
+  (datacore.main/init)
+
   (do
     (require '[datacore.source.csv :as csv])
     (require '[datacore.ui.java-fx :as fx])
@@ -52,9 +55,10 @@
   (swap-layout! identity)
 
   ;;show cell in window
-  (swap-layout! update-in [:children 0 :root]
-                merge {:type :datacore.ui.view/cell
-                       :cell csv-view})
+  (swap-layout! assoc-in [:children 0 :root]
+                {:type :datacore.ui.view/cell
+                 :cell csv-view
+                 :focused? true})
 
   ;;set window title
   (swap-layout! assoc-in [:children 0 :title] "foobar3300")

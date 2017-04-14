@@ -15,6 +15,11 @@
   []
   (println :delete))
 
+(defin balance
+  {:alias :windows/balance}
+  []
+  (println :balance))
+
 ;;split
 
 (defn- split [orientation]

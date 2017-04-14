@@ -25,6 +25,12 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
+(defn- get-or-build-view [{:keys [id] :as component-map}]
+  (prn "get-or-build-view for ID" id)
+  (prn "existing component" (-> state/view-to-component c/value (get id)))
+  (or (and id (-> state/view-to-component c/value (get id)))
+      (build-view component-map)))
+
 (defmethod build-view ::nothing
   [{:keys [id]}]
   (let [component (fx/make
@@ -36,7 +42,7 @@
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
-  (let [components (map build-view children)]
+  (let [components (map get-or-build-view children)]
     (doall
      (map
       (fn [spec component]
@@ -70,7 +76,7 @@
 (defn build-window-contents [{:keys [focused?] :as tree} message]
   (let [component (if-not tree
                     (build-view ::nothing)
-                    (build-view tree))]
+                    (get-or-build-view tree))]
    (fx/make
     :scene.layout/border-pane
     {:center (set-focus-border! component focused?)
@@ -91,7 +97,7 @@
         key-handler    (keys/key-handler default-keys/root-keymap)
         scene-args     (concat
                         [(if-not (or (nil? window-style) (= :normal window-style))
-                           (build-view (or root ::nothing))
+                           (get-or-build-view (or root ::nothing))
                            (build-window-contents root message/current-message))]
                         (when dimensions [width height]))
         scene          (fx/make :scene/scene
@@ -153,22 +159,12 @@
            (filter :focused?)
            first))
 
-(defn- apply-focus! [tree]
-  (when-let [focused-id (:id (find-focused tree))]
-    (set-focus-border!
-     (-> state/view-to-component c/value (get focused-id))
-     true)))
-
 (defn- scene-for-path [path]
   (let [window-index (second path)
         id           (some-> state/layout-tree c/value (get-in [:children window-index :id]))]
     (some-> (c/value state/view-to-component)
             (get id)
             .getScene)))
-
-(defn- get-or-build-view [{:keys [id] :as component-map}]
-  (or (-> state/view-to-component c/value (get id))
-      (build-view component-map)))
 
 (defn- diff-type [{:keys [type path] :as diff}]
   (cond (= :root (-> path butlast last))
@@ -244,5 +240,4 @@
                               .getWindow
                               (.setTitle value)))
 
-          :skip)))
-    (apply-focus! new-tree)))
+          :skip)))))
