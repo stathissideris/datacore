@@ -34,7 +34,7 @@
                           {:label :table-view-columns})})
     (c/formula :label view-cell {:label :table-status-line})))
 
-(defmethod view/build-view :datacore.view/table
+(defmethod view/build-view :datacore.ui.view/table
   [view-cell]
   (let [table     (fx/make :scene.control/table-view)
         set-data! (fn [{:keys [columns column-labels data]}]
