@@ -49,21 +49,11 @@
    :style-class ["focusable"]
    :center      (label "Nothing to show")})
 
-(defn set-focus-border [component focused?]
-  (assoc
-   component
-   :style
-    (if focused?
-      (str "-fx-border-width: 4 4 4 4;"
-           "-fx-border-color: #155477;")
-      (str "-fx-border-width: 0 0 0 0;"))))
-
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
-  (let [components (map #(-> (get-or-build-view %)
-                             (set-focus-border (:focused? %))) children)]
+  (let [components (map get-or-build-view children)]
     (doall
-     (map
+     (mapv
       (fn [spec component]
         (register-component! (:id spec) component))
       children
@@ -155,14 +145,23 @@
   {:fx/type :fx/top-level
    :children (mapv build-view children)})
 
+(defn set-focus-border! [component focused?]
+  (let [style (if focused?
+                (str "-fx-border-width: 4 4 4 4;"
+                     "-fx-border-color: #155477;")
+                (str "-fx-border-width: 0 0 0 0;"))]
+    (fx/set-field! component :style style)))
+
 (defmethod build-view ::cell
-  [{:keys [id cell]}]
+  [{:keys [id cell focused?]}]
   {:fx/type :fx/unmanaged
    :fx/component
-   (or (-> state/view-to-component c/value (get id))
+   (or ;;(-> state/view-to-component c/value (get id))
        (let [component (build-view cell)]
-         (fx/set-fields! component {:id          id
-                                    :style-class ["focusable"]}) ;;TODO add style-class instead of replacing the whole list
+         (-> component
+             (fx/set-fields! {:id          id
+                              :style-class ["focusable"]})  ;;TODO add style-class instead of replacing the whole list
+             (set-focus-border! focused?))
          (register-component! id component)
          component))})
 

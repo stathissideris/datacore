@@ -217,6 +217,7 @@
   (if (and (= root :fx/top-level) (= 2 (count path)))
     (let [stages (StageHelper/getStages)
           value  (.get stages (last path))]
+      (.remove stages value)
       (.close value))
     (let [index       (last path)
           parent-path (butlast path)
