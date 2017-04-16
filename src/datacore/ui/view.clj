@@ -26,60 +26,70 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
-(defn set-focus-border! [component focused?]
-  (when component
-    (fx/set-field!
-     component :style
-     (if focused?
-       (str "-fx-border-width: 4 4 4 4;"
-            "-fx-border-color: #155477;")
-       (str "-fx-border-width: 0 0 0 0;")))
-    component))
-
-(defn- get-or-build-view [{:keys [id focused?] :as component-map}]
+#_(defn- get-or-build-view [{:keys [id focused?] :as component-map}]
   (or (and id (-> state/view-to-component c/value (get id) (set-focus-border! focused?))) ;;because focus changes sometimes get lost in the diffs
       (build-view component-map)))
 
+(defn- get-or-build-view [{:keys [id focused?] :as component-map}]
+  (build-view component-map))
+
+(defn label [text]
+  {:fx/type :scene.control/label
+   :text    text})
+
 (defmethod build-view ::nothing
   [{:keys [id]}]
-  (let [component (fx/make
-                   :scene.layout/border-pane
-                   {:id          id
-                    :style-class ["focusable"]
-                    :center      (fx/label "Nothing to show")})]
+  (let [component {:fx/type     :scene.layout/border-pane
+                   :id          id
+                   :style-class ["focusable"]
+                   :center      (label "Nothing to show")}]
     (register-component! id component)))
+
+(defmethod build-view nil
+  [_]
+  {:fx/type     :scene.layout/border-pane
+   :style-class ["focusable"]
+   :center      (label "Nothing to show")})
+
+(defn set-focus-border [component focused?]
+  (assoc
+   component
+   :style
+    (if focused?
+      (str "-fx-border-width: 4 4 4 4;"
+           "-fx-border-color: #155477;")
+      (str "-fx-border-width: 0 0 0 0;"))))
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
-  (let [components (map get-or-build-view children)]
+  (let [components (map #(-> (get-or-build-view %)
+                             (set-focus-border (:focused? %))) children)]
     (doall
      (map
       (fn [spec component]
         (register-component! (:id spec) component))
       children
       components))
-    (fx/make :scene.control/split-pane
-             {:items       components
-              :orientation (if (= orientation :horizontal)
-                             javafx.geometry.Orientation/HORIZONTAL
-                             javafx.geometry.Orientation/VERTICAL)})))
+    {:fx/type     :scene.control/split-pane
+     :items       components
+     :orientation (if (= orientation :horizontal)
+                    javafx.geometry.Orientation/HORIZONTAL
+                    javafx.geometry.Orientation/VERTICAL)}))
 
 (defn- message-line [message]
-  (fx/make :scene.control/label
-           {:text      (c/formula :msg message)
-            :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
-            :text-fill (c/formula (comp {:message Color/BLACK
-                                         :error   (Color/web "0xF57000")}
-                                        :type) message)}))
+  {:fx/type   :scene.control/label
+   :text      (c/formula :msg message)
+   :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
+   :text-fill (c/formula (comp {:message Color/BLACK
+                                :error   (Color/web "0xF57000")}
+                               :type) message)})
 
 (defn build-window-contents [{:keys [focused?] :as tree} message]
-  (let [component (if-not tree
-                    (build-view ::nothing)
-                    (get-or-build-view tree))]
-   (fx/make
-    :scene.layout/border-pane
-    {:center (set-focus-border! component focused?)
-     :bottom (message-line message)})))
+  {:fx/type :scene.layout/border-pane
+   :center  (if-not tree
+              (build-view ::nothing)
+              (get-or-build-view tree))
+   :bottom  (message-line message)})
 
 (def window-style-map
   {:normal      StageStyle/DECORATED
@@ -95,50 +105,54 @@
   (let [[width height] dimensions
         key-handler    (keys/key-handler default-keys/root-keymap)
         scene-args     (concat
-                        [(if-not (or (nil? window-style) (= :normal window-style))
-                           (get-or-build-view (or root ::nothing))
-                           (build-window-contents root message/current-message))]
+                        [(build-view ::nothing)]
                         (when dimensions [width height]))
-        scene          (fx/make :scene/scene
-                                [[:fx/args scene-args]
-                                 (when (= window-style :transparent)
-                                   [:fill Color/TRANSPARENT])])
-        stage          (fx/make
-                        :stage/stage
-                        [(when window-style
-                           [:fx/args [(get window-style-map window-style)]])
-                         (when title [:title title])
-                         [:scene scene]
-                         [:on-close-request (fx/event-handler (fn [event]
-                                                                (.consume event)
-                                                                (close-window! id)))]
-                         [:fx/setup #(doto %
-                                       (.addEventFilter
-                                        KeyEvent/ANY
-                                        (fx/event-handler key-handler)))]])]
-    (-> scene
-        .focusOwnerProperty
-        (.addListener
-         (fx/change-listener
-          (fn [_ old new]
-            (when-let [component-id (when new
-                                      (some->> (cons new (fx/parents new))
-                                               (filter #(fx/has-style-class? % "focusable"))
-                                               first
-                                               .getId))]
-              (c/swap! state/window->focused-component assoc id component-id)
-              (c/reset! state/focus component-id))
-            (println "COMPONENT FOCUSED:" new)))))
-    (-> stage
-        .focusedProperty
-        (.addListener
-         (fx/change-listener
-          (fn [_ _ new]
-            (when new
-              (when-let [component-id (-> state/window->focused-component c/value (get id))]
-                (c/reset! state/focus component-id))
-              (println "WINDOW FOCUSED:" id title))))))
-    stage))
+        scene-focus-l  (fx/change-listener
+                        (fn [_ old new]
+                          (when-let [component-id (when new
+                                                    (some->> (cons new (fx/parents new))
+                                                             (filter #(fx/has-style-class? % "focusable"))
+                                                             first
+                                                             .getId))]
+                            (c/swap! state/window->focused-component assoc id component-id)
+                            (c/reset! state/focus component-id))
+                          (println "COMPONENT FOCUSED:" new)))
+        stage-focus-l  (fx/change-listener
+                        (fn [_ _ new]
+                          (when new
+                            (when-let [component-id (-> state/window->focused-component c/value (get id))]
+                              (c/reset! state/focus component-id))
+                            (println "WINDOW FOCUSED:" id title))))]
+    (merge
+     (when window-style
+       {:fx/args [(get window-style-map window-style)]})
+     (when title
+       {:title title})
+     {:fx/type          :stage/stage
+      :scene            (merge
+                         {:fx/type  :scene/scene
+                          :fx/args  scene-args
+                          :root     (build-window-contents root message/current-message)
+                          :fx/setup #(do
+                                       (-> % .focusOwnerProperty (.addListener scene-focus-l))
+                                       %)}
+                         (when (= window-style :transparent)
+                           {:fill Color/TRANSPARENT}))
+      :on-close-request (fx/event-handler (fn [event]
+                                            (.consume event)
+                                            (close-window! id)))
+      :fx/setup         #(do
+                           (.addEventFilter
+                            %
+                            KeyEvent/ANY
+                            (fx/event-handler key-handler))
+                           (-> % .focusedProperty (.addListener stage-focus-l))
+                           %)})))
+
+(defmethod build-view ::top-level
+  [{:keys [children]}]
+  {:fx/type :fx/top-level
+   :children (mapv build-view children)})
 
 (defmethod build-view ::cell
   [{:keys [id cell]}]
@@ -209,110 +223,9 @@
       (or (some->> (filter covers-pos? candidates) first :id)
           (-> candidates first :id)))))
 
-(defn- scene-for-path [path]
-  (let [window-index (second path)
-        id           (some-> state/layout-tree c/value (get-in [:children window-index :id]))]
-    (some-> (c/value state/view-to-component)
-            (get id)
-            .getScene)))
-
-(defn- diff-type [{:keys [type path] :as diff}]
-  (cond (= :root (-> path butlast last))
-        :set-root
-
-        (and (= type :insert)
-             (= :children (first path))
-             (= 2 (count path)))
-        :add-window
-
-        (and (= type :delete)
-             (= :children (first path))
-             (= 2 (count path)))
-        :delete-window
-
-        (and (= :children (first path))
-             (= :title (last path))
-             (= 3 (count path)))
-        :set-window-title
-
-        (= :focused? (last path))
-        :set-focus
-
-        (and (#{:assoc :edit} type)
-             (int? (-> path butlast last)))
-        :set-fields
-
-        (and (#{:insert :delete} type)
-             (int? (last path)))
-        :modify-list
-
-        :else
-        :default))
-
-(defn- convert-path [path]
-  (mapcat #(cond (= % :root) [:root :center] ;;translate datacore path to javafx path
-                 (= % :children) [:items]
-                 :else [%])
-          (nnext (butlast path))))
-
 (require '[clojure.pprint :as pp])
 (defn update-layout! [old-tree new-tree]
-  (let [component-by-id #(get (c/value state/view-to-component) %)
-        diffs           (->> (util/tree-diff old-tree new-tree)
-                             (map #(assoc % :diff-type (diff-type %)))
-                             (partition-by :diff-type))]
-    (pp/pprint diffs)
-    (doseq [diff-group diffs]
-      (let [{:keys [diff-type path old value] :as diff} (first diff-group)]
-        (condp = diff-type
-
-          :add-window
-          (let [component @(fx/run-later! #(build-view value))]
-            (register-component! (:id value) component)
-            (fx/run-later! #(fx/show component)))
-
-          :delete-window
-          (let [component (component-by-id (:id value))]
-            (when component
-              (unregister-component! (:id value))
-              (fx/run-later! #(.close component))))
-
-          :set-root
-          (let [component-map (get-in new-tree (butlast path))
-                scene         (scene-for-path path)]
-            ;;(pp/pprint component-map)
-            (fx/run-later!
-             #(.setRoot scene (build-window-contents component-map message/current-message))))
-
-          :set-focus
-          (doseq [{:keys [type path]} diff-group]
-            (let [id        (get-in (c/value state/layout-tree) (conj (vec (butlast path)) :id))
-                  component (component-by-id id)]
-              (set-focus-border! component (= type :assoc))))
-
-          :set-window-title
-          (fx/run-later! #(-> (scene-for-path path)
-                              .getWindow
-                              (.setTitle value)))
-
-          :set-fields
-          (let [component-map (get-in new-tree (butlast path))]
-            ;;(pp/pprint component-map)
-            (fx/run-later!
-             (fn []
-               (fx/set-field-in! (scene-for-path path)
-                                 (convert-path path)
-                                 (get-or-build-view component-map)))))
-
-          :modify-list
-          (let [coll (fx/get-field-in (scene-for-path path) (-> path convert-path butlast vec (conj :items)))]
-            (doseq [{:keys [type path value]} diff-group]
-              (let [index (last path)]
-                (fx/run-later!
-                 #(condp = type
-                    :delete (.remove coll (component-by-id (:id value))) ;;removing by ID does not work
-                    :insert (if (= index (.size coll))
-                              (.add coll (get-or-build-view value))
-                              (.set coll index (get-or-build-view value))))))))
-
-          :skip)))))
+  (let [diff (util/tree-diff
+              (build-view old-tree)
+              (build-view new-tree))]
+    (fx/update-tree :fx/top-level diff)))

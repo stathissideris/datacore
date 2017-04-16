@@ -3,7 +3,8 @@
   (:require [clojure.string :as str]
             [clojure.spec :as s]
             [datacore.util :as util]
-            [datacore.cells :as c])
+            [datacore.cells :as c]
+            [clojure.walk :as walk])
   (:import [javafx.collections ObservableList ListChangeListener]
            [javafx.embed.swing JFXPanel]
            [javafx.application Platform]
@@ -11,7 +12,8 @@
            [javafx.event EventHandler Event]
            [javafx.scene.paint Color]
            [javafx.beans.value ChangeListener]
-           [javafx.scene Node]))
+           [javafx.scene Node]
+           [com.sun.javafx.stage StageHelper]))
 
 ;;;; utils ;;;;;
 
@@ -105,8 +107,14 @@
   ((getter (class object) field-kw) object))
 
 (defn set-field! [object field value]
-  (if (int? field) ;;ObservableList
+  (cond
+    (and (= object :fx/top-level) (= field :children))
+    (StageHelper/getStages)
+
+    (int? field) ;;ObservableList
     (.set object field value)
+
+    :else
     (try
       (clojure.lang.Reflector/invokeInstanceMethod
        object
@@ -146,15 +154,20 @@
                                    :value  value})))))))))))
 
 (defn get-field [object field]
-  (if (int? field) ;;ObservableList
-    (.get object field)
-    (clojure.lang.Reflector/invokeInstanceMethod
-     object
-     (->> field
-          util/kebab->camel
-          util/capitalize-first
-          (str "get"))
-     (object-array []))))
+  (cond (and (= object :fx/top-level) (= field :children))
+        (StageHelper/getStages)
+
+        (int? field) ;;ObservableList
+        (.get object field)
+
+        :else
+        (clojure.lang.Reflector/invokeInstanceMethod
+         object
+         (->> field
+              util/kebab->camel
+              util/capitalize-first
+              (str "get"))
+         (object-array []))))
 
 (s/def ::path (s/coll-of (s/or :field-name keyword? :index nat-int?)))
 (defn get-field-in [root path]
@@ -190,6 +203,27 @@
     (set-field! object field value))
   object)
 
+(defn insert-in! [root path value]
+  (if (and (= root :fx/top-level) (= 2 (count path)))
+    (do
+      (.add (StageHelper/getStages) (last path) value)
+      (.show value))
+    (let [index       (last path)
+          parent-path (butlast path)
+          coll        (get-field-in root parent-path)]
+      (.add coll index value))))
+
+(defn remove-in! [root path]
+  (if (and (= root :fx/top-level) (= 2 (count path)))
+    (let [stages (StageHelper/getStages)
+          value  (.get stages (last path))]
+      (.close value))
+    (let [index       (last path)
+          parent-path (butlast path)
+          coll        (get-field-in root parent-path)
+          item        (.get coll index)]
+      (.remove coll item)))) ;;removing by index does not work
+
 (defn- resolve-class [class-kw]
   (if (keyword? class-kw)
     (Class/forName (str "javafx."
@@ -202,12 +236,18 @@
   ([class-kw]
    (new-instance class-kw nil))
   ([class-kw args]
-   (let [clazz (if (keyword? class-kw)
-                 (resolve-class class-kw)
-                 class-kw)]
-     (if (empty? args)
-       (.newInstance clazz)
-       (clojure.lang.Reflector/invokeConstructor clazz (to-array args))))))
+   (try
+     (let [clazz (if (keyword? class-kw)
+                   (resolve-class class-kw)
+                   class-kw)]
+       (if (empty? args)
+         (.newInstance clazz)
+         (clojure.lang.Reflector/invokeConstructor clazz (to-array args))))
+     (catch Exception e
+       (throw (ex-info "Error while creating FX instance"
+                       {:class class-kw
+                        :args  args}
+                       e))))))
 
 ;;;;; make ;;;;;
 
@@ -221,16 +261,63 @@
   ([class-or-instance]
    (make class-or-instance {}))
   ([class-or-instance spec]
-   (let [o (if (or (keyword? class-or-instance)
-                   (class? class-or-instance))
-             (new-instance class-or-instance (make-args spec))
-             class-or-instance)]
-     (doseq [[field value :as entry] (make-other spec)]
-       (when entry
-         (if (= field :fx/setup)
-           (value o)
-           (set-field! o field value))))
-     o)))
+   (if (= :fx/top-level class-or-instance)
+     :fx/top-level
+     (let [o (if (or (keyword? class-or-instance)
+                     (class? class-or-instance))
+               (new-instance class-or-instance (make-args spec))
+               class-or-instance)]
+       (doseq [[field value :as entry] (make-other spec)]
+         (when entry
+           (if (= field :fx/setup)
+             (value o)
+             (set-field! o field value))))
+       o))))
+
+(defn make-tree
+  [tree]
+  (walk/postwalk
+   (fn [item]
+     (if (:fx/type item)
+       (make (:fx/type item)
+             (dissoc item :fx/type))
+       item))
+   tree))
+
+(defn- type-change? [diff-group]
+  (some?
+   (first
+    (filter #(and (= :edit (:type %))
+                  (= :map (:struct %))
+                  (= :fx/type (last (:path %)))) diff-group))))
+
+(defn- ignore-diff? [{:keys [type path] :as diff}]
+  (prn diff)
+  (or (and (= :edit type) (contains? (set path) :fx/setup))
+      (and (= :edit type) (contains? (set path) :fx/args))))
+
+(require '[clojure.pprint :refer [pprint]])
+(defn update-tree
+  [root diffs]
+  (let [diff-groups (partition-by #(vector (butlast (:path %)) (:struct %)) diffs)]
+    (doseq [diff-group diff-groups]
+      (if (type-change? diff-group)
+        (set-field-in! root
+                       (-> diff-group first :path butlast)
+                       (make-tree (->> diff-group
+                                       (filter (comp #{:edit :assoc} :type))
+                                       (map (juxt (comp last :path) :value))
+                                       (into {}))))
+        (doseq [{:keys [type path value] :as diff} (remove ignore-diff? diff-group)]
+          (run-later!
+           #(condp = type
+              :edit   (set-field-in! root path (make-tree value))
+              :assoc  (set-field-in! root path (make-tree value))
+              :dissoc (set-field-in! root path nil)
+              :insert (insert-in! root path (make-tree value))
+              :delete (remove-in! root path))))))))
+
+;;;;; convenience functions ;;;;;
 
 (defn label
   [text & [spec]]
@@ -265,6 +352,20 @@
    [[:fx/args ["foo"]]
     [:text "bar"]
     [:fx/setup #(.setText % "baz")]]))
+
+(comment
+  (make-tree
+   {:fx/type     :scene.control/split-pane
+    :orientation javafx.geometry.Orientation/HORIZONTAL
+    :items       [{:fx/type :scene.control/label
+                   :text    "foo"}
+                  {:fx/type :scene.control/label
+                   :text    "bar"}
+                  {:fx/type :scene.layout/border-pane
+                   :center  {:fx/type :scene.control/label
+                             :text    "baz"}
+                   :bottom  {:fx/type :scene.control/label
+                             :text    "zoo"}}]}))
 
 (comment
   (def s (-> (new-instance :scene.control/split-pane)

@@ -32,10 +32,6 @@
 
   (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (@#'view/update-layout! old new)))
 
-  (state/swap-layout!
-   (constantly
-    {:type     :datacore.ui.view/top-level
-     :children []}))
   (state/swap-layout! update :children conj
                       {:type       :datacore.ui.view/window
                        :title      "datacore"

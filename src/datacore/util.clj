@@ -180,22 +180,22 @@
   nil
   (tree-diff [a b]
     (if (nil? b)
-      [{:type :same :path [] :value nil}]
-      [{:type :edit :path [] :old a :value b}]))
+      [{:type :same :path [] :value nil :struct :atom}]
+      [{:type :edit :path [] :old a :value b :struct :atom}]))
 
   Object
   (tree-diff [a b]
     (if (= a b)
-      [{:type :same :path [] :value a}]
-      [{:type :edit :path [] :old a :value b}]))
+      [{:type :same :path [] :value a :struct :atom}]
+      [{:type :edit :path [] :old a :value b :struct :atom}]))
 
   java.util.Map
   (tree-diff [a b]
     (cond
       (not (map? b))
-      [(set-path {:type :edit :path [] :old a :value b})]
+      [(set-path {:type :edit :path [] :old a :value b :struct :map})]
       (= a b)
-      [(set-path {:type :same :path [] :value a})]
+      [(set-path {:type :same :path [] :value a :struct :map})]
       :else
       (let [ka           (set (keys a))
             kb           (set (keys b))
@@ -203,19 +203,22 @@
             edited-keys  (filter #(not= (get a %) (get b %)) common-keys)
             deleted-keys (set/difference ka kb)
             added-keys   (set/difference kb ka)]
-        (apply concat
-               (for [k deleted-keys] {:type :dissoc :path [k] :value (get a k)})
-               (for [k added-keys] {:type :assoc :path [k] :value (get b k)})
-               (for [k edited-keys]
-                 (map (partial prepend-path [k]) (tree-diff (get a k) (get b k))))))))
+        (map #(if (or (nil? (:struct %)) (= :atom (:struct %)))
+                (assoc % :struct :map)
+                %)
+             (apply concat
+                    (for [k deleted-keys] {:type :dissoc :path [k] :value (get a k)})
+                    (for [k added-keys] {:type :assoc :path [k] :value (get b k)})
+                    (for [k edited-keys]
+                      (map (partial prepend-path [k]) (tree-diff (get a k) (get b k)))))))))
 
   java.util.List
   (tree-diff [a b]
     (cond
       (not (instance? java.util.List b))
-      [(set-path {:type :edit :path [] :old a :value b})]
+      [(set-path {:type :edit :path [] :old a :value b :struct :vector})]
       (= a b)
-      [(set-path {:type :same :path [] :value a})]
+      [(set-path {:type :same :path [] :value a :struct :vector})]
       :else
       (doall
        (mapcat
@@ -230,25 +233,27 @@
                        [diff])
                  :insert [diff]
                  :delete [diff]))
-        (map #(-> %
-                  (dissoc :index)
-                  (assoc :path [(:index %)]))
+        (map #(as-> % $
+                (dissoc $ :index)
+                (assoc $ :path [(:index %)])
+                (if (or (nil? (:struct $)) (= :atom (:struct $))) (assoc $ :struct :vector) $))
              (seq-diff-indices a b)))))))
 
 (s/def ::path (s/coll-of any?))
 (s/def ::value (s/nilable any?))
 (s/def ::old (s/nilable any?))
+(s/def ::struct #{:atom :vector :map})
 (s/def ::type #{:same :delete :insert :assoc :dissoc :edit})
 (defn- vector-path? [path] (-> path last nat-int?))
 (let [d (fn [type spec] (s/and spec #(= type (:type %))))]
-  (s/def ::diff-item (s/or :same   (d :same (s/keys :req-un [::type ::path ::value]))
-                           :delete (s/and (d :delete (s/keys :req-un [::type ::path ::value]))
+  (s/def ::diff-item (s/or :same   (d :same (s/keys :req-un [::type ::path ::value ::struct]))
+                           :delete (s/and (d :delete (s/keys :req-un [::type ::path ::value ::struct]))
                                           #(vector-path? (:path %)))
-                           :insert (s/and (d :insert (s/keys :req-un [::type ::path ::value]))
+                           :insert (s/and (d :insert (s/keys :req-un [::type ::path ::value ::struct]))
                                           #(vector-path? (:path %)))
-                           :assoc  (d :assoc (s/keys :req-un [::type ::path ::value]))
-                           :dissoc (d :dissoc (s/keys :req-un [::type ::path ::value]))
-                           :edit   (s/and (d :edit (s/keys :req-un [::type ::path ::old ::value]))
+                           :assoc  (d :assoc (s/keys :req-un [::type ::path ::value ::struct]))
+                           :dissoc (d :dissoc (s/keys :req-un [::type ::path ::value ::struct]))
+                           :edit   (s/and (d :edit (s/keys :req-un [::type ::path ::old ::value ::struct]))
                                           #(not= (:old %) (:value %))))))
 (declare patch)
 (s/def ::tree-diff-input any?)

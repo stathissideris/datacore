@@ -93,23 +93,23 @@
          (seq-diff-indices [[] 5 {:m [[5 6 5 7 5] 9], :l 0, :b {}, :d 5}] []))))
 
 (deftest tree-diff-test
-  (is (= [{:type :insert :path [1] :value 1}]
+  (is (= [{:type :insert :path [1] :value 1 :struct :vector}]
          (tree-diff [0] [0 1])))
 
-  (is (= [{:type :delete :path [1] :value :b}]
+  (is (= [{:type :delete :path [1] :value :b :struct :vector}]
          (tree-diff [:a :b :c :d :e]
                     [:a    :c :d :e])))
 
-  (is (= [{:type :edit :path [:c] :old "foo" :value "bar"}
-          {:type :edit :path [:b] :old 1 :value 10}]
+  (is (= [{:type :edit :path [:c] :old "foo" :value "bar" :struct :map}
+          {:type :edit :path [:b] :old 1 :value 10 :struct :map}]
          (tree-diff {:b 1  :c "foo"}
                     {:b 10 :c "bar"})))
 
-  (is (= [{:type :dissoc :path [:a] :value 6}
-          {:type :assoc :path [:g] :value 900}
-          {:type :assoc :path [:h] :value 100}
-          {:type :edit :path [:b] :old 10 :value 11}
-          {:type :edit :path [:d] :old 40 :value 41}]
+  (is (= [{:type :dissoc :path [:a] :value 6 :struct :map}
+          {:type :assoc :path [:g] :value 900 :struct :map}
+          {:type :assoc :path [:h] :value 100 :struct :map}
+          {:type :edit :path [:b] :old 10 :value 11 :struct :map}
+          {:type :edit :path [:d] :old 40 :value 41 :struct :map}]
          (tree-diff {:a 6 :b 10 :c 90 :d 40 :e 100 :f 900}
                     {     :b 11 :c 90 :d 41 :e 100 :f 900 :g 900 :h 100})))
 
@@ -139,37 +139,38 @@
                    :id "87d3ba15-16f6-434d-8707-e34f34cbc9cf"}
                   :id "a4b55b75-3156-444d-af49-5b8657886859"}]
                 :id "39d4c029-0df5-4daa-8e65-1bad38474504"}]
-    (is (= [{:type :assoc :path [:children 0 :root :confused?] :value false}
-            {:type :assoc :path [:children 0 :root :focused?] :value true}
+    (is (= [{:type :assoc :path [:children 0 :root :confused?] :value false :struct :map}
+            {:type :assoc :path [:children 0 :root :focused?] :value true :struct :map}
             {:type :delete :path [:children 1] :value {:type         :datacore.ui.view/window
                                                        :window-style :transparent
                                                        :root         {:type :datacore.ui.view/prompt
                                                                       :id   "fec825ac-8419-4f32-b445-17d6e21cbbe9"}
-                                                       :id           "e931ae63-439c-48c4-a4fa-161fbd354de0"}}]
+                                                       :id           "e931ae63-439c-48c4-a4fa-161fbd354de0"}
+             :struct :vector}]
            (tree-diff tree-a tree-b))))
 
-  (is (= [{:type :edit   :path [:a :c] :old "foo" :value "bar"}
-          {:type :delete :path [:a :b 0] :value 0}
-          {:type :insert :path [:a :b 2] :value 80}
-          {:type :insert :path [:a :b 2] :value 70}
-          {:type :delete :path [:a :b 7] :value 6}]
+  (is (= [{:type :edit   :path [:a :c] :old "foo" :value "bar" :struct :map}
+          {:type :delete :path [:a :b 0] :value 0 :struct :vector}
+          {:type :insert :path [:a :b 2] :value 80 :struct :vector}
+          {:type :insert :path [:a :b 2] :value 70 :struct :vector}
+          {:type :delete :path [:a :b 7] :value 6 :struct :vector}]
          (tree-diff {:a {:b [0 1 2       3 4 5 6]
                          :c "foo"}}
                     {:a {:b [  1 2 70 80 3 4 5]
                          :c "bar"}})))
 
-  (is (= [{:type :edit   :path [2 :f] :old 9 :value 100}
-          {:type :insert :path [4] :value 80}
-          {:type :insert :path [4] :value 70}
-          {:type :delete :path [9] :value 6}]
+  (is (= [{:type :edit   :path [2 :f] :old 9 :value 100 :struct :map}
+          {:type :insert :path [4] :value 80 :struct :vector}
+          {:type :insert :path [4] :value 70 :struct :vector}
+          {:type :delete :path [9] :value 6 :struct :vector}]
          (tree-diff [0 1 {:f 9   :g 10} 2       3 4 5 6]
                     [0 1 {:f 100 :g 10} 2 70 80 3 4 5])))
 
-  (is (= [{:type :dissoc :path [2 :g] :value 10}
-          {:type :edit   :path [2 :f] :old 9 :value 100}
-          {:type :insert :path [4] :value 80}
-          {:type :insert :path [4] :value 70}
-          {:type :delete :path [9] :value 6}]
+  (is (= [{:type :dissoc :path [2 :g] :value 10 :struct :map}
+          {:type :edit   :path [2 :f] :old 9 :value 100 :struct :map}
+          {:type :insert :path [4] :value 80 :struct :vector}
+          {:type :insert :path [4] :value 70 :struct :vector}
+          {:type :delete :path [9] :value 6 :struct :vector}]
          (tree-diff [0 1 {:f 9   :g 10} 2       3 4 5 6]
                     [0 1 {:f 100}       2 70 80 3 4 5])))
 
@@ -177,11 +178,11 @@
                     :c "foo"}}
         tree-b {:a {:b [0 1 {:f 100 :g 10} 2 70 80 3 4 5]
                     :c "bar"}}]
-    (is (= [{:type :edit   :path [:a :c] :old "foo" :value "bar"}
-            {:type :edit   :path [:a :b 2 :f] :old 9 :value 100}
-            {:type :insert :path [:a :b 4] :value 80}
-            {:type :insert :path [:a :b 4] :value 70}
-            {:type :delete :path [:a :b 9] :value 6}]
+    (is (= [{:type :edit   :path [:a :c] :old "foo" :value "bar" :struct :map}
+            {:type :edit   :path [:a :b 2 :f] :old 9 :value 100 :struct :map}
+            {:type :insert :path [:a :b 4] :value 80 :struct :vector}
+            {:type :insert :path [:a :b 4] :value 70 :struct :vector}
+            {:type :delete :path [:a :b 9] :value 6 :struct :vector}]
            (tree-diff tree-a tree-b))))
 
   (let [a    [{:t [{:t 2, :v 7} 9 [2 8 8]]
