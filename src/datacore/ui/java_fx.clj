@@ -261,18 +261,23 @@
   ([class-or-instance]
    (make class-or-instance {}))
   ([class-or-instance spec]
-   (if (= :fx/top-level class-or-instance)
-     :fx/top-level
-     (let [o (if (or (keyword? class-or-instance)
-                     (class? class-or-instance))
-               (new-instance class-or-instance (make-args spec))
-               class-or-instance)]
-       (doseq [[field value :as entry] (make-other spec)]
-         (when entry
-           (if (= field :fx/setup)
-             (value o)
-             (set-field! o field value))))
-       o))))
+   (cond (= :fx/top-level class-or-instance)
+         :fx/top-level
+
+         (= :fx/unmanaged class-or-instance)
+         (:fx/component spec)
+
+         :else
+         (let [o (if (or (keyword? class-or-instance)
+                         (class? class-or-instance))
+                   (new-instance class-or-instance (make-args spec))
+                   class-or-instance)]
+           (doseq [[field value :as entry] (make-other spec)]
+             (when entry
+               (if (= field :fx/setup)
+                 (value o)
+                 (set-field! o field value))))
+           o))))
 
 (defn make-tree
   [tree]
@@ -292,7 +297,6 @@
                   (= :fx/type (last (:path %)))) diff-group))))
 
 (defn- ignore-diff? [{:keys [type path] :as diff}]
-  (prn diff)
   (or (and (= :edit type) (contains? (set path) :fx/setup))
       (and (= :edit type) (contains? (set path) :fx/args))))
 
@@ -301,13 +305,16 @@
   [root diffs]
   (let [diff-groups (partition-by #(vector (butlast (:path %)) (:struct %)) diffs)]
     (doseq [diff-group diff-groups]
-      (if (type-change? diff-group)
-        (set-field-in! root
-                       (-> diff-group first :path butlast)
-                       (make-tree (->> diff-group
-                                       (filter (comp #{:edit :assoc} :type))
-                                       (map (juxt (comp last :path) :value))
-                                       (into {}))))
+      (cond
+        (type-change? diff-group)
+        (run-later!
+         #(set-field-in! root
+                         (-> diff-group first :path butlast)
+                         (make-tree (->> diff-group
+                                         (filter (comp #{:edit :assoc} :type))
+                                         (map (juxt (comp last :path) :value))
+                                         (into {})))))
+        :else
         (doseq [{:keys [type path value] :as diff} (remove ignore-diff? diff-group)]
           (run-later!
            #(condp = type

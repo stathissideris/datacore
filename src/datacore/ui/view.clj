@@ -38,12 +38,10 @@
    :text    text})
 
 (defmethod build-view ::nothing
-  [{:keys [id]}]
-  (let [component {:fx/type     :scene.layout/border-pane
-                   :id          id
-                   :style-class ["focusable"]
-                   :center      (label "Nothing to show")}]
-    (register-component! id component)))
+  [_]
+  {:fx/type     :scene.layout/border-pane
+   :style-class ["focusable"]
+   :center      (label "Nothing to show")})
 
 (defmethod build-view nil
   [_]
@@ -76,20 +74,23 @@
                     javafx.geometry.Orientation/HORIZONTAL
                     javafx.geometry.Orientation/VERTICAL)}))
 
-(defn- message-line [message]
-  {:fx/type   :scene.control/label
-   :text      (c/formula :msg message)
-   :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
-   :text-fill (c/formula (comp {:message Color/BLACK
-                                :error   (Color/web "0xF57000")}
-                               :type) message)})
+(defn- message-line []
+  {:fx/type      :fx/unmanaged
+   :fx/component nil
+   #_(fx/make-tree
+    {:fx/type   :scene.control/label
+     :text      (c/formula :msg message/current-message)
+     :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
+     :text-fill (c/formula (comp {:message Color/BLACK
+                                  :error   (Color/web "0xF57000")}
+                                 :type) message/current-message)})})
 
 (defn build-window-contents [{:keys [focused?] :as tree} message]
   {:fx/type :scene.layout/border-pane
    :center  (if-not tree
               (build-view ::nothing)
               (get-or-build-view tree))
-   :bottom  (message-line message)})
+   :bottom  (message-line)})
 
 (def window-style-map
   {:normal      StageStyle/DECORATED
@@ -156,11 +157,14 @@
 
 (defmethod build-view ::cell
   [{:keys [id cell]}]
-  (let [component (build-view cell)]
-    (fx/set-fields! component {:id          id
-                               :style-class ["focusable"]}) ;;TODO add style-class instead of replacing the whole list
-    (register-component! id component)
-    component))
+  {:fx/type :fx/unmanaged
+   :fx/component
+   (or (-> state/view-to-component c/value (get id))
+       (let [component (build-view cell)]
+         (fx/set-fields! component {:id          id
+                                    :style-class ["focusable"]}) ;;TODO add style-class instead of replacing the whole list
+         (register-component! id component)
+         component))})
 
 ;;;;;;;;;;;;;;;;
 

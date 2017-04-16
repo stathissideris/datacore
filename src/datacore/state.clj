@@ -28,23 +28,6 @@
                  (update :children vec)
                  (assign-layout-ids)))))
 
-;; {:type ::top-level
-;;  :children
-;;  [{:type ::view/window
-;;     :title "datacore"
-;;     :dimensions [100 800]
-;;     :root
-;;     {:type        ::view/split-pane
-;;      :orientation :horizontal
-;;      :children    [{:type        ::view/split-pane
-;;                     :orientation :vertical
-;;                     :children    [(CellId. 2)
-;;                                   (CellId. 4)]}
-;;                    {:type        ::view/split-pane
-;;                     :orientation :vertical
-;;                     :children    [(CellId. 3)
-;;                                   ::view/nothing]}]}}]}
-
 (comment
   (datacore.main/init)
 
