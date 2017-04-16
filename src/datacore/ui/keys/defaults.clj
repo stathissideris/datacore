@@ -16,6 +16,11 @@
      :down  :windows/focus-down
      :left  :windows/focus-left
      :right :windows/focus-right}}
+   {:f2
+    {:up    :windows/swap-up
+     :down  :windows/swap-down
+     :left  :windows/swap-left
+     :right :windows/swap-right}}
    {#{:ctrl :h}
     {:k :help/describe-key
      :f :help/describe-function

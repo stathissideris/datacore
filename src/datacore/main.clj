@@ -16,9 +16,11 @@
        ~@body
        (str s#))))
 
+(def uncaught-exception (atom nil))
 (defn- global-exception-handler []
   (reify Thread$UncaughtExceptionHandler
     (uncaughtException [this thread throwable]
+      (reset! uncaught-exception throwable)
       (let [trace (with-err-str (repl/pst throwable 150))]
         (println "UNCAUGHT EXCEPTION" trace)))))
 

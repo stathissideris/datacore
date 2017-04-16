@@ -51,8 +51,7 @@
 (defn- focus-to-direction [direction]
   (let [tree     (c/value state/layout-tree)
         focused  (view/find-focused tree)
-        focus-id (view/component-in-direction (:id focused) direction tree)]
-    (prn 'will-focus focus-id)
+        focus-id (view/node-in-direction (:id focused) direction tree)]
     (when focus-id
       (state/swap-layout!
        (fn [tree]
@@ -87,18 +86,39 @@
 
 ;;swap
 
+(defn- swap-to-direction [direction]
+  (let [tree    (c/value state/layout-tree)
+        focused (view/find-focused tree)
+        swap-id (when focused (view/node-in-direction (:id focused) direction tree))
+        swapped (when swap-id (view/find-by-id tree swap-id))]
+    (when (and focused swap-id)
+      (state/swap-layout!
+       (fn [tree]
+         (walk/postwalk
+          (fn [{:keys [id] :as x}]
+            (if (map? x)
+              (cond (= id swap-id) focused
+                    (= id (:id focused)) swapped
+                    :else x)
+              x))
+          tree))))))
+
 (defin swap-left
   {:alias :windows/swap-left}
-  [])
+  []
+  (swap-to-direction :left))
 
 (defin swap-right
   {:alias :windows/swap-right}
-  [])
+  []
+  (swap-to-direction :right))
 
 (defin swap-up
   {:alias :windows/swap-up}
-  [])
+  []
+  (swap-to-direction :up))
 
 (defin swap-down
   {:alias :windows/swap-down}
-  [])
+  []
+  (swap-to-direction :down))

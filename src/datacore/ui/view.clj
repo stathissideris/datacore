@@ -26,8 +26,6 @@
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
 (defn- get-or-build-view [{:keys [id] :as component-map}]
-  (prn "get-or-build-view for ID" id)
-  (prn "existing component" (-> state/view-to-component c/value (get id)))
   (or (and id (-> state/view-to-component c/value (get id)))
       (build-view component-map)))
 
@@ -159,38 +157,46 @@
            (filter :focused?)
            first))
 
-(defn component-in-direction [component-id direction tree]
-  (when component-id
-    (let [mapping                (c/value state/view-to-component)
-          bounds-for-id          #(some-> mapping (get %) fx/bounds-in-screen)
+(defn find-by-id [tree id]
+  (some->> (tree-seq layout-children layout-children tree)
+           (filter #(= id (:id %)))
+           first))
+
+(defn node-in-direction [node-id direction tree]
+  (when node-id
+    (let [mapping       (c/value state/view-to-component)
+          bounds-for-id #(-> mapping (get %) fx/bounds-in-screen)
           {:keys [min-x min-y
                   max-x max-y
-                  width height]} (bounds-for-id component-id)
-          hor?                   (#{:left :right} direction)
-          min                    (if hor? min-x min-y)
-          max                    (if hor? max-x max-y)
-          pos                    (if hor?
-                                   (+ min-y (/ height 2))
-                                   (+ min-x (/ width 2)))
-          in-direction?          (fn [{:keys [id]}]
-                                   (let [{:keys [min-x min-y max-x max-y]}
-                                         (bounds-for-id id)]
-                                     (condp = direction
-                                       :up    (<= max-y min)
-                                       :down  (<= max min-y)
-                                       :left  (<= max-x min)
-                                       :right (<= max min-x))))
-          covers-pos?            (fn [{:keys [id]}]
-                                   (let [{:keys [min-x min-y max-x max-y]}
-                                         (bounds-for-id id)]
-                                     (if hor?
-                                       (<= min-y pos max-y)
-                                       (<= min-x pos max-x))))
-          candidates             (some->>
-                                  (tree-seq layout-children layout-children tree)
-                                  (filter :focusable?)
-                                  (remove #(= component-id (:id %)))
-                                  (filter (partial in-direction?)))]
+                  width height]
+           :as bbox}    (bounds-for-id node-id)
+          hor?          (contains? #{:left :right} direction)
+          min           (if hor? min-x min-y)
+          #_             (do (prn 'BBOX bbox)
+                            (prn 'MIN min))
+          max           (if hor? max-x max-y)
+          pos           (if hor?
+                          (+ min-y (/ height 2))
+                          (+ min-x (/ width 2)))
+          in-direction? (fn [{:keys [id]}]
+                          (let [{:keys [min-x min-y max-x max-y] :as bbox}
+                                (bounds-for-id id)]
+                            (condp = direction
+                              :up    (<= max-y min)
+                              :down  (<= max min-y)
+                              :left  (<= max-x min)
+                              :right (<= max min-x))))
+          covers-pos?   (fn [{:keys [id]}]
+                          (let [{:keys [min-x min-y max-x max-y]}
+                                (bounds-for-id id)]
+                            (if hor?
+                              (<= min-y pos max-y)
+                              (<= min-x pos max-x))))
+          candidates    (some->>
+                         (tree-seq layout-children layout-children tree)
+                         (filter :focusable?)
+                         (remove #(= node-id (:id %)))
+                         (filter (partial in-direction?)))]
       (or (some->> (filter covers-pos? candidates) first :id)
           (-> candidates first :id)))))
 
@@ -206,11 +212,13 @@
         :set-root
 
         (and (= type :insert)
-             (= :children (first path)))
+             (= :children (first path))
+             (= 2 (count path)))
         :add-window
 
         (and (= type :delete)
-             (= :children (first path)))
+             (= :children (first path))
+             (= 2 (count path)))
         :delete-window
 
         (and (= :children (first path))
@@ -225,15 +233,26 @@
              (int? (-> path butlast last)))
         :set-fields
 
+        (and (#{:insert :delete} type)
+             (int? (last path)))
+        :modify-list
+
         :else
         :default))
 
+(defn- convert-path [path]
+  (mapcat #(cond (= % :root) [:root :center] ;;translate datacore path to javafx path
+                 (= % :children) [:items]
+                 :else [%])
+          (nnext (butlast path))))
+
 (require '[clojure.pprint :as pp])
 (defn update-layout! [old-tree new-tree]
-  (let [diffs (->> (util/tree-diff old-tree new-tree)
-                   (map #(assoc % :diff-type (diff-type %)))
-                   (partition-by :diff-type))]
-    (pp/pprint diffs)
+  (let [component-by-id #(get (c/value state/view-to-component) %)
+        diffs           (->> (util/tree-diff old-tree new-tree)
+                             (map #(assoc % :diff-type (diff-type %)))
+                             (partition-by :diff-type))]
+    ;;(pp/pprint diffs)
     (doseq [diff-group diffs]
       (let [{:keys [diff-type path old value] :as diff} (first diff-group)]
         (condp = diff-type
@@ -244,7 +263,7 @@
             (fx/run-later! #(fx/show component)))
 
           :delete-window
-          (let [component (get (c/value state/view-to-component) (:id value))]
+          (let [component (component-by-id (:id value))]
             (when component
               (unregister-component! (:id value))
               (fx/run-later! #(.close component))))
@@ -252,32 +271,39 @@
           :set-root
           (let [component-map (get-in new-tree (butlast path))
                 scene         (scene-for-path path)]
-            (pp/pprint component-map)
+            ;;(pp/pprint component-map)
             (fx/run-later!
              #(.setRoot scene (build-window-contents component-map message/current-message))))
-
-          :set-fields
-          (let [component-map (get-in new-tree (butlast path))]
-            (pp/pprint component-map)
-            (fx/run-later!
-             (fn []
-               (fx/set-field-in! (scene-for-path path)
-                                 (mapcat #(cond (= % :root) [:root :center] ;;translate datacore path to javafx path
-                                                (= % :children) [:items]
-                                                :else [%])
-                                         (nnext (butlast path)))
-                                 (get-or-build-view component-map)))))
 
           :set-focus
           (doseq [{:keys [type path]} diff-group]
             (let [id        (get-in (c/value state/layout-tree) (conj (vec (butlast path)) :id))
-                  component (get (c/value state/view-to-component) id)]
-              (prn path id (= type :assoc) component)
+                  component (component-by-id id)]
               (set-focus-border! component (= type :assoc))))
 
           :set-window-title
           (fx/run-later! #(-> (scene-for-path path)
                               .getWindow
                               (.setTitle value)))
+
+          :set-fields
+          (let [component-map (get-in new-tree (butlast path))]
+            ;;(pp/pprint component-map)
+            (fx/run-later!
+             (fn []
+               (fx/set-field-in! (scene-for-path path)
+                                 (convert-path path)
+                                 (get-or-build-view component-map)))))
+
+          :modify-list
+          (let [coll (fx/get-field-in (scene-for-path path) (-> path convert-path butlast vec (conj :items)))]
+            (doseq [{:keys [type path value]} diff-group]
+              (let [index (last path)]
+                (fx/run-later!
+                 #(condp = type
+                    :delete (.remove coll (component-by-id (:id value))) ;;removing by ID does not work
+                    :insert (if (= index (.size coll))
+                              (.add coll (get-or-build-view value))
+                              (.set coll index (get-or-build-view value))))))))
 
           :skip)))))
