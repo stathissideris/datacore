@@ -24,7 +24,7 @@
                         (str "Web View: "
                              (cond url url
                                    content (str "Local content" content-type)
-                                   :else "Nothing loaded")))
+                                   :else "Nothing to show")))
                       view-cell
                       {:label :web-view-status-line}))))
 

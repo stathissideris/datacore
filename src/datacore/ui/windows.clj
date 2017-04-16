@@ -30,8 +30,9 @@
         (if focused?
           {:type        ::view/split-pane
            :orientation orientation
-           :children [item
-                      {:type ::view/nothing}]}
+           :children    [item
+                         {:type       ::view/nothing
+                          :focusable? true}]}
           item))
       tree))))
 
@@ -47,21 +48,42 @@
 
 ;;focus
 
+(defn- focus-to-direction [direction]
+  (let [tree     (c/value state/layout-tree)
+        focused  (view/find-focused tree)
+        focus-id (view/component-in-direction (:id focused) direction tree)]
+    (prn 'will-focus focus-id)
+    (when focus-id
+      (state/swap-layout!
+       (fn [tree]
+         (walk/postwalk
+          (fn [{:keys [id] :as x}]
+            (if (map? x)
+              (if (= id focus-id)
+                (assoc x :focused? true)
+                (dissoc x :focused?))
+              x))
+          tree))))))
+
 (defin focus-left
   {:alias :windows/focus-left}
-  [])
+  []
+  (focus-to-direction :left))
 
 (defin focus-right
   {:alias :windows/focus-right}
-  [])
+  []
+  (focus-to-direction :right))
 
 (defin focus-up
   {:alias :windows/focus-up}
-  [])
+  []
+  (focus-to-direction :up))
 
 (defin focus-down
   {:alias :windows/focus-down}
-  [])
+  []
+  (focus-to-direction :down))
 
 ;;swap
 

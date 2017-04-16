@@ -11,6 +11,11 @@
      :3 :windows/split-right
      :0 :windows/delete
      #{:ctrl :f} :open-file}}
+   {:f1
+    {:up    :windows/focus-up
+     :down  :windows/focus-down
+     :left  :windows/focus-left
+     :right :windows/focus-right}}
    {#{:ctrl :h}
     {:k :help/describe-key
      :f :help/describe-function

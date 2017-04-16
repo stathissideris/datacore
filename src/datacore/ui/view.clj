@@ -154,10 +154,45 @@
 (defn- layout-children [{:keys [children root] :as node}]
   (or children (when root [root])))
 
-(defn- find-focused [tree]
+(defn find-focused [tree]
   (some->> (tree-seq layout-children layout-children tree)
            (filter :focused?)
            first))
+
+(defn component-in-direction [component-id direction tree]
+  (when component-id
+    (let [mapping                (c/value state/view-to-component)
+          bounds-for-id          #(some-> mapping (get %) fx/bounds-in-screen)
+          {:keys [min-x min-y
+                  max-x max-y
+                  width height]} (bounds-for-id component-id)
+          hor?                   (#{:left :right} direction)
+          min                    (if hor? min-x min-y)
+          max                    (if hor? max-x max-y)
+          pos                    (if hor?
+                                   (+ min-y (/ height 2))
+                                   (+ min-x (/ width 2)))
+          in-direction?          (fn [{:keys [id]}]
+                                   (let [{:keys [min-x min-y max-x max-y]}
+                                         (bounds-for-id id)]
+                                     (condp = direction
+                                       :up    (<= max-y min)
+                                       :down  (<= max min-y)
+                                       :left  (<= max-x min)
+                                       :right (<= max min-x))))
+          covers-pos?            (fn [{:keys [id]}]
+                                   (let [{:keys [min-x min-y max-x max-y]}
+                                         (bounds-for-id id)]
+                                     (if hor?
+                                       (<= min-y pos max-y)
+                                       (<= min-x pos max-x))))
+          candidates             (some->>
+                                  (tree-seq layout-children layout-children tree)
+                                  (filter :focusable?)
+                                  (remove #(= component-id (:id %)))
+                                  (filter (partial in-direction?)))]
+      (or (some->> (filter covers-pos? candidates) first :id)
+          (-> candidates first :id)))))
 
 (defn- scene-for-path [path]
   (let [window-index (second path)
@@ -233,7 +268,12 @@
                                          (nnext (butlast path)))
                                  (get-or-build-view component-map)))))
 
-          ;;:set-focus
+          :set-focus
+          (doseq [{:keys [type path]} diff-group]
+            (let [id        (get-in (c/value state/layout-tree) (conj (vec (butlast path)) :id))
+                  component (get (c/value state/view-to-component) id)]
+              (prn path id (= type :assoc) component)
+              (set-focus-border! component (= type :assoc))))
 
           :set-window-title
           (fx/run-later! #(-> (scene-for-path path)

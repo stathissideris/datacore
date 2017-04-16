@@ -4,7 +4,7 @@
             [clojure.spec :as s]
             [datacore.util :as util]
             [datacore.cells :as c])
-  (:import [javafx.collections ObservableList]
+  (:import [javafx.collections ObservableList ListChangeListener]
            [javafx.embed.swing JFXPanel]
            [javafx.application Platform]
            [javafx.stage StageStyle]
@@ -12,6 +12,8 @@
            [javafx.scene.paint Color]
            [javafx.beans.value ChangeListener]
            [javafx.scene Node]))
+
+;;;; utils ;;;;;
 
 (defn init []
   (JFXPanel.)
@@ -39,6 +41,30 @@
   (reify ChangeListener
     (changed [this observable old new]
      (fun observable old new))))
+
+(defn list-change-listener [fun]
+  (reify ListChangeListener
+    (onChanged [this change]
+      (fun (seq (.getList change))))))
+
+(defn parse-bbox [bbox]
+  {:min-x  (.getMinX   bbox)
+   :max-x  (.getMaxX   bbox)
+   :min-z  (.getMinZ   bbox)
+   :width  (.getWidth  bbox)
+   :max-z  (.getMaxZ   bbox)
+   :depth  (.getDepth  bbox)
+   :max-y  (.getMaxY   bbox)
+   :min-y  (.getMinY   bbox)
+   :height (.getHeight bbox)})
+
+(defn bounds-in-screen [component]
+  (parse-bbox (.localToScreen component (.getBoundsInLocal component))))
+
+(defn bounds-in-scene [component]
+  (parse-bbox (.localToScene component (.getBoundsInLocal component))))
+
+;;;;; reflection ;;;;;
 
 (defn- superclasses [clazz]
   (when-let [super (.getSuperclass clazz)]
