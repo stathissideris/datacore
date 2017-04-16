@@ -1,5 +1,6 @@
 (ns datacore.ui.windows
   (:require [clojure.walk :as walk]
+            [clojure.zip :as zip]
             [datacore :refer [defin]]
             [datacore.ui.view :as view]
             [datacore.cells :as c]
@@ -10,10 +11,32 @@
   []
   (println :maximize))
 
+(defn- focus-first-focusable [tree]
+  (loop [z (view/layout-zipper tree)]
+    (let [node (zip/node z)]
+      (cond (zip/end? z)
+            (zip/root z)
+            (:focusable? node)
+            (zip/root (zip/replace z (assoc node :focused? true)))
+            :else
+            (recur (zip/next z))))))
+
 (defin delete
   {:alias :windows/delete}
   []
-  (println :delete))
+  (let [tree    (c/value state/layout-tree)
+        focused (view/find-focused tree)]
+    (state/swap-layout!
+     (fn [tree]
+       (walk/postwalk
+        (fn [item]
+          (if (map? item)
+            (if-let [to-delete (some->> item :children (filter #(= (:id focused) (:id %))) first)]
+              (let [other (some->> item :children (remove #(= (:id focused) (:id %))) first)]
+                (focus-first-focusable other))
+              item)
+            item))
+        tree)))))
 
 (defin balance
   {:alias :windows/balance}

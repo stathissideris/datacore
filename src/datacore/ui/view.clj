@@ -1,5 +1,6 @@
 (ns datacore.ui.view
   (:require [clojure.core.match :as m :refer [match]]
+            [clojure.zip :as zip]
             [clojure.spec :as s]
             [datacore.ui.java-fx :as fx]
             [datacore.util :as util]
@@ -25,8 +26,18 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
-(defn- get-or-build-view [{:keys [id] :as component-map}]
-  (or (and id (-> state/view-to-component c/value (get id)))
+(defn set-focus-border! [component focused?]
+  (when component
+    (fx/set-field!
+     component :style
+     (if focused?
+       (str "-fx-border-width: 4 4 4 4;"
+            "-fx-border-color: #155477;")
+       (str "-fx-border-width: 0 0 0 0;")))
+    component))
+
+(defn- get-or-build-view [{:keys [id focused?] :as component-map}]
+  (or (and id (-> state/view-to-component c/value (get id) (set-focus-border! focused?))) ;;because focus changes sometimes get lost in the diffs
       (build-view component-map)))
 
 (defmethod build-view ::nothing
@@ -60,16 +71,6 @@
             :text-fill (c/formula (comp {:message Color/BLACK
                                          :error   (Color/web "0xF57000")}
                                         :type) message)}))
-
-(defn set-focus-border! [component focused?]
-  (when component
-    (fx/set-field!
-     component :style
-     (if focused?
-       (str "-fx-border-width: 4 4 4 4;"
-            "-fx-border-color: #155477;")
-       (str "-fx-border-width: 0 0 0 0;")))
-    component))
 
 (defn build-window-contents [{:keys [focused?] :as tree} message]
   (let [component (if-not tree
@@ -151,6 +152,14 @@
 
 (defn- layout-children [{:keys [children root] :as node}]
   (or children (when root [root])))
+
+(defn layout-zipper [root]
+  (zip/zipper #(some? (layout-children %))
+              layout-children
+              (fn [node children]
+                (if (:children node)
+                  (assoc node :children (vec children))
+                  (assoc node :root (first children)))) root))
 
 (defn find-focused [tree]
   (some->> (tree-seq layout-children layout-children tree)
@@ -252,7 +261,7 @@
         diffs           (->> (util/tree-diff old-tree new-tree)
                              (map #(assoc % :diff-type (diff-type %)))
                              (partition-by :diff-type))]
-    ;;(pp/pprint diffs)
+    (pp/pprint diffs)
     (doseq [diff-group diffs]
       (let [{:keys [diff-type path old value] :as diff} (first diff-group)]
         (condp = diff-type
