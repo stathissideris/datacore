@@ -18,34 +18,18 @@
                         "-fx-border-color: #155477;"))
 (def unfocused-style "-fx-border-width: 0 0 0 0;")
 
-(defn- register-component! [view-id unmanaged]
-  (c/swap! state/view-to-component assoc view-id unmanaged)
-  unmanaged)
-(s/fdef register-component!
-  :args (s/cat :view-id string? :unmanaged any?))
-
-(defn- unregister-component! [view-id]
-  (c/swap! state/view-to-component dissoc view-id))
+(def components-cache (atom {}))
+(defn- memo-component [id fun]
+  (or (-> components-cache deref (get id))
+      (let [res (fun)]
+        (swap! components-cache assoc id res)
+        res)))
 
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
-#_(defn- get-or-build-view [{:keys [id focused?] :as component-map}]
-  (or (and id (-> state/view-to-component c/value (get id) (set-focus-border! focused?))) ;;because focus changes sometimes get lost in the diffs
-      (build-view component-map)))
-
 (defn set-focus-border! [component focused?]
   (fx/set-field! component :style (if focused? focused-style unfocused-style)))
-
-(defn- get-cached-view [id]
-  (-> state/view-to-component c/value (get id)))
-
-(defn- get-or-build-view [{:keys [id focused?] :as component-map}]
-  (let [c (or (get-cached-view id)
-              (build-view component-map))]
-    (if (map? c)
-      (assoc c :style (if focused? focused-style unfocused-style))
-      (set-focus-border! c focused?))))
 
 (defn label [text]
   {:fx/type :scene.control/label
@@ -68,29 +52,29 @@
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
   {:fx/type     :scene.control/split-pane
-   :items       (map get-or-build-view children)
+   :items       (map (comp build-view) children)
    :orientation (if (= orientation :horizontal)
                   javafx.geometry.Orientation/HORIZONTAL
                   javafx.geometry.Orientation/VERTICAL)})
 
 (defn- message-line []
-  (->> {:fx/type   :scene.control/label
-        :text      (c/formula :msg message/current-message)
-        :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
-        :text-fill (c/formula (comp {:message Color/BLACK
-                                     :error   (Color/web "0xF57000")}
-                                    :type) message/current-message)}
-       fx/make-tree
-       fx/unmanaged
-       (register-component! "message-line")))
+  (memo-component
+   "message-line"
+   #(->> {:fx/type   :scene.control/label
+          :text      (c/formula :msg message/current-message)
+          :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
+          :text-fill (c/formula (comp {:message Color/BLACK
+                                       :error   (Color/web "0xF57000")}
+                                      :type) message/current-message)}
+         fx/make-tree
+         fx/unmanaged)))
 
 (defn build-window-contents [tree message]
   {:fx/type :scene.layout/border-pane
    :center  (if-not tree
               (build-view {:type ::nothing})
               (build-view tree))
-   :bottom  (or (get-cached-view "message-line")
-                (message-line))})
+   :bottom  (message-line)})
 
 (def window-style-map
   {:normal      StageStyle/DECORATED
@@ -156,13 +140,16 @@
    :children (mapv build-view children)})
 
 (defmethod build-view ::cell
-  [{:keys [id cell]}]
-  (-> cell
-      build-view
-      (fx/set-fields! {:id          id
-                       ;;TODO add style-class instead of replacing the whole list
-                       :style-class ["focusable"]})
-      fx/unmanaged))
+  [{:keys [id cell focused?]}]
+  (memo-component
+   id
+   #(-> cell
+        build-view
+        (fx/set-fields! {:id          id
+                         ;;TODO add style-class instead of replacing the whole list
+                         :style-class ["focusable"]
+                         :style       (if focused? focused-style unfocused-style)})
+        fx/unmanaged)))
 
 ;;;;;;;;;;;;;;;;
 
