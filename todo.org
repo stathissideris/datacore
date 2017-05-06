@@ -1,0 +1,9 @@
+* To do
+** TODO Move diff to clojure.util.diff
+** TODO Fix move focus bug
+** TODO Swap views
+** TODO Fix id of "minibuffer" unmanaged component
+** TODO Keymap based on mode
+** TODO Run function using prompt (text prompt with autocomplete)
+** TODO Cells vizualisation
+** TODO Make view cells output stuff such as selection etc
