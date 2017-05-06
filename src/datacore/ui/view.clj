@@ -14,11 +14,15 @@
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
-(defn- register-component! [view-id fx-component]
-  (c/swap! state/view-to-component assoc view-id fx-component)
-  fx-component)
+(def focused-style (str "-fx-border-width: 4 4 4 4;"
+                        "-fx-border-color: #155477;"))
+(def unfocused-style "-fx-border-width: 0 0 0 0;")
+
+(defn- register-component! [view-id unmanaged]
+  (c/swap! state/view-to-component assoc view-id unmanaged)
+  unmanaged)
 (s/fdef register-component!
-  :args (s/cat :view-id string? :fx-component any?))
+  :args (s/cat :view-id string? :unmanaged any?))
 
 (defn- unregister-component! [view-id]
   (c/swap! state/view-to-component dissoc view-id))
@@ -30,57 +34,63 @@
   (or (and id (-> state/view-to-component c/value (get id) (set-focus-border! focused?))) ;;because focus changes sometimes get lost in the diffs
       (build-view component-map)))
 
+(defn set-focus-border! [component focused?]
+  (fx/set-field! component :style (if focused? focused-style unfocused-style)))
+
+(defn- get-cached-view [id]
+  (-> state/view-to-component c/value (get id)))
+
 (defn- get-or-build-view [{:keys [id focused?] :as component-map}]
-  (build-view component-map))
+  (let [c (or (get-cached-view id)
+              (build-view component-map))]
+    (if (map? c)
+      (assoc c :style (if focused? focused-style unfocused-style))
+      (set-focus-border! c focused?))))
 
 (defn label [text]
   {:fx/type :scene.control/label
    :text    text})
 
 (defmethod build-view ::nothing
-  [_]
+  [{:keys [focused?]}]
   {:fx/type     :scene.layout/border-pane
    :style-class ["focusable"]
+   :style       (if focused? focused-style unfocused-style)
    :center      (label "Nothing to show")})
 
 (defmethod build-view nil
-  [_]
+  [{:keys [focused?]}]
   {:fx/type     :scene.layout/border-pane
    :style-class ["focusable"]
+   :style       (if focused? focused-style unfocused-style)
    :center      (label "Nothing to show")})
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
-  (let [components (map get-or-build-view children)]
-    (doall
-     (mapv
-      (fn [spec component]
-        (register-component! (:id spec) component))
-      children
-      components))
-    {:fx/type     :scene.control/split-pane
-     :items       components
-     :orientation (if (= orientation :horizontal)
-                    javafx.geometry.Orientation/HORIZONTAL
-                    javafx.geometry.Orientation/VERTICAL)}))
+  {:fx/type     :scene.control/split-pane
+   :items       (map get-or-build-view children)
+   :orientation (if (= orientation :horizontal)
+                  javafx.geometry.Orientation/HORIZONTAL
+                  javafx.geometry.Orientation/VERTICAL)})
 
 (defn- message-line []
-  {:fx/type      :fx/unmanaged
-   :fx/component nil
-   #_(fx/make-tree
-    {:fx/type   :scene.control/label
-     :text      (c/formula :msg message/current-message)
-     :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
-     :text-fill (c/formula (comp {:message Color/BLACK
-                                  :error   (Color/web "0xF57000")}
-                                 :type) message/current-message)})})
+  (->> {:fx/type   :scene.control/label
+        :text      (c/formula :msg message/current-message)
+        :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
+        :text-fill (c/formula (comp {:message Color/BLACK
+                                     :error   (Color/web "0xF57000")}
+                                    :type) message/current-message)}
+       fx/make-tree
+       fx/unmanaged
+       (register-component! "message-line")))
 
-(defn build-window-contents [{:keys [focused?] :as tree} message]
+(defn build-window-contents [tree message]
   {:fx/type :scene.layout/border-pane
    :center  (if-not tree
-              (build-view ::nothing)
-              (get-or-build-view tree))
-   :bottom  (message-line)})
+              (build-view {:type ::nothing})
+              (build-view tree))
+   :bottom  (or (get-cached-view "message-line")
+                (message-line))})
 
 (def window-style-map
   {:normal      StageStyle/DECORATED
@@ -145,25 +155,14 @@
   {:fx/type :fx/top-level
    :children (mapv build-view children)})
 
-(defn set-focus-border! [component focused?]
-  (let [style (if focused?
-                (str "-fx-border-width: 4 4 4 4;"
-                     "-fx-border-color: #155477;")
-                (str "-fx-border-width: 0 0 0 0;"))]
-    (fx/set-field! component :style style)))
-
 (defmethod build-view ::cell
-  [{:keys [id cell focused?]}]
-  {:fx/type :fx/unmanaged
-   :fx/component
-   (or ;;(-> state/view-to-component c/value (get id))
-       (let [component (build-view cell)]
-         (-> component
-             (fx/set-fields! {:id          id
-                              :style-class ["focusable"]})  ;;TODO add style-class instead of replacing the whole list
-             (set-focus-border! focused?))
-         (register-component! id component)
-         component))})
+  [{:keys [id cell]}]
+  (-> cell
+      build-view
+      (fx/set-fields! {:id          id
+                       ;;TODO add style-class instead of replacing the whole list
+                       :style-class ["focusable"]})
+      fx/unmanaged))
 
 ;;;;;;;;;;;;;;;;
 

@@ -282,13 +282,19 @@
 
 (defn make-tree
   [tree]
-  (walk/postwalk
-   (fn [item]
-     (if (:fx/type item)
-       (make (:fx/type item)
-             (dissoc item :fx/type))
-       item))
-   tree))
+  (if (-> tree :fx/type (= :fx/unmanaged))
+    (:fx/component tree)
+    (walk/postwalk
+     (fn [item]
+       (if (:fx/type item)
+         (make (:fx/type item)
+               (dissoc item :fx/type))
+         item))
+     tree)))
+
+(defn unmanaged [component]
+  {:fx/type      :fx/unmanaged
+   :fx/component component})
 
 (defn- type-change? [diff-group]
   (some?
@@ -304,6 +310,7 @@
 (require '[clojure.pprint :refer [pprint]])
 (defn update-tree
   [root diffs]
+  ;;(pprint diffs)
   (let [diff-groups (partition-by #(vector (butlast (:path %)) (:struct %)) diffs)]
     (doseq [diff-group diff-groups]
       (cond

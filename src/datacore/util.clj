@@ -217,7 +217,7 @@
     (cond
       (not (instance? java.util.List b))
       [(set-path {:type :edit :path [] :old a :value b :struct :vector})]
-      (= a b)
+      (or (identical? a b) (= a b))
       [(set-path {:type :same :path [] :value a :struct :vector})]
       :else
       (doall
