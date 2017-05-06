@@ -3,22 +3,19 @@
             [datacore.util :as util]
             [clojure.walk :as walk]))
 
-(defcell view-to-component {})
 (defcell layout-tree {:type     :datacore.ui.view/top-level
                       :id       "n/a"
                       :children []})
-
 (defcell window->focused-component {})
 (defcell focus nil)
 
 (defn- assign-layout-ids [tree]
-  #_(walk/postwalk
+  (walk/postwalk
    (fn [x]
      (if (and (map? x) (:type x) (not (:id x)))
        (assoc x :id (str (java.util.UUID/randomUUID)))
        x))
-   tree)
-  tree)
+   tree))
 
 ;;TODO make swap-layout! remember focus - unless there is a new focus
 (defn swap-layout! [fun & args]

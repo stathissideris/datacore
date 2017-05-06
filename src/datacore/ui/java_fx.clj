@@ -332,6 +332,74 @@
               :insert (insert-in! root path (make-tree value))
               :delete (remove-in! root path))))))))
 
+;;;;; traversal ;;;;;
+
+(defprotocol Parent
+  (children? [this])
+  (children [this])
+  (child [this index]))
+
+(deftype TopLevel []
+  Parent
+  (children [this]
+    (distinct (seq (StageHelper/getStages))))
+  (children? [this]
+    (< 0 (count (children this))))
+  (child [this index]
+    (.get (children this) index)))
+
+(def top-level (TopLevel.))
+
+(extend-type javafx.stage.Stage
+  Parent
+  (children [this] [(.getScene this)])
+  (children? [this] true)
+  (child [this index] (.getScene this)))
+
+(extend-type javafx.scene.Scene
+  Parent
+  (children [this] [(.getRoot this)])
+  (children? [this] true)
+  (child [this index] (.getRoot this)))
+
+(extend-type javafx.scene.Scene
+  Parent
+  (children [this] [(.getRoot this)])
+  (children? [this] true)
+  (child [this index] (.getRoot this)))
+
+(extend-type javafx.scene.layout.Pane
+  Parent
+  (children [this]
+    (.getChildren this))
+  (children? [this]
+    (< 0 (count (children this))))
+  (child [this index]
+   (.get (children this) index)))
+
+(extend-type javafx.scene.control.SplitPane
+  Parent
+  (children [this]
+    (.getItems this))
+  (children? [this]
+    (< 0 (count (children this))))
+  (child [this index]
+    (.get (children this) index)))
+
+(extend-type Object
+  Parent
+  (children [this] nil)
+  (children? [this] false)
+  (child [this index] nil))
+
+(defn- safe-id [component]
+  (try (.getId component) (catch Exception _ nil)))
+
+(defn find-by-id [id]
+  (->> (tree-seq children? children top-level)
+       (filter #(= id (safe-id %)))
+       first))
+
 ;;;;; convenience functions ;;;;;
 
 (defn label
@@ -355,8 +423,9 @@
 
 (defn show [c] (.show c) c)
 
-(defn has-style-class? [^Node node ^String c]
-  (some? (not-empty (filter (partial = c) (seq (.getStyleClass node))))))
+(defn has-style-class? [node ^String c]
+  (and (instance? javafx.scene.Node node)
+       (some? (not-empty (filter (partial = c) (seq (.getStyleClass node)))))))
 
 (defn parents [^Node node]
   (take-while (complement nil?) (rest (iterate #(when % (.getParent %)) node))))

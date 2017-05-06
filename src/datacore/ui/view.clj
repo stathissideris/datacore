@@ -36,15 +36,17 @@
    :text    text})
 
 (defmethod build-view ::nothing
-  [{:keys [focused?]}]
+  [{:keys [id focused?]}]
   {:fx/type     :scene.layout/border-pane
+   :id          id
    :style-class ["focusable"]
    :style       (if focused? focused-style unfocused-style)
    :center      (label "Nothing to show")})
 
 (defmethod build-view nil
-  [{:keys [focused?]}]
+  [{:keys [id focused?]}]
   {:fx/type     :scene.layout/border-pane
+   :id          id
    :style-class ["focusable"]
    :style       (if focused? focused-style unfocused-style)
    :center      (label "Nothing to show")})
@@ -176,8 +178,7 @@
 
 (defn node-in-direction [node-id direction tree]
   (when node-id
-    (let [mapping       (c/value state/view-to-component)
-          bounds-for-id #(-> mapping (get %) fx/bounds-in-screen)
+    (let [bounds-for-id #(-> % fx/find-by-id fx/bounds-in-screen)
           {:keys [min-x min-y
                   max-x max-y
                   width height]
