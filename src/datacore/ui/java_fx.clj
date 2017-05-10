@@ -6,6 +6,7 @@
             [datacore.cells :as c]
             [clojure.walk :as walk])
   (:import [javafx.collections ObservableList ListChangeListener]
+           [javafx.scene.control.SplitPane]
            [javafx.embed.swing JFXPanel]
            [javafx.application Platform]
            [javafx.stage StageStyle]
@@ -15,10 +16,11 @@
            [javafx.scene Node]
            [com.sun.javafx.stage StageHelper]))
 
+(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+
 ;;;; utils ;;;;;
 
 (defn init []
-  (JFXPanel.)
   (Platform/setImplicitExit false))
 
 (defn run-later! [fun]

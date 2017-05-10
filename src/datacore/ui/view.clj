@@ -143,15 +143,16 @@
 
 (defmethod build-view ::cell
   [{:keys [id cell focused?]}]
-  (memo-component
-   id
-   #(-> cell
-        build-view
-        (fx/set-fields! {:id          id
-                         ;;TODO add style-class instead of replacing the whole list
-                         :style-class ["focusable"]
-                         :style       (if focused? focused-style unfocused-style)})
-        fx/unmanaged)))
+  (-> (memo-component
+       id
+       #(-> cell
+            build-view
+            (fx/set-fields! {:id          id
+                             ;;TODO add style-class instead of replacing the whole list
+                             :style-class ["focusable"]
+                             :style       (if focused? focused-style unfocused-style)})
+            fx/unmanaged))
+      (update :fx/component set-focus-border! focused?)))
 
 ;;;;;;;;;;;;;;;;
 
