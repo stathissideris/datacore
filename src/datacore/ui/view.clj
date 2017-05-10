@@ -11,7 +11,7 @@
             [datacore.ui.message :as message]
             [datacore.state :as state]
             [clojure.walk :as walk])
-  (:import [javafx.scene.input KeyEvent]
+  (:import [javafx.scene.input KeyEvent MouseEvent]
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
@@ -105,8 +105,8 @@
                                                              (filter #(fx/has-style-class? % "focusable"))
                                                              first
                                                              .getId))]
-                            (c/swap! state/window->focused-component assoc id component-id)
-                            (c/reset! state/focus component-id))
+                            (println "will attempt to focus " component-id)
+                            (focus component-id))
                           (println "COMPONENT FOCUSED:" new)))
         stage-focus-l  (fx/change-listener
                         (fn [_ _ new]
@@ -151,10 +151,14 @@
        id
        #(-> cell
             build-view
-            (fx/set-fields! {:id          id
+            (fx/set-fields! {:id               id
                              ;;TODO add style-class instead of replacing the whole list
-                             :style-class ["focusable"]
-                             :style       (if focused? focused-style unfocused-style)})
+                             :style-class      ["focusable"]
+                             :style            (if focused? focused-style unfocused-style)})
+            (doto
+              (.addEventFilter
+               MouseEvent/MOUSE_CLICKED
+               (fx/event-handler (fn [_] (focus id)))))
             fx/unmanaged))
       (update :fx/component set-focus-border! focused?)))
 
