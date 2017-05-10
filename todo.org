@@ -1,6 +1,6 @@
 * To do
 ** DONE Swap views
-** TODO Fix move focus bug (skips closest)
+** DONE Fix move focus bug (skips closest)
 ** TODO Test multiple windows
 ** TODO Fix id of "minibuffer" unmanaged component
 ** TODO Keymap based on mode

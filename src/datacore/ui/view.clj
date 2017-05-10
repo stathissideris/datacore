@@ -4,6 +4,7 @@
             [clojure.spec :as s]
             [datacore.ui.java-fx :as fx]
             [datacore.util :as util]
+            [datacore.util.geometry :as geom]
             [datacore.cells :as c]
             [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
@@ -202,7 +203,7 @@
                               :right (<= max min-x))))
           covers-pos?   (fn [{:keys [id]}]
                           (let [{:keys [min-x min-y max-x max-y]}
-                                (bounds-for-id id)]
+                                (geom/extend-bbox (bounds-for-id id) 20)] ;;extend to avoid getting stuck on separators
                             (if hor?
                               (<= min-y pos max-y)
                               (<= min-x pos max-x))))
@@ -210,7 +211,8 @@
                          (tree-seq layout-children layout-children tree)
                          (filter :focusable?)
                          (remove #(= node-id (:id %)))
-                         (filter (partial in-direction?)))]
+                         (filter (partial in-direction?))
+                         (sort-by #(geom/bbox-distance bbox (bounds-for-id (:id %)))))]
       (or (some->> (filter covers-pos? candidates) first :id)
           (-> candidates first :id)))))
 
