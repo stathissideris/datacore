@@ -100,13 +100,6 @@
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
-                          (when-let [component-id (when new
-                                                    (some->> (cons new (fx/parents new))
-                                                             (filter #(fx/has-style-class? % "focusable"))
-                                                             first
-                                                             .getId))]
-                            (println "will attempt to focus " component-id)
-                            (focus component-id))
                           (println "COMPONENT FOCUSED:" new)))
         stage-focus-l  (fx/change-listener
                         (fn [_ _ new]
