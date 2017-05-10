@@ -73,19 +73,8 @@
 
 (defn- focus-to-direction [direction]
   (let [tree     (c/value state/layout-tree)
-        focused  (view/find-focused tree)
-        focus-id (view/node-in-direction (:id focused) direction tree)]
-    (when focus-id
-      (state/swap-layout!
-       (fn [tree]
-         (walk/postwalk
-          (fn [{:keys [id] :as x}]
-            (if (map? x)
-              (if (= id focus-id)
-                (assoc x :focused? true)
-                (dissoc x :focused?))
-              x))
-          tree))))))
+        focused  (view/find-focused tree)]
+    (view/focus (view/node-in-direction (:id focused) direction tree))))
 
 (defin focus-left
   {:alias :windows/focus-left}

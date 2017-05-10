@@ -36,21 +36,24 @@
   {:fx/type :scene.control/label
    :text    text})
 
+(declare focus)
+(defn- build-nothing [{:keys [id focused?]}]
+  {:fx/type          :scene.layout/border-pane
+   :id               id
+   :style-class      ["focusable"]
+   :style            (if focused? focused-style unfocused-style)
+   :center           (label "Nothing to show")
+   :on-mouse-clicked (fx/event-handler
+                      (fn [_]
+                        (focus id)))})
+
 (defmethod build-view ::nothing
-  [{:keys [id focused?]}]
-  {:fx/type     :scene.layout/border-pane
-   :id          id
-   :style-class ["focusable"]
-   :style       (if focused? focused-style unfocused-style)
-   :center      (label "Nothing to show")})
+  [tree]
+  (build-nothing tree))
 
 (defmethod build-view nil
-  [{:keys [id focused?]}]
-  {:fx/type     :scene.layout/border-pane
-   :id          id
-   :style-class ["focusable"]
-   :style       (if focused? focused-style unfocused-style)
-   :center      (label "Nothing to show")})
+  [tree]
+  (build-nothing tree))
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
@@ -177,6 +180,19 @@
   (some->> (tree-seq layout-children layout-children tree)
            (filter #(= id (:id %)))
            first))
+
+(defn focus [focus-id]
+  (when focus-id
+    (state/swap-layout!
+     (fn [tree]
+       (walk/postwalk
+        (fn [{:keys [id] :as x}]
+          (if (map? x)
+            (if (= id focus-id)
+              (assoc x :focused? true)
+              (dissoc x :focused?))
+            x))
+        tree)))))
 
 (defn node-in-direction [node-id direction tree]
   (when node-id
