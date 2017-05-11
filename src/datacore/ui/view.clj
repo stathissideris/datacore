@@ -29,21 +29,15 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
-(defn set-focus-border! [component focused?]
-  (fx/set-field! component :style (if focused? focused-style unfocused-style)))
-
-(defn label [text]
-  {:fx/type :scene.control/label
-   :text    text})
-
 (declare focus!)
 (defn- build-nothing [{:keys [id focused?]}]
   {:fx/type          :scene.layout/border-pane
    :id               id
    :style-class      ["focus-indicator"]
-   :style            (if focused? focused-style unfocused-style)
-   :center           (label "Nothing to show")
-   :fx/focused?      focused?
+   :center           {:fx/type           :scene.control/label
+                      :style-class       ["label" "main-component"]
+                      :text              "Nothing to show"
+                      :focus-traversable true}
    :on-mouse-clicked (fx/event-handler
                       (fn [_]
                         (focus! id)))})
@@ -92,6 +86,13 @@
   (state/swap-layout! update :children (fn [c] (remove #(= component-id (:id %)) c))))
 
 ;;TODO add this to scene: [:fx/setup #(style/add-stylesheet % "css/default.css")]
+(declare find-focused)
+(declare focus-cell-view-main!)
+(declare set-focus-border!)
+
+(defn- focus-indicator-parent [component]
+  (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))
+
 (defmethod build-view ::window
   [{:keys [id title dimensions root window-style]}]
   (let [[width height] dimensions
@@ -101,8 +102,17 @@
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
-                          (println "COMPONENT FOCUSED:" new)
-                          (some->> new fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first .getId focus!)))
+                          (println "COMPONENT FOCUSED:" (fx/tree new))
+                          ;; (when new
+                          ;;   (let [correct-id (:id (find-focused (c/value state/layout-tree)))
+                          ;;         actual-id (some-> (focus-indicator-parent new) .getId)]
+                          ;;     (if (not= actual-id correct-id)
+                          ;;       (let [c (fx/find-by-id correct-id)]
+                          ;;         (prn '----will-correct-focus----)
+                          ;;         (set-focus-border! c true)
+                          ;;         (focus-cell-view-main! c)))))
+                          ;;(some->> new fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first .getId focus!)
+                          ))
         stage-focus-l  (fx/change-listener
                         (fn [_ _ new]
                           (when new
@@ -137,18 +147,6 @@
   {:fx/type :fx/top-level
    :children (mapv build-view children)})
 
-(defn- focus-cell-view-main! [component focused?]
-  (when focused?
-    (prn 'will-focus
-         (some-> component
-            (fx/find-by-style-class "main-component")
-            (first)))
-    (let [c (some-> component
-                    (fx/find-by-style-class "main-component")
-                    (first))]
-      (fx/run-later! #(.requestFocus c))))
-  component)
-
 (defmethod build-view ::cell
   [{:keys [id cell focused?]}]
   (-> (memo-component
@@ -163,11 +161,8 @@
                 MouseEvent/MOUSE_CLICKED
                 (fx/event-handler
                  (fn [_]
-                   (focus! id)
-                   (focus-cell-view-main! view true)))))
-             fx/unmanaged)))
-      (update :fx/component set-focus-border! focused?)
-      (update :fx/component focus-cell-view-main! focused?)))
+                   (focus! id)))))
+             fx/unmanaged)))))
 
 ;;;;;;;;;;;;;;;;
 
@@ -243,9 +238,29 @@
       (or (some->> (filter covers-pos? candidates) first :id)
           (-> candidates first :id)))))
 
-(require '[clojure.pprint :as pp])
+(defn set-focus-border! [component focused?]
+  (fx/set-field! component :style (if focused? focused-style unfocused-style)))
+
+(defn- focus-cell-view-main! [component]
+  (if-let [c (some-> component
+                     (fx/find-by-style-class "main-component")
+                     (first))]
+    (fx/run-later! #(.requestFocus c))
+    (fx/run-later! #(.requestFocus component)))
+  component)
+
 (defn update-layout! [old-tree new-tree]
   (let [diff (util/tree-diff
               (build-view old-tree)
               (build-view new-tree))]
-    (fx/update-tree :fx/top-level diff)))
+    (fx/update-tree! :fx/top-level diff)
+
+    (let [c (some-> (find-focused old-tree)
+                    :id
+                    (fx/find-by-id))]
+      (when c (set-focus-border! c false)))
+    (let [focus-id (some-> (find-focused new-tree) :id)
+          c        (fx/find-by-id focus-id)]
+      (when (and c (not= c fx/top-level))
+        (set-focus-border! c true)
+        (focus-cell-view-main! c)))))

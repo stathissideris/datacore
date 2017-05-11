@@ -44,7 +44,7 @@
 (defn change-listener [fun]
   (reify ChangeListener
     (changed [this observable old new]
-     (fun observable old new))))
+      (fun observable old new))))
 
 (defn list-change-listener [fun]
   (reify ListChangeListener
@@ -119,57 +119,58 @@
 (defmethod fset :fx/focused?
   [o _ focus?]
   (when focus?
-    (.requestFocus o)))
+    (run-later! #(.requestFocus o))))
 
 (defn set-field! [object field value]
-  (cond
-    (and (= object :fx/top-level) (= field :children))
-    (StageHelper/getStages)
+  (when object
+    (cond
+      (and (= object :fx/top-level) (= field :children))
+      (StageHelper/getStages)
 
-    (int? field) ;;ObservableList
-    (.set object field value)
+      (int? field) ;;ObservableList
+      (.set object field value)
 
-    (= "fx" (namespace field))
-    (fset object field value)
+      (= "fx" (namespace field))
+      (fset object field value)
 
-    :else
-    (try
-      (clojure.lang.Reflector/invokeInstanceMethod
-       object
-       (->> field
-            util/kebab->camel
-            util/capitalize-first
-            (str "set"))
-       (object-array [value]))
-      object
-      (catch Exception _
-        (if (c/cell-id? value)
-          (do
-            (run-later! #(set-field! object field (c/value value)))
-            (when-not (c/label value)
-              (c/set-label! value (keyword (str (.getName (class object)) "-" (name field)))))
-            (c/add-watch!
-             value
-             [object field]
-             (fn [_ _ v]
-               (run-later! #(set-field! object field v))))
-            object)
-          (let [s! (setter (class object) field)]
-            (if-not s!
-              (throw (ex-info "setter not found"
-                              {:object object
-                               :class  (class object)
-                               :field  field
-                               :value  value}))
-              (try
-                (s! object value)
-                object
-                (catch Exception e
-                  (throw (ex-info "error while calling setter"
-                                  {:object object
-                                   :class  (class object)
-                                   :field  field
-                                   :value  value})))))))))))
+      :else
+      (try
+        (clojure.lang.Reflector/invokeInstanceMethod
+         object
+         (->> field
+              util/kebab->camel
+              util/capitalize-first
+              (str "set"))
+         (object-array [value]))
+        object
+        (catch Exception _
+          (if (c/cell-id? value)
+            (do
+              (run-later! #(set-field! object field (c/value value)))
+              (when-not (c/label value)
+                (c/set-label! value (keyword (str (.getName (class object)) "-" (name field)))))
+              (c/add-watch!
+               value
+               [object field]
+               (fn [_ _ v]
+                 (run-later! #(set-field! object field v))))
+              object)
+            (let [s! (setter (class object) field)]
+              (if-not s!
+                (throw (ex-info "setter not found"
+                                {:object object
+                                 :class  (class object)
+                                 :field  field
+                                 :value  value}))
+                (try
+                  (s! object value)
+                  object
+                  (catch Exception e
+                    (throw (ex-info "error while calling setter"
+                                    {:object object
+                                     :class  (class object)
+                                     :field  field
+                                     :value  value}))))))))))))
 
 (defn get-field [object field]
   (cond (and (= object :fx/top-level) (= field :children))
@@ -325,7 +326,7 @@
       (and (= :edit type) (contains? (set path) :fx/args))))
 
 ;;(require '[clojure.pprint :refer [pprint]])
-(defn update-tree
+(defn update-tree!
   [root diffs]
   ;;(pprint diffs)
   (let [diff-groups (partition-by #(vector (butlast (:path %)) (:struct %)) diffs)]
@@ -421,15 +422,16 @@
   (try (set (.getStyleClass component))
        (catch Exception _ #{})))
 
-(defn find-by-style-class [id clazz]
-  (->> (tree-seq children? children top-level)
+(defn find-by-style-class [root clazz]
+  (->> (tree-seq children? children root)
        (filter #(get (safe-style-class %) clazz))))
 
 (defn tree [root]
-  (merge
-   {:component root}
-   (when (children? root)
-     {:children (mapv tree (children root))})))
+  (when root
+    (merge
+     {:component root}
+     (when (children? root)
+       {:children (mapv tree (children root))}))))
 
 ;;;;; convenience functions ;;;;;
 

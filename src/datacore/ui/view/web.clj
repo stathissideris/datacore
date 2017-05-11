@@ -1,4 +1,5 @@
 (ns datacore.ui.view.web
+  (:refer-clojure :exclude [load])
   (:require [datacore.ui.view :as view]
             [datacore.ui.java-fx :as fx]
             [datacore.cells :as c]
