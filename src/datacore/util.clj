@@ -62,6 +62,12 @@
     (str (subs s 0 (- len 3)) "...")
     s))
 
+(defn index-of [x coll]
+  (first
+   (map first
+        (filter #(= (second %) x)
+                (map-indexed vector coll)))))
+
 (comment
   ;;incomplete diff impl
 

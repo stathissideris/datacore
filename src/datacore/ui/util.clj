@@ -34,4 +34,4 @@
                      :scene.layout/border-pane
                      {:center cell
                       :bottom (c/formula (fn [_] (fx/label (Date.) {:style "-fx-padding: 0.5em;"})) cell)})]})]
-       [:fx/setup fx/show]]))))
+       [:fx/setup fx/show!]]))))

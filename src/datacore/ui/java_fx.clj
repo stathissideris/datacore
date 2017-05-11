@@ -121,6 +121,10 @@
   (when focus?
     (run-later! #(.requestFocus o))))
 
+(defmethod fset :fx/event-filter
+  [o _ [filter fun]]
+  (.addEventFilter o filter (event-handler fun)))
+
 (defn set-field! [object field value]
   (when object
     (cond
@@ -130,7 +134,7 @@
       (int? field) ;;ObservableList
       (.set object field value)
 
-      (= "fx" (namespace field))
+      (namespace field)
       (fset object field value)
 
       :else
@@ -298,15 +302,13 @@
 
 (defn make-tree
   [tree]
-  (if (-> tree :fx/type (= :fx/unmanaged))
-    (:fx/component tree)
-    (walk/postwalk
-     (fn [item]
-       (if (:fx/type item)
-         (make (:fx/type item)
-               (dissoc item :fx/type))
-         item))
-     tree)))
+  (walk/postwalk
+   (fn [item]
+     (if (:fx/type item)
+       (make (:fx/type item)
+             (dissoc item :fx/type))
+       item))
+   tree))
 
 (defn unmanaged [component]
   {:fx/type      :fx/unmanaged
@@ -454,14 +456,17 @@
         {:fx/args [StageStyle/UNDECORATED]
          :scene (make :scene/scene {:fx/args [root]})}))
 
-(defn show [c] (.show c) c)
+(defn show! [c] (.show c) c)
 
 (defn has-style-class? [node ^String c]
   (and (instance? javafx.scene.Node node)
        (some? (not-empty (filter (partial = c) (seq (.getStyleClass node)))))))
 
+(defn parent [^Node node]
+  (when node (.getParent node)))
+
 (defn parents [^Node node]
-  (take-while (complement nil?) (rest (iterate #(when % (.getParent %)) node))))
+  (take-while (complement nil?) (rest (iterate parent node))))
 
 (defn focus-owner []
   (some-> top-level children first .getScene .focusOwnerProperty .get))

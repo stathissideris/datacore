@@ -16,6 +16,14 @@
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
+(defn focus! [component]
+  (if-let [c (some-> component
+                     (fx/find-by-style-class "main-component")
+                     (first))]
+    (fx/run-later! #(.requestFocus c))
+    (fx/run-later! #(.requestFocus component)))
+  component)
+
 (def focused-style (str "-fx-border-width: 4 4 4 4;"
                         "-fx-border-color: #155477;"))
 (def unfocused-style "-fx-border-width: 0 0 0 0;")
@@ -30,26 +38,29 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
+(defmethod fx/fset :dc/indicate-focus?
+  [component _ focused?]
+  (fx/set-field! component :style (if focused? focused-style unfocused-style)))
+
 (declare focus!)
-(defn- build-nothing [{:keys [id focused?]}]
-  {:fx/type          :scene.layout/border-pane
-   :id               id
-   :style-class      ["focus-indicator"]
-   :center           {:fx/type           :scene.control/label
-                      :style-class       ["label" "main-component"]
-                      :text              "Nothing to show"
-                      :focus-traversable true}
-   :on-mouse-clicked (fx/event-handler
-                      (fn [_]
-                        (focus! id)))})
+(defn- build-nothing []
+  {:fx/type            :scene.layout/border-pane
+   :style-class        ["focus-indicator"]
+   :center             {:fx/type           :scene.control/label
+                        :style-class       ["label" "main-component"]
+                        :text              "Nothing to show"
+                        :focus-traversable true}
+   :on-mouse-clicked   (fx/event-handler
+                        (fn [e]
+                          (focus! (.getTarget e))))})
 
 (defmethod build-view ::nothing
   [tree]
-  (build-nothing tree))
+  (build-nothing))
 
 (defmethod build-view nil
   [tree]
-  (build-nothing tree))
+  (build-nothing))
 
 (defmethod build-view ::split-pane
   [{:keys [orientation children]}]
@@ -83,10 +94,11 @@
    :undecorated StageStyle/UNDECORATED
    :transparent StageStyle/TRANSPARENT})
 
-(defn close-window! [component-id]
-  (state/swap-layout! update :children (fn [c] (remove #(= component-id (:id %)) c))))
-
 ;;TODO add this to scene: [:fx/setup #(style/add-stylesheet % "css/default.css")]
+
+(defn focus-indicator-parent [component]
+  (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))
+
 (defmethod build-view ::window
   [{:keys [id title dimensions root window-style]}]
   (let [[width height] dimensions
@@ -96,7 +108,11 @@
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
-                          (println "COMPONENT FOCUSED:" (fx/tree new))))
+                          (println "COMPONENT LOST FOCUS:" (fx/tree new))
+                          (println "COMPONENT FOCUSED:" (fx/tree new))
+                          (when new
+                            (fx/set-field! (focus-indicator-parent old) :dc/indicate-focus? false)
+                            (fx/set-field! (focus-indicator-parent new) :dc/indicate-focus? true))))
         stage-focus-l  (fx/change-listener
                         (fn [_ _ new]
                           (when new
@@ -116,37 +132,19 @@
                           :fx/setup #(-> % .focusOwnerProperty (.addListener scene-focus-l))}
                          (when (= window-style :transparent)
                            {:fill Color/TRANSPARENT}))
-      :on-close-request (fx/event-handler (fn [event]
-                                            (.consume event)
-                                            (close-window! id)))
-      :fx/setup         #(do
-                           (.addEventFilter
-                            %
-                            KeyEvent/ANY
-                            (fx/event-handler key-handler))
-                           (-> % .focusedProperty (.addListener stage-focus-l)))})))
-
-(defmethod build-view ::top-level
-  [{:keys [children]}]
-  {:fx/type :fx/top-level
-   :children (mapv build-view children)})
+      :fx/event-filter  [KeyEvent/ANY key-handler]
+      :fx/setup         #(-> % .focusedProperty (.addListener stage-focus-l))})))
 
 (defmethod build-view ::cell
   [{:keys [id cell focused?]}]
-  (-> (memo-component
-       id
-       #(let [view (build-view cell)]
-         (-> view
-             (fx/set-fields! {:id          id
-                              ;;TODO add style-class instead of replacing the whole list
-                              :style-class ["focus-indicator"]})
-             (doto
-               (.addEventFilter
-                MouseEvent/MOUSE_CLICKED
-                (fx/event-handler
-                 (fn [_]
-                   (focus! id)))))
-             fx/unmanaged)))))
+  (let [view (build-view cell)]
+    (-> view
+        (fx/set-fields!
+         {:id                 id
+          :style-class        ["focus-indicator"]
+          :dc/indicate-focus? focused?
+          :fx/event-filter    [MouseEvent/MOUSE_CLICKED #(focus! id)]})
+        fx/unmanaged)))
 
 ;;;;;;;;;;;;;;;;
 
@@ -170,19 +168,6 @@
   (some->> (tree-seq layout-children layout-children tree)
            (filter #(= id (:id %)))
            first))
-
-(defn focus! [focus-id]
-  (when focus-id
-    (state/swap-layout!
-     (fn [tree]
-       (walk/postwalk
-        (fn [{:keys [id] :as x}]
-          (if (map? x)
-            (if (= id focus-id)
-              (assoc x :focused? true)
-              (dissoc x :focused?))
-            x))
-        tree)))))
 
 (defn node-in-direction [node-id direction tree]
   (when node-id
@@ -222,38 +207,21 @@
       (or (some->> (filter covers-pos? candidates) first :id)
           (-> candidates first :id)))))
 
-(defn- set-focus-border! [component focused?]
-  (fx/set-field! component :style (if focused? focused-style unfocused-style)))
+(comment
+ (defn- handle-focus! [old-tree new-tree]
+   (let [c (some-> (find-focused old-tree)
+                   :id
+                   (fx/find-by-id))]
+     (when c (fx/set-field! c :indicate-focus false)))
 
-(defn- focus-cell-view-main! [component]
-  (if-let [c (some-> component
-                     (fx/find-by-style-class "main-component")
-                     (first))]
-    (fx/run-later! #(.requestFocus c))
-    (fx/run-later! #(.requestFocus component)))
-  component)
-
-(defn- handle-focus! [old-tree new-tree]
-  (let [c (some-> (find-focused old-tree)
-                  :id
-                  (fx/find-by-id))]
-    (when c (set-focus-border! c false)))
-
-  (let [focus-id (some-> (find-focused new-tree) :id)
-        c        (fx/find-by-id focus-id)]
-    (when (and c (not= c fx/top-level))
-      (set-focus-border! c true)
-      ;;TODO nasty hack: The delay is necessary when doing
-      ;;window/split. The component that should get the focus is
-      ;;momentarily without a Scene, so its request for focus is
-      ;;rejected and the focus is instead given to a different
-      ;;component. Not sure how to fix properly. See implementation of
-      ;;javafx.scene.Node/requestFocus
-      (timer/delayed 20 #(focus-cell-view-main! c)))))
-
-(defn update-layout! [old-tree new-tree]
-  (let [diff (util/tree-diff
-              (build-view old-tree)
-              (build-view new-tree))]
-    (fx/update-tree! :fx/top-level diff)
-    (handle-focus! old-tree new-tree)))
+   (let [focus-id (some-> (find-focused new-tree) :id)
+         c        (fx/find-by-id focus-id)]
+     (when (and c (not= c fx/top-level))
+       (fx/set-field! c :indicate-focus false)
+       ;;TODO nasty hack: The delay is necessary when doing
+       ;;window/split. The component that should get the focus is
+       ;;momentarily without a Scene, so its request for focus is
+       ;;rejected and the focus is instead given to a different
+       ;;component. Not sure how to fix properly. See implementation of
+       ;;javafx.scene.Node/requestFocus
+       (timer/delayed 20 #(focus-cell-view-main! c))))))

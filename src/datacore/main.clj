@@ -31,6 +31,4 @@
 
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))
 
-  (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (@#'view/update-layout! old new)))
-
-  (windows/new))
+  (windows/new-window))

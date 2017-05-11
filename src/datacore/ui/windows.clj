@@ -2,7 +2,10 @@
   (:require [clojure.walk :as walk]
             [clojure.zip :as zip]
             [datacore :refer [defin]]
+            [datacore.util :as util]
             [datacore.ui.view :as view]
+            [datacore.ui.timer :as timer]
+            [datacore.ui.java-fx :as fx]
             [datacore.cells :as c]
             [datacore.state :as state]))
 
@@ -52,19 +55,25 @@
 
 ;;split
 
+(defn- split-pane-index-of [item split-pane]
+  (util/index-of item (fx/get-field split-pane :items)))
+
 (defn- split [orientation]
-  (state/swap-layout!
-   (fn [tree]
-     (walk/postwalk
-      (fn [{:keys [focused?] :as item}]
-        (if focused?
-          {:type        ::view/split-pane
-           :orientation orientation
-           :children    [item
-                         {:type       ::view/nothing
-                          :focusable? true}]}
-          item))
-      tree))))
+  (let [focused    (view/focus-indicator-parent (fx/focus-owner))
+        parent     (fx/parent focused)
+        split-pane
+        (fx/make-tree
+         {:fx/type     :scene.control/split-pane
+          :items       [focused (view/build-view {:type ::view/nothing})]
+          :orientation (if (= orientation :horizontal)
+                         javafx.geometry.Orientation/HORIZONTAL
+                         javafx.geometry.Orientation/VERTICAL)})]
+    (if (fx/has-style-class? parent "root")
+      (fx/set-field! parent :center split-pane)
+      (let [parent (fx/parent parent)
+            idx    (split-pane-index-of focused parent)]
+        (.set (.getItems parent) idx split-pane)))
+    (timer/delayed 20 #(view/focus! focused))))
 
 (defin split-below
   {:alias :windows/split-below}
@@ -144,17 +153,17 @@
 
 ;; multiple windows
 
-(defin new
+(defin new-window
   {:alias :windows/new}
   []
-  (state/swap-layout!
-   (fn [tree]
-     (update
-      tree :children
-      conj
-      {:type       :datacore.ui.view/window
-       :title      "datacore"
-       :dimensions [1000 800]
-       :root       {:type       :datacore.ui.view/nothing
-                    :focused?   true
-                    :focusable? true}}))))
+  (fx/run-later!
+   #(fx/show!
+     (fx/make-tree
+      (view/build-view
+       {:type       :datacore.ui.view/window
+        :title      "datacore"
+        :dimensions [1000 800]
+        :root       (view/build-view
+                     {:type       :datacore.ui.view/nothing
+                      :focused?   true
+                      :focusable? true})})))))
