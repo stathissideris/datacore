@@ -23,24 +23,11 @@
 (defin maximize
   {:alias :windows/maximize}
   []
-  (state/swap-layout!
-   (fn [tree]
-     (update
-      tree :children
-      (fn [ch]
-        (map #(if-let [focused (view/find-focused %)]
-                (assoc % :root focused)
-                %) ch))))))
-
-(defn- focus-first-focusable [tree]
-  (loop [z (view/layout-zipper tree)]
-    (let [node (zip/node z)]
-      (cond (zip/end? z)
-            (zip/root z)
-            (:focusable? node)
-            (zip/root (zip/replace z (assoc node :focused? true)))
-            :else
-            (recur (zip/next z))))))
+  (let [focused (view/focus-indicator-parent (fx/focus-owner))
+        parent  (fx/parent focused)]
+    (when-not (fx/has-style-class? parent "root")
+      (let [root (some->> (fx/parents focused) (filter #(fx/has-style-class? % "root")) first)]
+        (fx/set-field! root :center focused)))))
 
 (defin delete
   {:alias :windows/delete}
