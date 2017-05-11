@@ -8,8 +8,9 @@
 ** DONE Maximize
 ** DONE New window
 ** TODO Close window
-** TODO Balance windows
+** TODO Balance window
 ** TODO Move splitter with keyboard
+** TODO Move focus between windows
 ** TODO Bug: Fix id of "minibuffer" unmanaged component (appears on in last window)
 ** TODO Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
