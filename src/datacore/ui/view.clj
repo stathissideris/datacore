@@ -101,7 +101,8 @@
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
-                          (println "COMPONENT FOCUSED:" new)))
+                          (println "COMPONENT FOCUSED:" new)
+                          (some->> new fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first .getId focus!)))
         stage-focus-l  (fx/change-listener
                         (fn [_ _ new]
                           (when new
