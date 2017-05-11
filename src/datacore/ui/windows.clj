@@ -9,6 +9,17 @@
             [datacore.cells :as c]
             [datacore.state :as state]))
 
+(defn- split-pane-index-of [item split-pane]
+  (util/index-of item (fx/get-field split-pane :items)))
+
+(defn- replace! [reference-component new-component]
+  (let [parent (fx/parent reference-component)]
+    (if (fx/has-style-class? parent "root")
+      (fx/set-field! parent :center new-component)
+      (let [parent (fx/parent parent)
+            idx    (split-pane-index-of reference-component parent)]
+        (.set (.getItems parent) idx new-component)))))
+
 (defin maximize
   {:alias :windows/maximize}
   []
@@ -34,19 +45,12 @@
 (defin delete
   {:alias :windows/delete}
   []
-  (let [tree    (c/value state/layout-tree)
-        focused (view/find-focused tree)]
-    (state/swap-layout!
-     (fn [tree]
-       (walk/postwalk
-        (fn [item]
-          (if (map? item)
-            (if-let [to-delete (some->> item :children (filter #(= (:id focused) (:id %))) first)]
-              (let [other (some->> item :children (remove #(= (:id focused) (:id %))) first)]
-                (focus-first-focusable other))
-              item)
-            item))
-        tree)))))
+  (let [focused (view/focus-indicator-parent (fx/focus-owner))
+        parent  (fx/parent focused)]
+    (when-not (fx/has-style-class? parent "root")
+      (let [split-pane (fx/parent parent)
+            other      (some->> (.getItems split-pane) (remove #(= % focused)) first)]
+        (replace! split-pane other)))))
 
 (defin balance
   {:alias :windows/balance}
@@ -55,12 +59,8 @@
 
 ;;split
 
-(defn- split-pane-index-of [item split-pane]
-  (util/index-of item (fx/get-field split-pane :items)))
-
 (defn- split [orientation]
   (let [focused    (view/focus-indicator-parent (fx/focus-owner))
-        parent     (fx/parent focused)
         split-pane
         (fx/make-tree
          {:fx/type     :scene.control/split-pane
@@ -68,11 +68,7 @@
           :orientation (if (= orientation :horizontal)
                          javafx.geometry.Orientation/HORIZONTAL
                          javafx.geometry.Orientation/VERTICAL)})]
-    (if (fx/has-style-class? parent "root")
-      (fx/set-field! parent :center split-pane)
-      (let [parent (fx/parent parent)
-            idx    (split-pane-index-of focused parent)]
-        (.set (.getItems parent) idx split-pane)))
+    (replace! focused split-pane)
     (timer/delayed 20 #(view/focus! focused))))
 
 (defin split-below
