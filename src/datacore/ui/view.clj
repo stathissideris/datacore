@@ -9,6 +9,7 @@
             [datacore.ui.keys :as keys]
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.message :as message]
+            [datacore.ui.timer :as timer]
             [datacore.state :as state]
             [clojure.walk :as walk])
   (:import [javafx.scene.input KeyEvent MouseEvent]
@@ -86,13 +87,6 @@
   (state/swap-layout! update :children (fn [c] (remove #(= component-id (:id %)) c))))
 
 ;;TODO add this to scene: [:fx/setup #(style/add-stylesheet % "css/default.css")]
-(declare find-focused)
-(declare focus-cell-view-main!)
-(declare set-focus-border!)
-
-(defn- focus-indicator-parent [component]
-  (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))
-
 (defmethod build-view ::window
   [{:keys [id title dimensions root window-style]}]
   (let [[width height] dimensions
@@ -102,17 +96,7 @@
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
-                          (println "COMPONENT FOCUSED:" (fx/tree new))
-                          ;; (when new
-                          ;;   (let [correct-id (:id (find-focused (c/value state/layout-tree)))
-                          ;;         actual-id (some-> (focus-indicator-parent new) .getId)]
-                          ;;     (if (not= actual-id correct-id)
-                          ;;       (let [c (fx/find-by-id correct-id)]
-                          ;;         (prn '----will-correct-focus----)
-                          ;;         (set-focus-border! c true)
-                          ;;         (focus-cell-view-main! c)))))
-                          ;;(some->> new fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first .getId focus!)
-                          ))
+                          (println "COMPONENT FOCUSED:" (fx/tree new))))
         stage-focus-l  (fx/change-listener
                         (fn [_ _ new]
                           (when new
@@ -238,7 +222,7 @@
       (or (some->> (filter covers-pos? candidates) first :id)
           (-> candidates first :id)))))
 
-(defn set-focus-border! [component focused?]
+(defn- set-focus-border! [component focused?]
   (fx/set-field! component :style (if focused? focused-style unfocused-style)))
 
 (defn- focus-cell-view-main! [component]
@@ -249,18 +233,27 @@
     (fx/run-later! #(.requestFocus component)))
   component)
 
+(defn- handle-focus! [old-tree new-tree]
+  (let [c (some-> (find-focused old-tree)
+                  :id
+                  (fx/find-by-id))]
+    (when c (set-focus-border! c false)))
+
+  (let [focus-id (some-> (find-focused new-tree) :id)
+        c        (fx/find-by-id focus-id)]
+    (when (and c (not= c fx/top-level))
+      (set-focus-border! c true)
+      ;;TODO nasty hack: The delay is necessary when doing
+      ;;window/split. The component that should get the focus is
+      ;;momentarily without a Scene, so its request for focus is
+      ;;rejected and the focus is instead given to a different
+      ;;component. Not sure how to fix properly. See implementation of
+      ;;javafx.scene.Node/requestFocus
+      (timer/delayed 20 #(focus-cell-view-main! c)))))
+
 (defn update-layout! [old-tree new-tree]
   (let [diff (util/tree-diff
               (build-view old-tree)
               (build-view new-tree))]
     (fx/update-tree! :fx/top-level diff)
-
-    (let [c (some-> (find-focused old-tree)
-                    :id
-                    (fx/find-by-id))]
-      (when c (set-focus-border! c false)))
-    (let [focus-id (some-> (find-focused new-tree) :id)
-          c        (fx/find-by-id focus-id)]
-      (when (and c (not= c fx/top-level))
-        (set-focus-border! c true)
-        (focus-cell-view-main! c)))))
+    (handle-focus! old-tree new-tree)))

@@ -2,10 +2,10 @@
 ** DONE Swap views
 ** DONE Fix move focus bug (skips closest)
 ** DONE Focus on mouse click
-** TODO Table steals focus when window is split
+** DONE Table steals focus when window is split
 ** TODO Test multiple windows
 ** TODO Fix id of "minibuffer" unmanaged component
-** TODO Keymap based on mode
+** TODO Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
 ** TODO Cells vizualisation
 ** TODO Make view cells output stuff such as selection etc
