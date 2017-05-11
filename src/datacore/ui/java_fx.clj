@@ -108,6 +108,20 @@
 (defn get-field [object field-kw]
   ((getter (class object) field-kw) object))
 
+(defmulti fset (fn [_ field _] field))
+
+(defmethod fset :fx/setup
+  [o _ value]
+  (value o)
+  o)
+
+;;(def set-focused! (declared-method javafx.scene.Node "setFocused" [Boolean/TYPE]))
+(defmethod fset :fx/focused?
+  [o _ focus?]
+  (if focus?
+    (.requestFocus o)
+    (some-> o .getScene .getRoot .requestFocus)))
+
 (defn set-field! [object field value]
   (cond
     (and (= object :fx/top-level) (= field :children))
@@ -115,6 +129,9 @@
 
     (int? field) ;;ObservableList
     (.set object field value)
+
+    (= "fx" (namespace field))
+    (fset object field value)
 
     :else
     (try
@@ -276,10 +293,7 @@
                    (new-instance class-or-instance (make-args spec))
                    class-or-instance)]
            (doseq [[field value :as entry] (make-other spec)]
-             (when entry
-               (if (= field :fx/setup)
-                 (value o)
-                 (set-field! o field value))))
+             (when entry (set-field! o field value)))
            o))))
 
 (defn make-tree
@@ -297,6 +311,8 @@
 (defn unmanaged [component]
   {:fx/type      :fx/unmanaged
    :fx/component component})
+
+;;;;; "React" ;;;;;
 
 (defn- type-change? [diff-group]
   (some?
@@ -401,6 +417,14 @@
   (->> (tree-seq children? children top-level)
        (filter #(= id (safe-id %)))
        first))
+
+(defn- safe-style-class [component]
+  (try (set (.getStyleClass component))
+       (catch Exception _ #{})))
+
+(defn find-by-style-class [id clazz]
+  (->> (tree-seq children? children top-level)
+       (filter #(get (safe-style-class %) clazz))))
 
 ;;;;; convenience functions ;;;;;
 

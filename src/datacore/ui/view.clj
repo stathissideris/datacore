@@ -36,16 +36,17 @@
   {:fx/type :scene.control/label
    :text    text})
 
-(declare focus)
+(declare focus!)
 (defn- build-nothing [{:keys [id focused?]}]
   {:fx/type          :scene.layout/border-pane
    :id               id
-   :style-class      ["focusable"]
+   :style-class      ["focus-indicator"]
    :style            (if focused? focused-style unfocused-style)
    :center           (label "Nothing to show")
+   :fx/focused?      focused?
    :on-mouse-clicked (fx/event-handler
                       (fn [_]
-                        (focus id)))})
+                        (focus! id)))})
 
 (defmethod build-view ::nothing
   [tree]
@@ -142,17 +143,24 @@
   [{:keys [id cell focused?]}]
   (-> (memo-component
        id
-       #(-> cell
-            build-view
-            (fx/set-fields! {:id               id
-                             ;;TODO add style-class instead of replacing the whole list
-                             :style-class      ["focusable"]
-                             :style            (if focused? focused-style unfocused-style)})
-            (doto
-              (.addEventFilter
-               MouseEvent/MOUSE_CLICKED
-               (fx/event-handler (fn [_] (focus id)))))
-            fx/unmanaged))
+       #(let [view (build-view cell)]
+         (-> view
+             (fx/set-fields! {:id          id
+                              ;;TODO add style-class instead of replacing the whole list
+                              :style-class ["focus-indicator"]
+                              :fx/focused? focused?
+                              :style       (if focused? focused-style unfocused-style)})
+             (doto
+               (.addEventFilter
+                MouseEvent/MOUSE_CLICKED
+                (fx/event-handler
+                 (fn [_]
+                   (some-> view
+                           (fx/find-by-style-class "main-component")
+                           (first)
+                           (fx/fset :fx/focused? true))
+                   (focus! id)))))
+             fx/unmanaged)))
       (update :fx/component set-focus-border! focused?)))
 
 ;;;;;;;;;;;;;;;;
@@ -178,7 +186,7 @@
            (filter #(= id (:id %)))
            first))
 
-(defn focus [focus-id]
+(defn focus! [focus-id]
   (when focus-id
     (state/swap-layout!
      (fn [tree]
