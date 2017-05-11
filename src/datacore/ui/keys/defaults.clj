@@ -15,7 +15,8 @@
     {:up    :windows/focus-up
      :down  :windows/focus-down
      :left  :windows/focus-left
-     :right :windows/focus-right}}
+     :right :windows/focus-right
+     :n     :windows/new}}
    {:f2
     {:up    :windows/swap-up
      :down  :windows/swap-down

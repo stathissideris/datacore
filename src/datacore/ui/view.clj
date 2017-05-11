@@ -90,7 +90,7 @@
 (defmethod build-view ::window
   [{:keys [id title dimensions root window-style]}]
   (let [[width height] dimensions
-        key-handler    (keys/key-handler default-keys/root-keymap)
+        key-handler    (keys/key-handler #'default-keys/root-keymap)
         scene-args     (concat
                         [(build-view ::nothing)]
                         (when dimensions [width height]))

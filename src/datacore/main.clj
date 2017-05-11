@@ -3,7 +3,8 @@
             [datacore.cells :as c]
             [datacore.state :as state]
             [datacore.ui.view :as view]
-            [datacore.ui.java-fx :as fx]))
+            [datacore.ui.java-fx :as fx]
+            [datacore.ui.windows :as windows]))
 
 (defmacro with-err-str
   "Evaluates exprs in a context in which *err* is bound to a fresh
@@ -32,10 +33,4 @@
 
   (c/add-watch! state/layout-tree :layout-watch (fn [_ old new] (@#'view/update-layout! old new)))
 
-  (state/swap-layout! update :children conj
-                      {:type       :datacore.ui.view/window
-                       :title      "datacore"
-                       :dimensions [1000 800]
-                       :root       {:type       :datacore.ui.view/nothing
-                                    :focused?   true
-                                    :focusable? true}}))
+  (windows/new))

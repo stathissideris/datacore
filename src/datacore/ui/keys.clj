@@ -119,6 +119,7 @@
       (let [{:keys [type] :as event} (event->map fx-event)
             press                    (event->press event)
             new-chain                (conj (-> key-input c/value :chain) press)
+            keymap                   (if (var? keymap) (deref keymap) keymap)
             match                    (get-in keymap new-chain)]
         (cond
           ;;also consume :key-typed and :key-released equivalents of

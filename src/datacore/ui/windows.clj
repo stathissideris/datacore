@@ -141,3 +141,20 @@
   {:alias :windows/swap-down}
   []
   (swap-to-direction :down))
+
+;; multiple windows
+
+(defin new
+  {:alias :windows/new}
+  []
+  (state/swap-layout!
+   (fn [tree]
+     (update
+      tree :children
+      conj
+      {:type       :datacore.ui.view/window
+       :title      "datacore"
+       :dimensions [1000 800]
+       :root       {:type       :datacore.ui.view/nothing
+                    :focused?   true
+                    :focusable? true}}))))
