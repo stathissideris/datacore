@@ -118,9 +118,8 @@
 ;;(def set-focused! (declared-method javafx.scene.Node "setFocused" [Boolean/TYPE]))
 (defmethod fset :fx/focused?
   [o _ focus?]
-  (if focus?
-    (.requestFocus o)
-    (some-> o .getScene .getRoot .requestFocus)))
+  (when focus?
+    (.requestFocus o)))
 
 (defn set-field! [object field value]
   (cond
@@ -325,7 +324,7 @@
   (or (and (= :edit type) (contains? (set path) :fx/setup))
       (and (= :edit type) (contains? (set path) :fx/args))))
 
-(require '[clojure.pprint :refer [pprint]])
+;;(require '[clojure.pprint :refer [pprint]])
 (defn update-tree
   [root diffs]
   ;;(pprint diffs)
@@ -426,6 +425,12 @@
   (->> (tree-seq children? children top-level)
        (filter #(get (safe-style-class %) clazz))))
 
+(defn tree [root]
+  (merge
+   {:component root}
+   (when (children? root)
+     {:children (mapv tree (children root))})))
+
 ;;;;; convenience functions ;;;;;
 
 (defn label
@@ -455,6 +460,9 @@
 
 (defn parents [^Node node]
   (take-while (complement nil?) (rest (iterate #(when % (.getParent %)) node))))
+
+(defn focus-owner []
+  (some-> top-level children first .getScene .focusOwnerProperty .get))
 
 (comment
   (make

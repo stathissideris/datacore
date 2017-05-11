@@ -118,9 +118,7 @@
                          {:fx/type  :scene/scene
                           :fx/args  scene-args
                           :root     (build-window-contents root message/current-message)
-                          :fx/setup #(do
-                                       (-> % .focusOwnerProperty (.addListener scene-focus-l))
-                                       %)}
+                          :fx/setup #(-> % .focusOwnerProperty (.addListener scene-focus-l))}
                          (when (= window-style :transparent)
                            {:fill Color/TRANSPARENT}))
       :on-close-request (fx/event-handler (fn [event]
@@ -131,13 +129,24 @@
                             %
                             KeyEvent/ANY
                             (fx/event-handler key-handler))
-                           (-> % .focusedProperty (.addListener stage-focus-l))
-                           %)})))
+                           (-> % .focusedProperty (.addListener stage-focus-l)))})))
 
 (defmethod build-view ::top-level
   [{:keys [children]}]
   {:fx/type :fx/top-level
    :children (mapv build-view children)})
+
+(defn- focus-cell-view-main! [component focused?]
+  (when focused?
+    (prn 'will-focus
+         (some-> component
+            (fx/find-by-style-class "main-component")
+            (first)))
+    (let [c (some-> component
+                    (fx/find-by-style-class "main-component")
+                    (first))]
+      (fx/run-later! #(.requestFocus c))))
+  component)
 
 (defmethod build-view ::cell
   [{:keys [id cell focused?]}]
@@ -147,21 +156,17 @@
          (-> view
              (fx/set-fields! {:id          id
                               ;;TODO add style-class instead of replacing the whole list
-                              :style-class ["focus-indicator"]
-                              :fx/focused? focused?
-                              :style       (if focused? focused-style unfocused-style)})
+                              :style-class ["focus-indicator"]})
              (doto
                (.addEventFilter
                 MouseEvent/MOUSE_CLICKED
                 (fx/event-handler
                  (fn [_]
-                   (some-> view
-                           (fx/find-by-style-class "main-component")
-                           (first)
-                           (fx/fset :fx/focused? true))
-                   (focus! id)))))
+                   (focus! id)
+                   (focus-cell-view-main! view true)))))
              fx/unmanaged)))
-      (update :fx/component set-focus-border! focused?)))
+      (update :fx/component set-focus-border! focused?)
+      (update :fx/component focus-cell-view-main! focused?)))
 
 ;;;;;;;;;;;;;;;;
 

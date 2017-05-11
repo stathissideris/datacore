@@ -1,7 +1,8 @@
 * To do
 ** DONE Swap views
 ** DONE Fix move focus bug (skips closest)
-** TODO Focus on mouse click
+** DONE Focus on mouse click
+** TODO Table steals focus when window is split
 ** TODO Test multiple windows
 ** TODO Fix id of "minibuffer" unmanaged component
 ** TODO Keymap based on mode

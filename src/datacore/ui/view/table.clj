@@ -7,7 +7,8 @@
             [datacore.ui.observable :refer [observable-list]])
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
-           [java.util Date]))
+           [java.util Date]
+           [javafx.scene.control SelectionMode]))
 
 (defn column [name cell-value-fn]
   (fx/make
@@ -36,7 +37,18 @@
 
 (defmethod view/build-view :datacore.ui.view/table
   [view-cell]
-  (let [table     (fx/make :scene.control/table-view)
+  (let [table     (fx/make :scene.control/table-view
+                           {:fx/setup
+                            (fn [table]
+                              (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
+                              (fx/set-field! table :style-class ["table-view" "main-component"])
+                              (-> table
+                                  .getSelectionModel
+                                  .getSelectedItems
+                                  (.addListener
+                                   (fx/list-change-listener
+                                    (fn [selected]
+                                      (println "TABLE SELECTION: " (pr-str selected)))))))})
         set-data! (fn [{:keys [columns column-labels data]}]
                     (fx/run-later!
                      #(doto table
