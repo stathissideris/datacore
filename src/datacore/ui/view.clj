@@ -169,13 +169,12 @@
            (filter #(= id (:id %)))
            first))
 
-(defn node-in-direction [node-id direction tree]
-  (when node-id
-    (let [bounds-for-id #(-> % fx/find-by-id fx/bounds-in-screen)
-          {:keys [min-x min-y
+(defn focusable-in-direction [component direction]
+  (when component
+    (let [{:keys [min-x min-y
                   max-x max-y
                   width height]
-           :as bbox}    (bounds-for-id node-id)
+           :as bbox}    (fx/bounds-in-screen component)
           hor?          (contains? #{:left :right} direction)
           min           (if hor? min-x min-y)
           #_             (do (prn 'BBOX bbox)
@@ -184,28 +183,27 @@
           pos           (if hor?
                           (+ min-y (/ height 2))
                           (+ min-x (/ width 2)))
-          in-direction? (fn [{:keys [id]}]
+          in-direction? (fn [component]
                           (let [{:keys [min-x min-y max-x max-y] :as bbox}
-                                (bounds-for-id id)]
+                                (fx/bounds-in-screen component)]
                             (condp = direction
                               :up    (<= max-y min)
                               :down  (<= max min-y)
                               :left  (<= max-x min)
                               :right (<= max min-x))))
-          covers-pos?   (fn [{:keys [id]}]
+          covers-pos?   (fn [component]
                           (let [{:keys [min-x min-y max-x max-y]}
-                                (geom/extend-bbox (bounds-for-id id) 20)] ;;extend to avoid getting stuck on separators
+                                (geom/extend-bbox (fx/bounds-in-screen component) 20)] ;;extend to avoid getting stuck on separators
                             (if hor?
                               (<= min-y pos max-y)
                               (<= min-x pos max-x))))
           candidates    (some->>
-                         (tree-seq layout-children layout-children tree)
-                         (filter :focusable?)
-                         (remove #(= node-id (:id %)))
+                         (fx/find-by-style-class fx/top-level "focus-indicator")
+                         (remove #(= % component))
                          (filter (partial in-direction?))
-                         (sort-by #(geom/bbox-distance bbox (bounds-for-id (:id %)))))]
-      (or (some->> (filter covers-pos? candidates) first :id)
-          (-> candidates first :id)))))
+                         (sort-by #(geom/bbox-distance bbox (fx/bounds-in-screen %))))]
+      (or (some->> (filter covers-pos? candidates) first)
+          (first candidates)))))
 
 (comment
  (defn- handle-focus! [old-tree new-tree]
