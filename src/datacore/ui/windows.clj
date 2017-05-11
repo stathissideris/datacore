@@ -9,7 +9,14 @@
 (defin maximize
   {:alias :windows/maximize}
   []
-  (println :maximize))
+  (state/swap-layout!
+   (fn [tree]
+     (update
+      tree :children
+      (fn [ch]
+        (map #(if-let [focused (view/find-focused %)]
+                (assoc % :root focused)
+                %) ch))))))
 
 (defn- focus-first-focusable [tree]
   (loop [z (view/layout-zipper tree)]

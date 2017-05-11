@@ -4,6 +4,11 @@
 ** DONE Focus on mouse click
 ** DONE Table steals focus when window is split
 ** TODO Test multiple windows
+** DONE Maximize
+** TODO New window
+** TODO Close window
+** TODO Balance windows
+** TODO Move splitter with keyboard
 ** TODO Fix id of "minibuffer" unmanaged component
 ** TODO Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
