@@ -16,33 +16,26 @@
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
+(defmulti build-view (fn [x] (or (:type x)
+                                 (when (c/cell-id? x) (:type (c/value x))))))
+
 (defn focus! [component]
-  (if-let [c (some-> component
-                     (fx/find-by-style-class "main-component")
-                     (first))]
-    (fx/run-later! #(.requestFocus c))
-    (fx/run-later! #(.requestFocus component)))
+  (when component
+   (if-let [c (some-> component
+                      (fx/find-by-style-class "main-component")
+                      (first))]
+     (fx/run-later! #(.requestFocus c))
+     (fx/run-later! #(.requestFocus component))))
   component)
 
 (def focused-style (str "-fx-border-width: 4 4 4 4;"
                         "-fx-border-color: #155477;"))
 (def unfocused-style "-fx-border-width: 0 0 0 0;")
 
-(def components-cache (atom {}))
-(defn- memo-component [id fun]
-  (or (-> components-cache deref (get id))
-      (let [res (fun)]
-        (swap! components-cache assoc id res)
-        res)))
-
-(defmulti build-view (fn [x] (or (:type x)
-                                 (when (c/cell-id? x) (:type (c/value x))))))
-
 (defmethod fx/fset :dc/indicate-focus?
   [component _ focused?]
   (fx/set-field! component :style (if focused? focused-style unfocused-style)))
 
-(declare focus!)
 (defn- build-nothing []
   {:fx/type            :scene.layout/border-pane
    :style-class        ["focus-indicator"]
@@ -71,16 +64,12 @@
                   javafx.geometry.Orientation/VERTICAL)})
 
 (defn- message-line []
-  (memo-component
-   "message-line"
-   #(->> {:fx/type   :scene.control/label
-          :text      (c/formula :msg message/current-message)
-          :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
-          :text-fill (c/formula (comp {:message Color/BLACK
-                                       :error   (Color/web "0xF57000")}
-                                      :type) message/current-message)}
-         fx/make-tree
-         fx/unmanaged)))
+  {:fx/type   :scene.control/label
+   :text      (c/formula :msg message/current-message)
+   :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
+   :text-fill (c/formula (comp {:message Color/BLACK
+                                :error   (Color/web "0xF57000")}
+                               :type) message/current-message)})
 
 (defn build-window-contents [tree message]
   {:fx/type :scene.layout/border-pane
@@ -136,14 +125,14 @@
       :fx/setup         #(-> % .focusedProperty (.addListener stage-focus-l))})))
 
 (defmethod build-view ::cell
-  [{:keys [id cell focused?]}]
+  [{:keys [cell focused?]}]
   (let [view (build-view cell)]
     (-> view
         (fx/set-fields!
-         {:id                 id
+         {
           :style-class        ["focus-indicator"]
           :dc/indicate-focus? focused?
-          :fx/event-filter    [MouseEvent/MOUSE_CLICKED #(focus! id)]})
+          :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [e] (focus! (.getTarget e)))]})
         fx/unmanaged)))
 
 ;;;;;;;;;;;;;;;;
@@ -204,22 +193,3 @@
                          (sort-by #(geom/bbox-distance bbox (fx/bounds-in-screen %))))]
       (or (some->> (filter covers-pos? candidates) first)
           (first candidates)))))
-
-(comment
- (defn- handle-focus! [old-tree new-tree]
-   (let [c (some-> (find-focused old-tree)
-                   :id
-                   (fx/find-by-id))]
-     (when c (fx/set-field! c :indicate-focus false)))
-
-   (let [focus-id (some-> (find-focused new-tree) :id)
-         c        (fx/find-by-id focus-id)]
-     (when (and c (not= c fx/top-level))
-       (fx/set-field! c :indicate-focus false)
-       ;;TODO nasty hack: The delay is necessary when doing
-       ;;window/split. The component that should get the focus is
-       ;;momentarily without a Scene, so its request for focus is
-       ;;rejected and the focus is instead given to a different
-       ;;component. Not sure how to fix properly. See implementation of
-       ;;javafx.scene.Node/requestFocus
-       (timer/delayed 20 #(focus-cell-view-main! c))))))

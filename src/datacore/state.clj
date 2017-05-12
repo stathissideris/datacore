@@ -3,56 +3,43 @@
             [datacore.util :as util]
             [clojure.walk :as walk]))
 
-(defcell layout-tree {:type     :datacore.ui.view/top-level
-                      :id       "n/a"
-                      :children []})
 (defcell window->focused-component {})
 (defcell focus nil)
 
-(defn- assign-layout-ids [tree]
-  (walk/postwalk
-   (fn [x]
-     (if (and (map? x) (:type x) (not (:id x)))
-       (assoc x :id (str (java.util.UUID/randomUUID)))
-       x))
-   tree))
-
-;;TODO make swap-layout! remember focus - unless there is a new focus
-(defn swap-layout! [fun & args]
-  (c/swap! layout-tree
-           (fn [old-tree]
-             (-> (apply fun old-tree args)
-                 (update :children vec)
-                 (assign-layout-ids)))))
+(do
+  (require '[datacore.ui.java-fx :as fx])
+  (require '[datacore.ui.windows :as windows])
+  (require '[datacore.ui.view :as view])
+  (require '[datacore.source.csv :as csv])
+  (require '[datacore.ui.java-fx :as fx])
+  (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
+  (def csv-view (csv/default-view csv))
+  )
 
 (comment
-  (datacore.main/init)
-
-  (do
-    (require '[datacore.source.csv :as csv])
-    (require '[datacore.ui.java-fx :as fx])
-    (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
-    (def csv-view (csv/default-view csv))
-    )
-
-  (swap-layout! identity)
+  (windows/new-window)
 
   ;;show cell in window
-  (swap-layout! assoc-in [:children 0 :root]
-                {:type       :datacore.ui.view/cell
-                 :cell       csv-view
-                 :focused?   true
-                 :focusable? true})
+  (fx/run-later!
+   #(windows/replace-focused!
+     (fx/make-tree
+      (view/build-view
+       {:type       :datacore.ui.view/cell
+        :cell       csv-view
+        :focused?   true
+        :focusable? true}))))
 
   (do
     (require '[datacore.ui.view.web :as web])
     (c/defcell web-input {})
     (def web-view (web/view web-input)))
-  (swap-layout! assoc-in [:children 0 :root]
-                {:type :datacore.ui.view/cell
-                 :cell web-view
-                 :focused? true
-                 :focusable? true})
+  (windows/replace-focused!
+   (fx/make-tree
+    (view/build-view
+     {:type       :datacore.ui.view/cell
+      :cell       csv-view
+      :focused?   true
+      :focusable? true})))
   (c/reset! web-input {:url "http://www.imdb.com/title/tt0088247/"})
   (c/reset! web-input {:url "http://www.imdb.com/title/tt0478126/"})
   (c/reset! web-input {:url "http://chart.apis.google.com/chart?cht=bvs&chs=500x250&chd=t:100,200,300,400,500,600,700&chds=0,700&chl=Savings||Checking||Money"})

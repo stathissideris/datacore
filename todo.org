@@ -3,15 +3,14 @@
 ** DONE Fix move focus bug (skips closest)
 ** DONE Focus on mouse click
 ** DONE Bug: Table steals focus when window is split
-** TODO Bug: window position/size is not reflected in state
-   http://stackoverflow.com/questions/38216268/how-to-listen-resize-event-of-stage-in-javafx
 ** DONE Maximize
-** DONE New window
+** DONE Balance window
+** DONE Bug: Fix id of "minibuffer" unmanaged component (appears on in last window)
+** TODO New window
 ** TODO Close window
-** TODO Balance window
 ** TODO Move splitter with keyboard
 ** TODO Move focus between windows
-** TODO Bug: Fix id of "minibuffer" unmanaged component (appears on in last window)
+** TODO Bug: first window always has focus
 ** TODO Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
 ** TODO Cells vizualisation

@@ -12,15 +12,25 @@
 (defn- split-pane-index-of [item split-pane]
   (util/index-of item (fx/get-field split-pane :items)))
 
+(defn- replace-in-split-pane! [split-pane old new]
+  (let [idx (split-pane-index-of old split-pane)]
+    (when-not idx
+      (throw (ex-info "Cannot find component in split-pane"
+                      {:old-component (fx/tree old)
+                       :new-component (fx/tree new)
+                       :split-pane    (fx/tree split-pane)})))
+    (.set (.getItems split-pane) (int idx) new)))
+
 (defn- replace! [reference-component new-component]
   (let [parent (fx/parent reference-component)]
     (if (fx/has-style-class? parent "root")
       (fx/set-field! parent :center new-component)
-      (let [parent (fx/parent parent)
-            idx    (split-pane-index-of reference-component parent)]
-        (.set (.getItems parent) idx new-component)))))
+      (replace-in-split-pane! (fx/parent parent) reference-component new-component))))
 
-(defn get-root [component]
+(defn replace-focused! [component]
+  (replace! (view/focus-indicator-parent (fx/focus-owner)) component))
+
+(defn- get-root [component]
   (some->> (fx/parents component) (filter #(fx/has-style-class? % "root")) first))
 
 (defin maximize
@@ -101,42 +111,42 @@
 
 ;;swap
 
-;; (defn- swap-to-direction [direction]
-;;   (let [tree    (c/value state/layout-tree)
-;;         focused (view/find-focused tree)
-;;         swap-id (when focused (view/node-in-direction (:id focused) direction tree))
-;;         swapped (when swap-id (view/find-by-id tree swap-id))]
-;;     (when (and focused swap-id)
-;;       (state/swap-layout!
-;;        (fn [tree]
-;;          (walk/postwalk
-;;           (fn [{:keys [id] :as x}]
-;;             (if (map? x)
-;;               (cond (= id swap-id) focused
-;;                     (= id (:id focused)) swapped
-;;                     :else x)
-;;               x))
-;;           tree))))))
-;;
-;; (defin swap-left
-;;   {:alias :windows/swap-left}
-;;   []
-;;   (swap-to-direction :left))
-;;
-;; (defin swap-right
-;;   {:alias :windows/swap-right}
-;;   []
-;;   (swap-to-direction :right))
-;;
-;; (defin swap-up
-;;   {:alias :windows/swap-up}
-;;   []
-;;   (swap-to-direction :up))
-;;
-;; (defin swap-down
-;;   {:alias :windows/swap-down}
-;;   []
-;;   (swap-to-direction :down))
+(defn- swap-to-direction [direction]
+  (let [focused (view/focus-indicator-parent (fx/focus-owner))
+        other   (view/focusable-in-direction focused direction)]
+    (when (and focused other)
+      (let [this-sp   (-> focused fx/parent fx/parent)
+            other-sp  (-> other fx/parent fx/parent)
+            this-idx  (split-pane-index-of focused this-sp)
+            other-idx (split-pane-index-of other other-sp)]
+        (if (#{:right :down} direction)
+          (do
+            (.set (.getItems other-sp) other-idx focused)
+            (.set (.getItems this-sp) this-idx other))
+          (do
+            (.set (.getItems this-sp) this-idx other)
+            (.set (.getItems other-sp) other-idx focused)))
+        (view/focus! focused)))))
+
+(defin swap-left
+  {:alias :windows/swap-left}
+  []
+  (swap-to-direction :left))
+
+(defin swap-right
+  {:alias :windows/swap-right}
+  []
+  (swap-to-direction :right))
+
+(defin swap-up
+  {:alias :windows/swap-up}
+  []
+  (swap-to-direction :up))
+
+(defin swap-down
+  {:alias :windows/swap-down}
+  []
+  (swap-to-direction :down))
 
 ;; multiple windows
 
