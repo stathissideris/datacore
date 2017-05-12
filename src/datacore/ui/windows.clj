@@ -6,8 +6,11 @@
             [datacore.ui.view :as view]
             [datacore.ui.timer :as timer]
             [datacore.ui.java-fx :as fx]
-            [datacore.cells :as c]
-            [datacore.state :as state]))
+            [datacore.cells :as c]))
+
+(defn- focus-owner []
+  (view/focus-indicator-parent
+   (fx/focus-owner @view/focused-stage)))
 
 (defn- split-pane-index-of [item split-pane]
   (util/index-of item (fx/get-field split-pane :items)))
@@ -36,7 +39,7 @@
 (defin maximize
   {:alias :windows/maximize}
   []
-  (let [focused (view/focus-indicator-parent (fx/focus-owner))
+  (let [focused (focus-owner)
         parent  (fx/parent focused)]
     (when-not (fx/has-style-class? parent "root")
       (let [root (get-root focused)]
@@ -45,7 +48,7 @@
 (defin delete
   {:alias :windows/delete}
   []
-  (let [focused (view/focus-indicator-parent (fx/focus-owner))
+  (let [focused (focus-owner)
         parent  (fx/parent focused)]
     (when-not (fx/has-style-class? parent "root")
       (let [split-pane (fx/parent parent)
@@ -62,7 +65,7 @@
 ;;split
 
 (defn- split [orientation]
-  (let [focused    (view/focus-indicator-parent (fx/focus-owner))
+  (let [focused    (focus-owner)
         split-pane
         (fx/make-tree
          {:fx/type     :scene.control/split-pane
@@ -86,7 +89,7 @@
 ;;focus
 
 (defn- focus-to-direction [direction]
-  (let [focused  (view/focus-indicator-parent (fx/focus-owner))]
+  (let [focused  (focus-owner)]
     (view/focus! (view/focusable-in-direction focused direction))))
 
 (defin focus-left
@@ -112,7 +115,7 @@
 ;;swap
 
 (defn- swap-to-direction [direction]
-  (let [focused (view/focus-indicator-parent (fx/focus-owner))
+  (let [focused (focus-owner)
         other   (view/focusable-in-direction focused direction)]
     (when (and focused other)
       (let [this-sp   (-> focused fx/parent fx/parent)

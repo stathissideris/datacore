@@ -6,11 +6,12 @@
 ** DONE Maximize
 ** DONE Balance window
 ** DONE Bug: Fix id of "minibuffer" unmanaged component (appears on in last window)
-** TODO New window
+** DONE New window
+** DONE Move focus between windows
+** DONE Bug: first window always has focus
+** TODO Bug: focus loss from main component when clicking on cell window
 ** TODO Close window
 ** TODO Move splitter with keyboard
-** TODO Move focus between windows
-** TODO Bug: first window always has focus
 ** TODO Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
 ** TODO Cells vizualisation

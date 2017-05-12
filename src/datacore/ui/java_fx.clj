@@ -38,12 +38,12 @@
 
 (defn event-handler [fun]
   (reify EventHandler
-    (^void handle [this ^Event event]
+    (^void handle [_ ^Event event]
      (fun event))))
 
 (defn change-listener [fun]
   (reify ChangeListener
-    (changed [this observable old new]
+    (changed [_ observable old new]
       (fun observable old new))))
 
 (defn list-change-listener [fun]
@@ -438,6 +438,9 @@
      (when (children? root)
        {:children (mapv tree (children root))}))))
 
+(defn stage-of [component]
+  (some-> component .getScene .getWindow))
+
 ;;;;; convenience functions ;;;;;
 
 (defn label
@@ -471,8 +474,8 @@
 (defn parents [^Node node]
   (take-while (complement nil?) (rest (iterate parent node))))
 
-(defn focus-owner []
-  (some-> top-level children first .getScene .focusOwnerProperty .get))
+(defn focus-owner [stage]
+  (some-> stage .getScene .focusOwnerProperty .get))
 
 (comment
   (make

@@ -10,7 +10,6 @@
             [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.message :as message]
             [datacore.ui.timer :as timer]
-            [datacore.state :as state]
             [clojure.walk :as walk])
   (:import [javafx.scene.input KeyEvent MouseEvent]
            [javafx.scene.paint Color]
@@ -19,13 +18,19 @@
 (defmulti build-view (fn [x] (or (:type x)
                                  (when (c/cell-id? x) (:type (c/value x))))))
 
+(defn- focus!-1 [component]
+  (fx/run-later!
+   (fn []
+     (.requestFocus (fx/stage-of component))
+     (.requestFocus component))))
+
 (defn focus! [component]
   (when component
-   (if-let [c (some-> component
-                      (fx/find-by-style-class "main-component")
-                      (first))]
-     (fx/run-later! #(.requestFocus c))
-     (fx/run-later! #(.requestFocus component))))
+    (if-let [c (some-> component
+                       (fx/find-by-style-class "main-component")
+                       (first))]
+      (focus!-1 c)
+      (focus!-1 component)))
   component)
 
 (def focused-style (str "-fx-border-width: 4 4 4 4;"
@@ -36,12 +41,14 @@
   [component _ focused?]
   (fx/set-field! component :style (if focused? focused-style unfocused-style)))
 
+(def nothing-counter (atom 0))
 (defn- build-nothing []
+  (swap! nothing-counter inc)
   {:fx/type            :scene.layout/border-pane
    :style-class        ["focus-indicator"]
    :center             {:fx/type           :scene.control/label
                         :style-class       ["label" "main-component"]
-                        :text              "Nothing to show"
+                        :text              (str "Nothing to show - " @nothing-counter)
                         :focus-traversable true}
    :on-mouse-clicked   (fx/event-handler
                         (fn [e]
@@ -85,8 +92,23 @@
 
 ;;TODO add this to scene: [:fx/setup #(style/add-stylesheet % "css/default.css")]
 
+;;;;; focus ;;;;;
+
 (defn focus-indicator-parent [component]
   (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))
+
+(def focused-stage (atom nil))
+(def focused-component (atom nil))
+(def stage->component (atom {}))
+(add-watch
+ focused-component :focus-watch
+ (fn [_ _ old new]
+   ;; (println "COMPONENT LOST FOCUS:" (fx/tree old))
+   ;; (println "COMPONENT FOCUSED:" (fx/tree new))
+
+   (fx/set-field! old :dc/indicate-focus? false)
+   (fx/set-field! (focus-indicator-parent old) :dc/indicate-focus? false)
+   (fx/set-field! (focus-indicator-parent new) :dc/indicate-focus? true)))
 
 (defmethod build-view ::window
   [{:keys [id title dimensions root window-style]}]
@@ -97,32 +119,33 @@
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
-                          (println "COMPONENT LOST FOCUS:" (fx/tree new))
-                          (println "COMPONENT FOCUSED:" (fx/tree new))
                           (when new
-                            (fx/set-field! (focus-indicator-parent old) :dc/indicate-focus? false)
-                            (fx/set-field! (focus-indicator-parent new) :dc/indicate-focus? true))))
+                            (swap! stage->component assoc (fx/stage-of new) new)
+                            (reset! focused-component new))))
+        stage          (fx/make-tree
+                        (merge
+                         (when window-style
+                           {:fx/args [(get window-style-map window-style)]})
+                         (when title
+                           {:title title})
+                         {:fx/type         :stage/stage
+                          :scene           (merge
+                                            {:fx/type  :scene/scene
+                                             :fx/args  scene-args
+                                             :root     (build-window-contents root message/current-message)
+                                             :fx/setup #(-> % .focusOwnerProperty (.addListener scene-focus-l))}
+                                            (when (= window-style :transparent)
+                                              {:fill Color/TRANSPARENT}))
+                          :fx/event-filter [KeyEvent/ANY key-handler]}))
         stage-focus-l  (fx/change-listener
-                        (fn [_ _ new]
-                          (when new
-                            (when-let [component-id (-> state/window->focused-component c/value (get id))]
-                              (c/reset! state/focus component-id))
-                            (println "WINDOW FOCUSED:" id title))))]
-    (merge
-     (when window-style
-       {:fx/args [(get window-style-map window-style)]})
-     (when title
-       {:title title})
-     {:fx/type          :stage/stage
-      :scene            (merge
-                         {:fx/type  :scene/scene
-                          :fx/args  scene-args
-                          :root     (build-window-contents root message/current-message)
-                          :fx/setup #(-> % .focusOwnerProperty (.addListener scene-focus-l))}
-                         (when (= window-style :transparent)
-                           {:fill Color/TRANSPARENT}))
-      :fx/event-filter  [KeyEvent/ANY key-handler]
-      :fx/setup         #(-> % .focusedProperty (.addListener stage-focus-l))})))
+                        (fn [_ old focused?]
+                          (when focused?
+                            ;;(println "STAGE FOCUSED:" (fx/tree stage))
+                            (reset! focused-stage stage)
+                            (reset! focused-component (get @stage->component stage)))))]
+
+    (doto stage
+      (-> .focusedProperty (.addListener stage-focus-l)))))
 
 (defmethod build-view ::cell
   [{:keys [cell focused?]}]
