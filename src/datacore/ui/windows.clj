@@ -20,13 +20,16 @@
             idx    (split-pane-index-of reference-component parent)]
         (.set (.getItems parent) idx new-component)))))
 
+(defn get-root [component]
+  (some->> (fx/parents component) (filter #(fx/has-style-class? % "root")) first))
+
 (defin maximize
   {:alias :windows/maximize}
   []
   (let [focused (view/focus-indicator-parent (fx/focus-owner))
         parent  (fx/parent focused)]
     (when-not (fx/has-style-class? parent "root")
-      (let [root (some->> (fx/parents focused) (filter #(fx/has-style-class? % "root")) first)]
+      (let [root (get-root focused)]
         (fx/set-field! root :center focused)))))
 
 (defin delete
@@ -42,7 +45,9 @@
 (defin balance
   {:alias :windows/balance}
   []
-  (println :balance))
+  (let [root (get-root (fx/focus-owner))]
+    (doseq [sp (filter (partial instance? javafx.scene.control.SplitPane) (fx/tree-seq root))]
+      (some-> sp .getDividers seq first (.setPosition 0.5)))))
 
 ;;split
 

@@ -6,11 +6,12 @@
   (util/deep-merge
    (keys/code-map)
    {#{:ctrl :x}
-    {:1 :windows/maximize
-     :2 :windows/split-below
-     :3 :windows/split-right
-     :0 :windows/delete
-     #{:ctrl :f} :open-file}}
+    {:1                :windows/maximize
+     :2                :windows/split-below
+     :3                :windows/split-right
+     :0                :windows/delete
+     #{:shift :equals} :windows/balance
+     #{:ctrl :f}       :open-file}}
    {:f1
     {:up    :windows/focus-up
      :down  :windows/focus-down

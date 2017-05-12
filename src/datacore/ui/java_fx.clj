@@ -1,5 +1,5 @@
 (ns datacore.ui.java-fx
-  (:refer-clojure :exclude [parents methods])
+  (:refer-clojure :exclude [parents methods tree-seq])
   (:require [clojure.string :as str]
             [clojure.spec :as s]
             [datacore.util :as util]
@@ -415,8 +415,11 @@
 (defn- safe-id [component]
   (try (.getId component) (catch Exception _ nil)))
 
+(defn tree-seq [root]
+  (clojure.core/tree-seq children? children root))
+
 (defn find-by-id [id]
-  (->> (tree-seq children? children top-level)
+  (->> (tree-seq top-level)
        (filter #(= id (safe-id %)))
        first))
 
@@ -425,7 +428,7 @@
        (catch Exception _ #{})))
 
 (defn find-by-style-class [root clazz]
-  (->> (tree-seq children? children root)
+  (->> (tree-seq root)
        (filter #(get (safe-style-class %) clazz))))
 
 (defn tree [root]

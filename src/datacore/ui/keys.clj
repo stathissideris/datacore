@@ -122,6 +122,9 @@
             keymap                   (if (var? keymap) (deref keymap) keymap)
             match                    (get-in keymap new-chain)]
         (cond
+          (= press :shift) ;;always skip shift
+          nil
+
           ;;also consume :key-typed and :key-released equivalents of
           ;;events that have been consumed:
           (also-consume-this? event)
