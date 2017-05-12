@@ -155,7 +155,7 @@
          {
           :style-class        ["focus-indicator"]
           :dc/indicate-focus? focused?
-          :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [e] (focus! (.getTarget e)))]})
+          :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [e] (focus! view))]})
         fx/unmanaged)))
 
 ;;;;;;;;;;;;;;;;
