@@ -1,6 +1,7 @@
 (ns datacore.ui.interactive
   (:require [datacore.ui.java-fx :as fx]
             [datacore.ui.util :as ui-util]
+            [datacore.cells :as c]
             [datacore.state :as state]))
 
 (def functions {})
@@ -8,7 +9,7 @@
 (defn register! [var {:keys [alias] :as options}]
   (alter-var-root
    #'functions
-   assoc alias {:var var}))
+   assoc alias (merge {:var var} options)))
 
 (defmacro defin [name options & rest]
   `(do
@@ -19,7 +20,7 @@
 
 (defmethod resolve-param ::main-component
   [_]
-  (ui-util/main-component (state/focused-component)))
+  (-> state/focused-component c/value ui-util/main-component))
 
 (defn call [match]
   (if-let [{:keys [var params]} (get functions match)]
@@ -27,6 +28,8 @@
       (prn var params)
       (let [fun (deref var)]
         (if (not-empty params)
-          (fun (reduce-kv (fn [m k v] (assoc m k (resolve-param v))) {} params))
+          (let [resolved-params (reduce-kv (fn [m k v] (assoc m k (resolve-param v))) {} params)]
+            (prn 'params resolved-params)
+            (fun resolved-params))
           (fun))))
     ::no-function))

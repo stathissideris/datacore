@@ -5,6 +5,7 @@
             [datacore.util :as util]
             [datacore.cells :as c]
             [datacore.state :as state]
+            [datacore.ui.view :as view]
             [hawk.core :as hawk]))
 
 (defn load-csv [{:keys [filename separator quote] :as options}]
@@ -45,7 +46,7 @@
    (fn [{:keys [label columns column-labels original-column-labels] :as contents}]
      (merge
       contents
-      {:type :datacore.ui.view/table}
+      {::view/type ::view/table}
       ;;TODO also uniquify label
       (when-not (not column-labels)
         {:column-labels (zipmap columns

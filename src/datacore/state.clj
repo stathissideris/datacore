@@ -1,7 +1,17 @@
 (ns datacore.state
   (:require [datacore.cells :as c :refer [cell defcell deformula]]
             [datacore.util :as util]
-            [clojure.walk :as walk]))
+            [datacore.ui.keys.maps :as keymaps]))
+
+(c/defcell focused-component nil)
+(c/deformula effective-keymap
+  (fn [keymaps focused]
+    (prn 'keymap (some->> focused util/meta :datacore.ui.view/type))
+    (keymaps/merge
+     keymaps/root-keymap
+     (some->> focused util/meta :datacore.ui.view/type (get (c/value keymaps/keymaps)))))
+  keymaps/keymaps
+  focused-component)
 
 (do
   (require '[datacore.ui.java-fx :as fx])
@@ -44,25 +54,11 @@
   (c/reset! web-input {:content "<html><body><h1>Test</h1><p>This is a <i>test</i>.</p></body></html>"})
 
 
-  ;;set window title
-  (swap-layout! assoc-in [:children 0 :title] "foobar3300")
-  (swap-layout! assoc-in [:children 1 :title] "foobar222333")
-
-  ;;open extra window
-  (swap-layout! update :children conj
-                {:type       :datacore.ui.view/window
-                 :title      "datacore 200"
-                 :dimensions [1000 800]
-                 :root       {:type :datacore.ui.view/nothing}})
-
   ;;open prompt window
   (swap-layout! update :children conj
                 {:type         :datacore.ui.view/window
                  :window-style :transparent
                  :root         {:type :datacore.ui.view/prompt}})
-
-  ;;close last window
-  (swap-layout! update :children (comp vec butlast))
 
   (defmacro simple-cell [name expr]
     `(c/deformula ~name

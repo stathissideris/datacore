@@ -2,13 +2,19 @@
   (:require [datacore.ui.view :as view]
             [datacore.ui.util :refer [with-status-line callback]]
             [datacore.ui.java-fx :as fx]
-            [datacore.ui.message :as message]
+            [datacore.ui.interactive :as in :refer [defin]]
             [datacore.cells :as c]
             [datacore.ui.observable :refer [observable-list]])
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
            [java.util Date]
            [javafx.scene.control SelectionMode]))
+
+(defin scroll-to-top
+  {:alias :table/scroll-to-top
+   :params {:component ::in/main-component}}
+  [{:keys [component]}]
+  (.scrollToColumnIndex component 10))
 
 (defn column [name cell-value-fn]
   (fx/make

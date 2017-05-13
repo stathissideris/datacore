@@ -10,8 +10,10 @@
 ** DONE Move focus between windows
 ** DONE Bug: first window always has focus
 ** DONE Bug: focus loss from main component when clicking on cell window
-** TODO Change keymap based on mode
+** DONE Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
+** TODO Meta map for cells
+** TODO Table view for cells
 ** TODO Cells vizualisation
 ** TODO Bug: prevent Cmd+Q from closing JVM
 ** TODO Bug: Swap to different window that does not have a splitter

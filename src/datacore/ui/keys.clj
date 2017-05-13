@@ -1,12 +1,12 @@
 (ns datacore.ui.keys
   (:require [clojure.string :as str]
             [clojure.set :as set]
-            [clojure.math.combinatorics :as combo]
-            [datacore]
+            [datacore.ui.interactive :as interactive]
             [datacore.ui.timer :as timer]
             [datacore.ui.message :as message]
+            [datacore.state :as state]
             [datacore.cells :as c])
-  (:import [javafx.scene.input KeyEvent KeyCode]
+  (:import [javafx.scene.input KeyEvent]
            [javafx.event Event]))
 
 (def modifiers [:alt :ctrl :meta :shift :shortcut])
@@ -38,18 +38,6 @@
                 (when-not (empty? chain)
                   ;;(prn 'CHAIN--- (chain-str chain))
                   (message/message (chain-str chain)))))
-
-(defn keycode->keyword [k]
-  (-> k .getName str/lower-case (str/replace " " "-") (str/replace "/" "-") keyword))
-
-(defn code-map []
-  (into
-   {}
-   (for [keycode (map keycode->keyword (into [] (KeyCode/values)))
-         mod (map set (combo/subsets modifiers))]
-     (let [combo (conj mod keycode)
-           combo (if (= 1 (count combo)) (first combo) combo)]
-       [combo ::propagate]))))
 
 (defn prefix? [x] (map? x))
 (defn action? [x] (keyword? x))
@@ -94,7 +82,6 @@
   (timer/cancel (:timer (c/value key-input)))
   (c/swap! key-input assoc :timer (timer/delayed 3500 #(do (debug 'KEY-STATE-RESET) (clear-chain!)))))
 
-
 (defn- consume-event [^Event e press event]
   (debug 'CONSUMED press event)
   (c/swap! key-input assoc :last-consumed event)
@@ -107,20 +94,17 @@
     (= (dissoc event :type)
        (dissoc last-consumed :type))))
 
-(defn handle-key-match [match]
-  (if-let [{:keys [var]} (get datacore/interactive-functions match)]
-    (let [fun (deref var)]
-      (fun))
+(defn call [match]
+  (when (= :interactive/no-function (interactive/call match))
     (message/error (str "No interactive function with alias " match " found!"))))
 
-(defn key-handler [keymap]
+(defn key-handler []
   (fn [fx-event]
     (try
       (let [{:keys [type] :as event} (event->map fx-event)
             press                    (event->press event)
             new-chain                (conj (-> key-input c/value :chain) press)
-            keymap                   (if (var? keymap) (deref keymap) keymap)
-            match                    (get-in keymap new-chain)]
+            match                    (get-in (-> state/effective-keymap c/value :mapping) new-chain)]
         (cond
           (= press :shift) ;;always skip shift
           nil
@@ -136,13 +120,6 @@
             nil)
 
           (and (= type :key-pressed) (not match))
-          (do
-            (println (str "ERROR - Key sequence " new-chain " not mapped to anything"))
-            (message/error (str "Key sequence " (chain-str new-chain) " not mapped to anything"))
-            (clear-chain!)
-            (consume-event fx-event press event))
-
-          (= match ::propagate)
           (do
             (debug 'PROPAGATED press event)
             (clear-chain!))
@@ -161,7 +138,7 @@
               (message/message (subs (str match) 1))
               (clear-chain!)
               (consume-event fx-event press event)
-              (handle-key-match match)
+              (interactive/call match)
               match))))
       (catch Exception e
         (.printStackTrace e)

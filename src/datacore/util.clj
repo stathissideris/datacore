@@ -1,4 +1,5 @@
 (ns datacore.util
+  (:refer-clojure :exclude [meta alter-meta!])
   (:require [clojure.string :as str]
             [clojure.spec :as s]
             [clojure.core.match :refer [match]]
@@ -67,6 +68,21 @@
    (map first
         (filter #(= (second %) x)
                 (map-indexed vector coll)))))
+
+;;;;;;;;;;;;;;;;;;;; meta ;;;;;;;;;;;;;;;;;;;;
+
+(def ^:private meta-map (atom {}))
+(defn meta [x]
+  (get @meta-map x))
+
+(defn add-meta! [x m]
+  (swap! meta-map assoc x m))
+
+(defn alter-meta! [x fun & args]
+  (swap! meta-map update x #(apply fun % args))
+  (meta x))
+
+;;;;;;;;;;;;;;;;;;;; diff ;;;;;;;;;;;;;;;;;;;;
 
 (comment
   ;;incomplete diff impl

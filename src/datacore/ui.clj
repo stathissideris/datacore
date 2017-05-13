@@ -1,13 +1,14 @@
 (ns datacore.ui
-  (:require [datacore :refer [defin]]
-            [datacore.ui.message :as message]))
+  (:require [datacore.ui.interactive :as interactive :refer [defin]]
+            [datacore.ui.message :as message]
+            [datacore.ui.java-fx :as fx]))
 
 (defin execute-command
   {:alias :execute-command
    :params [{:type :text}]}
   [function-name]
   (let [alias (keyword function-name)]
-    (if-let [{:keys [var]} (get datacore/interactive-functions alias)]
+    (if-let [{:keys [var]} (get interactive/functions alias)]
       (let [fun (deref var)]
         (fun))
       (message/error (str "No interactive function with alias " alias " found!")))))

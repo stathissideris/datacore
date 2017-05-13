@@ -2,12 +2,13 @@
   (:require [clojure.core.match :as m :refer [match]]
             [clojure.zip :as zip]
             [clojure.spec :as s]
-            [datacore.ui.java-fx :as fx]
             [datacore.util :as util]
+            [datacore.ui.util :as ui-util]
             [datacore.util.geometry :as geom]
             [datacore.cells :as c]
+            [datacore.state :as state]
+            [datacore.ui.java-fx :as fx]
             [datacore.ui.keys :as keys]
-            [datacore.ui.keys.defaults :as default-keys]
             [datacore.ui.message :as message]
             [datacore.ui.timer :as timer]
             [clojure.walk :as walk])
@@ -15,8 +16,12 @@
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
-(defmulti build-view (fn [x] (or (:type x)
-                                 (when (c/cell-id? x) (:type (c/value x))))))
+(defn- cell-view-type [cell]
+  (::type (c/value cell)))
+
+(defmulti build-view
+  (fn [x] (or (:type x)
+              (when (c/cell-id? x) (cell-view-type x)))))
 
 (defn- focus!-1 [component]
   (fx/run-later!
@@ -26,9 +31,7 @@
 
 (defn focus! [component]
   (when component
-    (if-let [c (some-> component
-                       (fx/find-by-style-class "main-component")
-                       (first))]
+    (if-let [c (ui-util/main-component component)]
       (focus!-1 c)
       (focus!-1 component)))
   component)
@@ -40,6 +43,10 @@
 (defmethod fx/fset :dc/indicate-focus?
   [component _ focused?]
   (fx/set-field! component :style (if focused? focused-style unfocused-style)))
+
+(defmethod fx/fset :dc/meta
+  [component _ meta]
+  (util/add-meta! component meta))
 
 (def nothing-counter (atom 0))
 (defn- build-nothing []
@@ -94,34 +101,31 @@
 
 ;;;;; focus ;;;;;
 
-(defn focus-indicator-parent [component]
-  (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))
-
 (def focused-stage (atom nil))
-(def focused-component (atom nil))
 (def stage->component (atom {}))
-(add-watch
- focused-component :focus-watch
- (fn [_ _ old new]
+
+(c/add-watch!
+ state/focused-component :focus-watch
+ (fn [_ old new]
    ;; (println "COMPONENT LOST FOCUS:" (fx/tree old))
    ;; (println "COMPONENT FOCUSED:" (fx/tree new))
 
    (fx/set-field! old :dc/indicate-focus? false)
-   (fx/set-field! (focus-indicator-parent old) :dc/indicate-focus? false)
-   (fx/set-field! (focus-indicator-parent new) :dc/indicate-focus? true)))
+   (fx/set-field! new :dc/indicate-focus? true)))
 
 (defmethod build-view ::window
   [{:keys [id title dimensions root window-style]}]
   (let [[width height] dimensions
-        key-handler    (keys/key-handler #'default-keys/root-keymap)
+        key-handler    (keys/key-handler)
         scene-args     (concat
                         [(build-view ::nothing)]
                         (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
                           (when new
-                            (swap! stage->component assoc (fx/stage-of new) new)
-                            (reset! focused-component new))))
+                            (let [new-focus-indicator (ui-util/focus-indicator-parent new)]
+                              (swap! stage->component assoc (fx/stage-of new-focus-indicator) new-focus-indicator)
+                              (c/reset! state/focused-component new-focus-indicator)))))
         stage          (fx/make-tree
                         (merge
                          (when window-style
@@ -142,7 +146,7 @@
                           (when focused?
                             ;;(println "STAGE FOCUSED:" (fx/tree stage))
                             (reset! focused-stage stage)
-                            (reset! focused-component (get @stage->component stage)))))]
+                            (c/reset! state/focused-component (get @stage->component stage)))))]
 
     (doto stage
       (-> .focusedProperty (.addListener stage-focus-l)))))
@@ -154,6 +158,7 @@
         (fx/set-fields!
          {:style-class        ["focus-indicator"]
           :dc/indicate-focus? focused?
+          :dc/meta            {::type (cell-view-type cell)}
           :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})
         fx/unmanaged)))
 
