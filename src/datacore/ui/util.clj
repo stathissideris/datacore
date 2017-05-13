@@ -35,3 +35,11 @@
                      {:center cell
                       :bottom (c/formula (fn [_] (fx/label (Date.) {:style "-fx-padding: 0.5em;"})) cell)})]})]
        [:fx/setup fx/show!]]))))
+
+(defn main-component [component]
+  (some-> component
+          (fx/find-by-style-class "main-component")
+          (first)))
+
+(defn focus-indicator-parent [component]
+  (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))

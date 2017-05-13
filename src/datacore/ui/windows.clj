@@ -1,15 +1,16 @@
 (ns datacore.ui.windows
   (:require [clojure.walk :as walk]
             [clojure.zip :as zip]
-            [datacore :refer [defin]]
+            [datacore.ui.interactive :refer [defin]]
             [datacore.util :as util]
+            [datacore.ui.util :as ui-util]
             [datacore.ui.view :as view]
             [datacore.ui.timer :as timer]
             [datacore.ui.java-fx :as fx]
             [datacore.cells :as c]))
 
 (defn- focus-owner []
-  (view/focus-indicator-parent
+  (ui-util/focus-indicator-parent
    (fx/focus-owner @view/focused-stage)))
 
 (defn- split-pane-index-of [item split-pane]
@@ -89,8 +90,7 @@
 ;;focus
 
 (defn- focus-to-direction [direction]
-  (let [focused  (focus-owner)]
-    (view/focus! (view/focusable-in-direction focused direction))))
+  (view/focus! (view/focusable-in-direction (focus-owner) direction)))
 
 (defin focus-left
   {:alias :windows/focus-left}
