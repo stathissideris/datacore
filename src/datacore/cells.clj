@@ -107,8 +107,9 @@
 
 (defn all-cells []
   (let [cells @global-cells]
-    (for [ids (keys (:cells cells))]
-      (cell->debug cells ids))))
+    (sort-by :id
+     (for [id (keys (:cells cells))]
+       (cell->debug cells id)))))
 
 (defn print-cells [cells]
   (print-table
