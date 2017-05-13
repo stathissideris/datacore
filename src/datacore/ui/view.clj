@@ -152,10 +152,9 @@
   (let [view (build-view cell)]
     (-> view
         (fx/set-fields!
-         {
-          :style-class        ["focus-indicator"]
+         {:style-class        ["focus-indicator"]
           :dc/indicate-focus? focused?
-          :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [e] (focus! view))]})
+          :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})
         fx/unmanaged)))
 
 ;;;;;;;;;;;;;;;;

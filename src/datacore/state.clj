@@ -3,9 +3,6 @@
             [datacore.util :as util]
             [clojure.walk :as walk]))
 
-(defcell window->focused-component {})
-(defcell focus nil)
-
 (do
   (require '[datacore.ui.java-fx :as fx])
   (require '[datacore.ui.windows :as windows])

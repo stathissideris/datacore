@@ -10,11 +10,12 @@
 ** DONE Move focus between windows
 ** DONE Bug: first window always has focus
 ** DONE Bug: focus loss from main component when clicking on cell window
-** TODO Bug: Swap to different window that does not have a splitter
-** TODO Bug: Swap to different window with splitters messes up focus/focus indicator
 ** TODO Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
 ** TODO Cells vizualisation
+** TODO Bug: prevent Cmd+Q from closing JVM
+** TODO Bug: Swap to different window that does not have a splitter
+** TODO Bug: Swap to different window with splitters messes up focus/focus indicator
 ** TODO Make view cells output stuff such as selection etc
 ** TODO Move diff to clojure.util.diff
 ** TODO Move splitter with keyboard
