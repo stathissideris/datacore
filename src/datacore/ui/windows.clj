@@ -58,7 +58,7 @@
 (defin balance
   {:alias :windows/balance}
   []
-  (let [root (get-root (fx/focus-owner))]
+  (let [root (get-root (focus-owner))]
     (doseq [sp (filter (partial instance? javafx.scene.control.SplitPane) (fx/tree-seq root))]
       (some-> sp .getDividers seq first (.setPosition 0.5)))))
 
