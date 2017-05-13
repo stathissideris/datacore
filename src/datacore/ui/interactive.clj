@@ -28,7 +28,7 @@
       (prn var params)
       (let [fun (deref var)]
         (if (not-empty params)
-          (let [resolved-params (reduce-kv (fn [m k v] (assoc m k (resolve-param v))) {} params)]
+          (let [resolved-params (reduce (fn [m [k v]] (assoc m k (resolve-param v))) {} params)]
             (prn 'params resolved-params)
             (fun resolved-params))
           (fun))))

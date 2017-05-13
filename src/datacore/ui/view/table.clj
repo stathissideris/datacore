@@ -12,7 +12,7 @@
 
 (defin scroll-to-top
   {:alias :table/scroll-to-top
-   :params {:component ::in/main-component}}
+   :params [[:component ::in/main-component]]}
   [{:keys [component]}]
   (.scrollToColumnIndex component 10))
 
