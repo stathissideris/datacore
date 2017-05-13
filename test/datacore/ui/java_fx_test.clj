@@ -1,5 +1,5 @@
 (ns datacore.ui.java-fx-test
-  (:refer-clojure :exclude [parents])
+  (:refer-clojure :exclude [parents methods tree-seq])
   (:require [datacore.ui.java-fx :refer :all]
             [clojure.test :refer :all]))
 
