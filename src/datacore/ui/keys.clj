@@ -121,6 +121,8 @@
 
           (and (= type :key-pressed) (not match))
           (do
+            (when (< 1 (count new-chain))
+              (message/error (str "Key sequence " (chain-str new-chain) " not mapped to anything")))
             (debug 'PROPAGATED press event)
             (clear-chain!))
 
