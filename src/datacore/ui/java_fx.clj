@@ -125,6 +125,16 @@
   [o _ [filter fun]]
   (.addEventFilter o filter (event-handler fun)))
 
+(defn get-property [object field]
+  (clojure.lang.Reflector/invokeInstanceMethod
+   object
+   (str (util/kebab->camel field) "Property")
+   (object-array [])))
+
+(defmethod fset :fx/prop-listener
+  [o _ [prop fun]]
+  (.addListener (get-property o prop) (change-listener fun)))
+
 (defn set-field! [object field value]
   (when object
     (cond

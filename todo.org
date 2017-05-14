@@ -12,6 +12,7 @@
 ** DONE Bug: focus loss from main component when clicking on cell window
 ** DONE Change keymap based on mode
 ** TODO Run function using prompt (text prompt with autocomplete)
+** TODO Refactor windows to get focused component from interactive
 ** TODO Meta map for cells
 ** TODO Table view for cells
 ** TODO Cells vizualisation
@@ -22,3 +23,10 @@
 ** TODO Move diff to clojure.util.diff
 ** TODO Move splitter with keyboard
 ** TODO Close window with keyboard
+** TODO Help system
+*** interactive/functions can be a cell
+*** help text for functions will be a cell with keymaps and interactive/functions as cells
+** TODO Config based on clj files
+** TODO Settings system
+** TODO Custom table view
+** TODO Re-introduce custom CSS and reactive CSS
