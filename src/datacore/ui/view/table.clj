@@ -10,6 +10,12 @@
            [java.util Date]
            [javafx.scene.control SelectionMode ControlUtils]))
 
+(defn selected-cells [table]
+  (into []
+        (for [cell (-> table .getSelectionModel .getSelectedCells)]
+          {:column (.getColumn cell)
+           :row    (.getRow cell)})))
+
 (defin scroll-to-top
   {:alias :table/scroll-to-top
    :params [[:component ::in/main-component]]}
@@ -27,6 +33,25 @@
   (doto (-> component .getSelectionModel)
     (.clearSelection)
     (.selectLast)))
+
+(defin scroll-to-first-column
+  {:alias :table/scroll-to-first-column
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (.scrollToColumnIndex component 0)
+  (when-let [selected-row (some-> component selected-cells first :row)]
+    (let [column (-> component .getColumns first)]
+      (-> component .getSelectionModel (.clearAndSelect selected-row column)))))
+
+(defin scroll-to-last-column
+  {:alias :table/scroll-to-last-column
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (let [last-index (-> component .getColumns count dec)]
+    (.scrollToColumnIndex component last-index)
+    (when-let [selected-row (some-> component selected-cells first :row)]
+      (let [column (-> component .getColumns last)]
+        (-> component .getSelectionModel (.clearAndSelect selected-row column))))))
 
 (defn column [name cell-value-fn]
   (fx/make
@@ -60,6 +85,7 @@
                             (fn [table]
                               (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
                               (fx/set-field! table :style-class ["table-view" "main-component"])
+                              (fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
                               (-> table
                                   .getSelectionModel
                                   .getSelectedItems
