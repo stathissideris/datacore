@@ -8,13 +8,25 @@
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
            [java.util Date]
-           [javafx.scene.control SelectionMode]))
+           [javafx.scene.control SelectionMode ControlUtils]))
 
 (defin scroll-to-top
   {:alias :table/scroll-to-top
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (.scrollToColumnIndex component 10))
+  (.scrollTo component (-> component .getItems first))
+  (doto (-> component .getSelectionModel)
+    (.clearSelection)
+    (.selectFirst)))
+
+(defin scroll-to-bottom
+  {:alias :table/scroll-to-bottom
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (.scrollTo component (-> component .getItems last))
+  (doto (-> component .getSelectionModel)
+    (.clearSelection)
+    (.selectLast)))
 
 (defn column [name cell-value-fn]
   (fx/make

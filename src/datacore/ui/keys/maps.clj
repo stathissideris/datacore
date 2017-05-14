@@ -56,7 +56,8 @@
 (def table-keymap
   {:name :datacore.ui.view/table
    :mapping
-   {#{:ctrl :x} {:1 :table/scroll-to-top}}})
+   {:esc {#{:shift :comma} :table/scroll-to-top
+          #{:shift :period} :table/scroll-to-bottom}}})
 
 (c/defcell keymaps {:root                   root-keymap
                     :datacore.ui.view/table table-keymap})
