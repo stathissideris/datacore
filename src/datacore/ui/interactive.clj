@@ -80,4 +80,4 @@
                            last-part))))
 
           (fs/exists? input)
-          [(wrap-filename input)])))
+          [(wrap-filename (-> input fs/file .getCanonicalFile str))])))

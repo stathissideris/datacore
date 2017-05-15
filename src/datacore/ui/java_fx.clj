@@ -434,10 +434,13 @@
 (defn tree-seq [root]
   (clojure.core/tree-seq children? children root))
 
-(defn find-by-id [id]
-  (->> (tree-seq top-level)
-       (filter #(= id (safe-id %)))
-       first))
+(defn find-by-id
+  ([id]
+   (find-by-id top-level id))
+  ([root id]
+   (->> (tree-seq root)
+        (filter #(= id (safe-id %)))
+        first)))
 
 (defn- safe-style-class [component]
   (try (set (.getStyleClass component))
