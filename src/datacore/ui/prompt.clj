@@ -4,8 +4,15 @@
             [datacore.ui.util :as uu]
             [datacore.ui.view :as view]
             [datacore.cells :as c]
-            [datacore.ui.interactive :as i]
-            [clojure.string :as str]))
+            [datacore.ui.interactive :as i])
+  (:import [javafx.scene.control ListCell]))
+
+(defn list-cell []
+  (proxy [ListCell] []
+    (updateItem
+      ([item empty]
+       (proxy-super updateItem item empty)
+       (.setText this (:text item))))))
 
 (defn make-popup [{:keys [autocomplete-fun]}]
   ;;.centerOnScreen
@@ -48,15 +55,19 @@
           :fx/prop-listener [:text
                              (fn [_ _ text]
                                (when autocomplete-fun
-                                 (reset! autocomplete-list (autocomplete-fun text))))]}
-         {:fx/type :scene.control/list-view
-          :style   (str "-fx-font-size: 1.5em;"
-                        "-fx-border-color: white;"
-                        "-fx-border-style: solid;"
-                        "-fx-border-width: 1px;"
-                        "-fx-border-radius: 0 0 5 5;"
-                        "-fx-background-radius: 0 0 2 2;")
-          :items   (observable-list autocomplete-list)}]}]})))
+                                 (future
+                                   (reset! autocomplete-list (autocomplete-fun text)))))]}
+         {:fx/type      :scene.control/list-view
+          :style        (str "-fx-font-size: 1.5em;"
+                             "-fx-border-color: white;"
+                             "-fx-border-style: solid;"
+                             "-fx-border-width: 1px;"
+                             "-fx-border-radius: 0 0 5 5;"
+                             "-fx-background-radius: 0 0 2 2;")
+          :items        (observable-list autocomplete-list)
+          :cell-factory (fx/callback
+                         (fn [list]
+                           (list-cell)))}]}]})))
 
 (defmethod view/build-view ::view/prompt
   [_]
@@ -68,19 +79,7 @@
     (uu/inspect popup-preview))
   )
 
-(defn function-autocomplete [input]
-  (if (empty? (str/trim input))
-    (->> i/functions
-         keys
-         (map #(-> % str (subs 1)))
-         sort
-         (take 50))
-    (->> i/functions
-         keys
-         (map #(-> % str (subs 1)))
-         (filter #(str/includes? % input))
-         sort)))
-
-;;(def cc (deref (fx/run-later! #(-> (make-popup {:autocomplete-fun function-autocomplete}) fx/transparent-window fx/show!))))
+;;(def cc (deref (fx/run-later! #(-> (make-popup {:autocomplete-fun i/function-autocomplete}) fx/transparent-window fx/show!))))
+;;(def cc (deref (fx/run-later! #(-> (make-popup {:autocomplete-fun i/file-autocomplete}) fx/transparent-window fx/show!))))
 ;;(fx/run-later! #(-> cc .close))
 ;;(c/swap! popup-preview (fn [_] (make-popup)))

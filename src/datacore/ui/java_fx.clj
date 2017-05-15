@@ -14,7 +14,8 @@
            [javafx.scene.paint Color]
            [javafx.beans.value ChangeListener]
            [javafx.scene Node]
-           [com.sun.javafx.stage StageHelper]))
+           [com.sun.javafx.stage StageHelper]
+           [javafx.util Callback]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -50,6 +51,11 @@
   (reify ListChangeListener
     (onChanged [this change]
       (fun (seq (.getList change))))))
+
+(defn callback [fun]
+  (reify Callback
+    (call [this p]
+      (fun p))))
 
 (defn parse-bbox [bbox]
   {:min-x  (.getMinX   bbox)

@@ -39,6 +39,24 @@
 
       (getRemoved [] (if-not (.wasRemoved this) [] (map second (current)))))))
 
+(defn naive-list-change [the-list old new]
+  (let [idx     (atom -1)]
+    (proxy [ListChangeListener$Change] [the-list]
+      (next [] (swap! idx inc) (< @idx 2))
+      (reset [] (reset! idx 0))
+
+      (wasAdded [] (= @idx 1))
+      (wasRemoved [] (= @idx 0))
+      (wasUpdated [] true)
+      (wasPermutated [] false)
+
+      (getFrom [] 0)
+      (getTo [] (if (= @idx 0)
+                  (dec (count old))
+                  (dec (count new))))
+
+      (getRemoved [] old))))
+
 (def atom-observable-list-id (atom -1))
 (def atom-observable-registry (atom {}))
 (defmethod observable-list clojure.lang.Atom
@@ -54,7 +72,7 @@
       (let [id (str "observable-list-atom-listener" (swap! atom-observable-list-id inc))]
         (swap! atom-observable-registry {listener id})
         (add-watch x id (fn [k ref old new]
-                          (.onChanged listener (list-change this old new))))))
+                          (.onChanged listener (naive-list-change this old new))))))
     (removeListener [^ListChangeListener listener]
       (when-let [id (get @atom-observable-registry listener)]
         (remove-watch x id)))))
