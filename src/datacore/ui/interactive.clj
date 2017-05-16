@@ -36,8 +36,19 @@
           (fun))))
     ::no-function))
 
-(defn- wrap-function [name]
-  {:text  (-> name str (subs 1))
+(defn- underline-match [text match]
+  (when text
+   (let [i (str/index-of text match)]
+     (if-not i
+       [text]
+       (let [before (not-empty (subs text 0 i))
+             after  (not-empty (subs text (+ i (.length match))))]
+         (->> (concat [before] [[:u match]] (underline-match after match))
+              (remove nil?)
+              (vec)))))))
+
+(defn- wrap-function [name input]
+  {:text  (underline-match (-> name str (subs 1)) input)
    :value name})
 
 (defn function-autocomplete [input]
@@ -45,21 +56,22 @@
     (if (empty? input)
       (->> functions
            keys
-           (map wrap-function)
+           (map #(wrap-function % input))
            (sort-by :text)
            (take 50))
       (->> functions
            keys
-           (map wrap-function)
+           (map #(wrap-function % input))
            (filter #(str/includes? (:text %) input))
            (sort-by :text)
            (take 50)))))
 
-(defn- wrap-filename [file]
-  (let [parts (str/split (str file) #"/")]
-    {:text  (str (if (= 2 (count parts)) "/" ".../")
-                 (last parts)
-                 (when (fs/directory? file) "/"))
+(defn- wrap-filename [file input]
+  (let [parts (str/split (str file) #"/")
+        text  (str (if (= 2 (count parts)) "/" ".../")
+                   (last parts)
+                   (when (fs/directory? file) "/"))]
+    {:text  (underline-match text input)
      :value (str file)}))
 
 (defn file-autocomplete [input]
@@ -69,7 +81,7 @@
 
           (and (str/ends-with? input "/")
                (fs/directory? input))
-          (map wrap-filename (fs/list-dir input))
+          (map #(wrap-filename % input) (fs/list-dir input))
 
           (and (not (fs/exists? input))
                (fs/exists? (fs/parent input)))
@@ -80,4 +92,5 @@
                            last-part))))
 
           (fs/exists? input)
-          [(wrap-filename (-> input fs/file .getCanonicalFile str))])))
+          [(wrap-filename (-> input fs/file .getCanonicalFile str)
+                          input)])))

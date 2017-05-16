@@ -8,11 +8,17 @@
   (:import [javafx.scene.control ListCell]))
 
 (defn list-cell []
-  (proxy [ListCell] []
-    (updateItem
-      ([item empty]
-       (proxy-super updateItem item empty)
-       (.setText this (:text item))))))
+  (let [tf (fx/text-flow)]
+    (proxy [ListCell] []
+      (updateItem
+        ([item empty]
+         (proxy-super updateItem item empty)
+         (.setText this nil)
+         (if empty
+           (.setGraphic this nil)
+           (do
+             (-> tf .getChildren (.setAll (map fx/text (:text item))))
+             (.setGraphic this tf))))))))
 
 (defn make-popup [{:keys [autocomplete-fun initial-text]}]
   ;;.centerOnScreen
@@ -83,6 +89,9 @@
 (defmethod view/build-view ::view/prompt
   [_]
   (make-popup))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (comment
   (do
