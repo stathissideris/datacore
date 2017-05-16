@@ -82,14 +82,14 @@
     (add-watch
      autocomplete-list :autocomplete
      (fn [_ _ _ new]
-       (fx/run-later!
-        #(fx/set-field! (fx/find-by-id prompt "autocomplete-list") :items (observable-list (vec new))))))
-    prompt))
-
-(defmethod view/build-view ::view/prompt
-  [_]
-  (make-popup))
-
+       (let [list  (fx/find-by-id prompt "autocomplete-list")
+             items (observable-list (vec new))]
+         (fx/run-later!
+          #(fx/set-field! list :items items)))))
+    (view/build-view
+     {:type         :datacore.ui.view/window
+      :raw-root     prompt
+      :window-style :transparent})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -104,7 +104,6 @@
                   #(-> (make-popup
                         {:autocomplete-fun i/function-autocomplete
                          :initial-text     "wind"})
-                       fx/transparent-window
                        fx/show!))))
   )
 
@@ -113,7 +112,6 @@
                   #(-> (make-popup
                         {:autocomplete-fun i/file-autocomplete
                          :initial-text     "/"})
-                       fx/transparent-window
                        fx/show!))))
   )
 

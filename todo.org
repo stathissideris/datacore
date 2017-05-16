@@ -11,8 +11,9 @@
 ** DONE Bug: first window always has focus
 ** DONE Bug: focus loss from main component when clicking on cell window
 ** DONE Change keymap based on mode
-** TODO Run function using prompt (text prompt with autocomplete)
-** TODO Refactor windows to get focused component from interactive
+** PROG Run function using prompt (text prompt with autocomplete)
+** PROG File prompt
+** DONE Refactor windows to get focused component from interactive
 ** TODO Meta map for cells
 ** TODO Table view for cells
 ** TODO Cells vizualisation
@@ -30,3 +31,4 @@
 ** TODO Settings system
 ** TODO Custom table view
 ** TODO Re-introduce custom CSS and reactive CSS
+** TODO Bug: file prompt does not match ~.~

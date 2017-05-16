@@ -114,18 +114,27 @@
    (fx/set-field! new :dc/indicate-focus? true)))
 
 (defmethod build-view ::window
-  [{:keys [id title dimensions root window-style]}]
+  [{:keys [title dimensions root raw-root window-style]}]
   (let [[width height] dimensions
         key-handler    (keys/key-handler)
-        scene-args     (concat
-                        [(build-view ::nothing)]
-                        (when dimensions [width height]))
         scene-focus-l  (fx/change-listener
                         (fn [_ old new]
                           (when new
                             (let [new-focus-indicator (ui-util/focus-indicator-parent new)]
                               (swap! stage->component assoc (fx/stage-of new-focus-indicator) new-focus-indicator)
                               (c/reset! state/focused-component new-focus-indicator)))))
+        scene          (merge
+                        {:fx/type  :scene/scene
+                         :fx/args  (concat
+                                    [(build-view ::nothing)]
+                                    (when dimensions [width height]))
+                         :fx/setup #(-> % .focusOwnerProperty (.addListener scene-focus-l))}
+                        (when root
+                          {:root (build-window-contents root message/current-message)})
+                        (when raw-root
+                          {:root raw-root})
+                        (when (= window-style :transparent)
+                          {:fill Color/TRANSPARENT}))
         stage          (fx/make-tree
                         (merge
                          (when window-style
@@ -133,13 +142,7 @@
                          (when title
                            {:title title})
                          {:fx/type         :stage/stage
-                          :scene           (merge
-                                            {:fx/type  :scene/scene
-                                             :fx/args  scene-args
-                                             :root     (build-window-contents root message/current-message)
-                                             :fx/setup #(-> % .focusOwnerProperty (.addListener scene-focus-l))}
-                                            (when (= window-style :transparent)
-                                              {:fill Color/TRANSPARENT}))
+                          :scene           scene
                           :fx/event-filter [KeyEvent/ANY key-handler]}))
         stage-focus-l  (fx/change-listener
                         (fn [_ old focused?]
@@ -147,7 +150,6 @@
                             ;;(println "STAGE FOCUSED:" (fx/tree stage))
                             (reset! focused-stage stage)
                             (c/reset! state/focused-component (get @stage->component stage)))))]
-
     (doto stage
       (-> .focusedProperty (.addListener stage-focus-l)))))
 
