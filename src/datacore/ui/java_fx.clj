@@ -547,12 +547,15 @@
    :right   TextAlignment/RIGHT})
 
 (defn span [{:keys [underline strike align] :as attr} content]
-  (let [f (font (select-keys attr [:family :weight :posture :size]))]
-    (doto (javafx.scene.text.Text. content)
-      (.setFont f)
-      (.setUnderline (or underline false))
-      (.setStrikethrough (or strike false))
-      (.setTextAlignment (text-alignment-map (or align :left))))))
+  (let [font-attr (not-empty (select-keys attr [:family :weight :posture :size]))
+        f         (when font-attr (font font-attr))
+        text
+        (doto (javafx.scene.text.Text. content)
+          (.setUnderline (or underline false))
+          (.setStrikethrough (or strike false))
+          (.setTextAlignment (text-alignment-map (or align :left))))]
+    (when f (.setFont text f))
+    text))
 
 (extend-type clojure.lang.APersistentVector
   Text
