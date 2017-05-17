@@ -60,7 +60,7 @@
                                      "-fx-border-width: 1px;")
               :text             initial-text
               :fx/prop-listener [:text
-                                 (fn [_ _ text]
+                                 (fn [_ _ _ text]
                                    (when autocomplete-fun
                                      (future
                                        (reset! autocomplete-list (autocomplete-fun text)))))]}

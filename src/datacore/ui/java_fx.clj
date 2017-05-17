@@ -43,10 +43,15 @@
     (^void handle [_ ^Event event]
      (fun event))))
 
-(defn change-listener [fun]
-  (reify ChangeListener
-    (changed [_ observable old new]
-      (fun observable old new))))
+(defn change-listener
+  ([fun]
+   (reify ChangeListener
+     (changed [_ observable old new]
+       (fun observable old new))))
+  ([source fun]
+   (reify ChangeListener
+     (changed [_ observable old new]
+       (fun source observable old new)))))
 
 (defn list-change-listener [fun]
   (reify ListChangeListener
@@ -140,7 +145,7 @@
 
 (defmethod fset :fx/prop-listener
   [o _ [prop fun]]
-  (.addListener (get-property o prop) (change-listener fun)))
+  (.addListener (get-property o prop) (change-listener o fun)))
 
 (defn set-field! [object field value]
   (when object
