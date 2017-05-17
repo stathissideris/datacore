@@ -26,9 +26,11 @@
   (let [autocomplete-list (atom [])
         prompt
         (fx/make-tree
-         {:fx/type  :scene.layout/v-box
-          :style    (str "-fx-padding: 40px;"
-                         "-fx-background-color: rgba(0,0,0,0);")
+         {:fx/type     :scene.layout/v-box
+          :style-class ["focus-parent"]
+          :dc/meta     {::view/type ::view/prompt}
+          :style       (str "-fx-padding: 40px;"
+                            "-fx-background-color: rgba(0,0,0,0);")
           :children
           [{:fx/type :scene.layout/v-box
             :style (str "-fx-padding: 0px;"

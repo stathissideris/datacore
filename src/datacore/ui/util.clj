@@ -43,3 +43,7 @@
 
 (defn focus-indicator-parent [component]
   (some->> component fx/parents (filter #(fx/has-style-class? % "focus-indicator")) first))
+
+(defn focus-parent [component]
+  (some->> component fx/parents (filter #(or (fx/has-style-class? % "focus-indicator")
+                                             (fx/has-style-class? % "focus-parent"))) first))

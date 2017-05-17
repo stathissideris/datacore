@@ -110,8 +110,11 @@
    ;; (println "COMPONENT LOST FOCUS:" (fx/tree old))
    ;; (println "COMPONENT FOCUSED:" (fx/tree new))
 
-   (fx/set-field! old :dc/indicate-focus? false)
-   (fx/set-field! new :dc/indicate-focus? true)))
+   (when (fx/has-style-class? old "focus-indicator")
+     (fx/set-field! old :dc/indicate-focus? false))
+
+   (when (fx/has-style-class? new "focus-indicator")
+     (fx/set-field! new :dc/indicate-focus? true))))
 
 (defn- build-scene [{:keys [dimensions root raw-root window-style]}]
   (merge
@@ -122,9 +125,9 @@
     :fx/prop-listener
     [:focus-owner (fn [_ _ _ new]
                     (when new
-                      (let [new-focus-indicator (ui-util/focus-indicator-parent new)]
-                        (swap! stage->component assoc (fx/stage-of new-focus-indicator) new-focus-indicator)
-                        (c/reset! state/focused-component new-focus-indicator))))]}
+                      (let [new-focus-parent (ui-util/focus-parent new)]
+                        (swap! stage->component assoc (fx/stage-of new-focus-parent) new-focus-parent)
+                        (c/reset! state/focused-component new-focus-parent))))]}
    (when root
      {:root (build-window-contents root message/current-message)})
    (when raw-root

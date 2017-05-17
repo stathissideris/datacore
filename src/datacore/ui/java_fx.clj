@@ -196,7 +196,8 @@
                                     {:object object
                                      :class  (class object)
                                      :field  field
-                                     :value  value}))))))))))))
+                                     :value  value})))))))))))
+  object)
 
 (defn get-field [object field]
   (cond (and (= object :fx/top-level) (= field :children))
