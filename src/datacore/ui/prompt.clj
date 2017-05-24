@@ -87,7 +87,9 @@
        (let [list  (fx/find-by-id prompt "autocomplete-list")
              items (observable-list (vec new))]
          (fx/run-later!
-          #(fx/set-field! list :items items)))))
+          #(do
+             (fx/set-field! list :items items)
+             (-> list .getSelectionModel .selectFirst))))))
     (view/build-view
      {:type         :datacore.ui.view/window
       :raw-root     prompt
@@ -130,6 +132,32 @@
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
   (move-suggestion component :prev))
+
+(defin home
+  {:alias :prompt/home
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (.home (fx/find-by-id component "input")))
+
+(defin end
+  {:alias :prompt/end
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (.end (fx/find-by-id component "input")))
+
+(defin complete
+  {:alias :prompt/complete
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (let [input-box (fx/find-by-id component "input")
+        list      (fx/find-by-id component "autocomplete-list")
+        selection (.getSelectionModel list)
+        length    (some-> list .getItems .size)
+        selected  (or (.getSelectedItem selection)
+                      (when (= 1 length) (some-> list .getItems first)))]
+    (when selected
+      (.setText input-box (:raw selected))
+      (in/call :prompt/end))))
 
 (comment
   (do

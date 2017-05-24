@@ -14,6 +14,8 @@
 ** PROG Run function using prompt (text prompt with autocomplete)
 ** PROG File prompt
 ** DONE Refactor windows to get focused component from interactive
+** TODO Prompt: better colours for selected option in list
+** TODO Prompt: handle deleting all input
 ** TODO Meta map for cells
 ** TODO Table view for cells
 ** TODO Cells vizualisation

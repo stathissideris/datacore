@@ -56,8 +56,11 @@
 (def prompt-keymap
   {:name :datacore.ui.view/prompt
    :mapping
-   {:up   :prompt/prev-suggestion
-    :down :prompt/next-suggestion}})
+   {:up         :prompt/prev-suggestion
+    :down       :prompt/next-suggestion
+    :tab        :prompt/complete
+    #{:ctrl :a} :prompt/home
+    #{:ctrl :e} :prompt/end}})
 
 (def table-keymap
   {:name :datacore.ui.view/table

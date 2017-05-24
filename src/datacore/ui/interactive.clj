@@ -60,7 +60,7 @@
 
 (defn- wrap-function [name input]
   {:text  (underline-match (-> name str (subs 1)) input)
-   :raw   name
+   :raw   (-> name str (subs 1))
    :value name})
 
 (defn function-autocomplete [input]
@@ -85,7 +85,7 @@
                              (last parts)
                              (when (fs/directory? file) "/"))]
     {:text  (underline-match text input-last-part)
-     :raw   text
+     :raw   (str file (when (fs/directory? file) "/"))
      :value (str file)}))
 
 (defn file-autocomplete [input]
