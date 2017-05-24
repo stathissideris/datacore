@@ -120,20 +120,20 @@
 (defn get-field [object field-kw]
   ((getter (class object) field-kw) object))
 
-(defmulti fset (fn [_ field _] field))
+(defmulti fset (fn [o field _] [(class o) field]))
 
-(defmethod fset :fx/setup
+(defmethod fset [Object :fx/setup]
   [o _ value]
   (value o)
   o)
 
 ;;(def set-focused! (declared-method javafx.scene.Node "setFocused" [Boolean/TYPE]))
-(defmethod fset :fx/focused?
+(defmethod fset [Object :fx/focused?]
   [o _ focus?]
   (when focus?
     (run-later! #(.requestFocus o))))
 
-(defmethod fset :fx/event-filter
+(defmethod fset [Object :fx/event-filter]
   [o _ [filter fun]]
   (.addEventFilter o filter (event-handler fun)))
 
@@ -143,7 +143,7 @@
    (str (util/kebab->camel field) "Property")
    (object-array [])))
 
-(defmethod fset :fx/prop-listener
+(defmethod fset [Object :fx/prop-listener]
   [o _ [prop fun]]
   (.addListener (get-property o prop) (change-listener o fun)))
 
@@ -199,9 +199,9 @@
                                      :value  value})))))))))))
   object)
 
-(defmulti fget (fn [_ field] field))
+(defmulti fget (fn [o field] [(class o) field]))
 
-(defmethod fget :fx/visible-range
+(defmethod fget [Object :fx/visible-range]
   [o _]
   (let [virtual-flow (some-> o .getSkin .getChildren (.get 0))]
     [(-> virtual-flow .getFirstVisibleCell .getIndex)

@@ -40,11 +40,11 @@
                         "-fx-border-color: #155477;"))
 (def unfocused-style "-fx-border-width: 0 0 0 0;")
 
-(defmethod fx/fset :dc/indicate-focus?
+(defmethod fx/fset [Object :dc/indicate-focus?]
   [component _ focused?]
   (fx/set-field! component :style (if focused? focused-style unfocused-style)))
 
-(defmethod fx/fset :dc/meta
+(defmethod fx/fset [Object :dc/meta]
   [component _ meta]
   (util/add-meta! component meta))
 
