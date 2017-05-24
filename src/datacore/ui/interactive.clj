@@ -24,6 +24,10 @@
   [_]
   (-> state/focused-component c/value ui-util/main-component))
 
+(defmethod resolve-param ::focus-parent
+  [_]
+  (c/value state/focused-component))
+
 (defn call [match]
   (if-let [{:keys [var params]} (get functions match)]
     (do

@@ -199,12 +199,23 @@
                                      :value  value})))))))))))
   object)
 
+(defmulti fget (fn [_ field] field))
+
+(defmethod fget :fx/visible-range
+  [o _]
+  (let [virtual-flow (some-> o .getSkin .getChildren (.get 0))]
+    [(-> virtual-flow .getFirstVisibleCell .getIndex)
+     (-> virtual-flow .getLastVisibleCell .getIndex)]))
+
 (defn get-field [object field]
   (cond (and (= object :fx/top-level) (= field :children))
         (StageHelper/getStages)
 
         (int? field) ;;ObservableList
         (.get object field)
+
+        (namespace field)
+        (fget object field)
 
         :else
         (clojure.lang.Reflector/invokeInstanceMethod

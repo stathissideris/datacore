@@ -53,6 +53,12 @@
      :f :help/describe-function
      :c :help/describe-cell}}})
 
+(def prompt-keymap
+  {:name :datacore.ui.view/prompt
+   :mapping
+   {:up   :prompt/prev-suggestion
+    :down :prompt/next-suggestion}})
+
 (def table-keymap
   {:name :datacore.ui.view/table
    :mapping
@@ -61,5 +67,6 @@
     #{:ctrl :a} :table/scroll-to-first-column
     #{:ctrl :e} :table/scroll-to-last-column}})
 
-(c/defcell keymaps {:root                   root-keymap
-                    :datacore.ui.view/table table-keymap})
+(c/defcell keymaps {:root                    root-keymap
+                    :datacore.ui.view/prompt prompt-keymap
+                    :datacore.ui.view/table  table-keymap})

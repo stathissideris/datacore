@@ -4,7 +4,7 @@
             [datacore.ui.util :as uu]
             [datacore.ui.view :as view]
             [datacore.cells :as c]
-            [datacore.ui.interactive :as i])
+            [datacore.ui.interactive :as in :refer [defin]])
   (:import [javafx.scene.control ListCell]))
 
 (defn list-cell []
@@ -53,7 +53,7 @@
                               "-fx-wrap-text: true;"
                               "-fx-text-fill: #887373;")}
              {:fx/type          :scene.control/text-field
-              :id               "prompt-text-field"
+              :id               "input"
               :style            (str "-fx-font-size: 2.5em;"
                                      "-fx-border-width: 5px;"
                                      "-fx-background-color: #f4f2f3;"
@@ -95,6 +95,42 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def ^:private scroll-to* (-> javafx.scene.control.ListView (.getMethod "scrollTo" (into-array [Integer/TYPE]))))
+
+(defn- scroll-to [list index]
+  (.invoke scroll-to* list (object-array [(int index)])))
+
+(defn- move-suggestion
+  [component direction]
+  (let [input-box      (fx/find-by-id component "input")
+        list           (fx/find-by-id component "autocomplete-list")
+        length         (some-> list .getItems .size)
+        selection      (.getSelectionModel list)
+        selected       (.getSelectedIndex selection)
+        new-selected   (+ selected (if (= :next direction) 1 -1))
+        new-selected   (cond (= -1 new-selected) (dec length)
+                             (= length new-selected) 0
+                             :else new-selected)
+        [first-visible
+         last-visible] (fx/get-field list :fx/visible-range)]
+    (.clearAndSelect selection new-selected)
+    (when (or (< new-selected first-visible)
+              (>= new-selected last-visible))
+      (scroll-to list new-selected))
+    (.requestFocus input-box)))
+
+(defin next-suggestion
+  {:alias :prompt/next-suggestion
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (move-suggestion component :next))
+
+(defin prev-suggestion
+  {:alias :prompt/prev-suggestion
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (move-suggestion component :prev))
+
 (comment
   (do
     (c/defcell popup-preview (make-popup))
@@ -104,7 +140,7 @@
 (comment
   (def cc (deref (fx/run-later!
                   #(-> (make-popup
-                        {:autocomplete-fun i/function-autocomplete
+                        {:autocomplete-fun in/function-autocomplete
                          :initial-text     "wind"})
                        fx/show!))))
   )
@@ -112,7 +148,7 @@
 (comment
   (def cc (deref (fx/run-later!
                   #(-> (make-popup
-                        {:autocomplete-fun i/file-autocomplete
+                        {:autocomplete-fun in/file-autocomplete
                          :initial-text     "/"})
                        fx/show!))))
   )
