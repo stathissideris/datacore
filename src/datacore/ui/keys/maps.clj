@@ -58,6 +58,8 @@
    :mapping
    {:up         :prompt/prev-suggestion
     :down       :prompt/next-suggestion
+    #{:ctrl :p} :prompt/prev-suggestion
+    #{:ctrl :n} :prompt/next-suggestion
     :tab        :prompt/complete
     #{:ctrl :a} :prompt/home
     #{:ctrl :e} :prompt/end}})
