@@ -83,7 +83,11 @@
                                []))
               :cell-factory (fx/callback
                              (fn [list]
-                               (list-cell)))}]}]})]
+                               (list-cell)))}]}]})
+        window            (view/build-view
+                           {:type         :datacore.ui.view/window
+                            :raw-root     prompt
+                            :window-style :transparent})]
     (add-watch
      autocomplete-list :autocomplete
      (fn [_ _ _ new]
@@ -93,10 +97,10 @@
           #(do
              (fx/set-field! list :items items)
              (-> list .getSelectionModel .selectFirst))))))
-    (view/build-view
-     {:type         :datacore.ui.view/window
-      :raw-root     prompt
-      :window-style :transparent})))
+    (reset! state {:accept-fn accept-fn
+                   :cancel-fn cancel-fn})
+    (in/call :prompt/end)
+    window))
 
 ;;;;;;;;;;;;;;;;;;;; interactive ;;;;;;;;;;;;;;;;;;;;
 
@@ -146,7 +150,10 @@
   {:alias :prompt/end
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
-  (.end (fx/find-by-id component "input")))
+  (let [input (fx/find-by-id component "input")]
+    (fx/run-later! #(doto input
+                      (.requestFocus)
+                      (.end)))))
 
 (defin backward-char
   {:alias :prompt/backward-char
@@ -190,6 +197,22 @@
       (.setText input-box (:raw selected))
       (in/call :prompt/end))))
 
+(defin accept
+  {:alias :prompt/accept
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (let [input-box (fx/find-by-id component "input")
+        list      (fx/find-by-id component "autocomplete-list")
+        selection (.getSelectionModel list)
+        length    (some-> list .getItems .size)
+        selected  (or (.getSelectedItem selection)
+                      (when (= 1 length) (some-> list .getItems first)))
+        accept-fn (:accept-fn @state)
+        stage     (fx/stage-of component)]
+    (when stage (.close stage))
+    (when accept-fn (accept-fn {:input-text    (.getText input-box)
+                                :selected-item (:value selected)}))))
+
 (comment
   (do
     (c/defcell popup-preview (make-popup))
@@ -197,20 +220,18 @@
   )
 
 (comment
-  (def cc (deref (fx/run-later!
-                  #(-> (make-popup
-                        {:autocomplete-fun in/function-autocomplete
-                         :initial-text     "wind"})
-                       fx/show!))))
+  (fx/run-later!
+   #(-> (make-popup
+         {:autocomplete-fun in/function-autocomplete
+          :initial-text     "wind"
+          :accept-fn        (fn [text] (prn 'SELECTED text))})
+        fx/show!))
   )
 
 (comment
-  (def cc (deref (fx/run-later!
-                  #(-> (make-popup
-                        {:autocomplete-fun in/file-autocomplete
-                         :initial-text     "/"})
-                       fx/show!))))
+  (fx/run-later!
+   #(-> (make-popup
+         {:autocomplete-fun in/file-autocomplete
+          :initial-text     "/"})
+        fx/show!))
   )
-
-;;(fx/run-later! #(-> cc .close))
-;;(c/swap! popup-preview (fn [_] (make-popup)))

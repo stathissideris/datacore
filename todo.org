@@ -16,6 +16,7 @@
 ** DONE Refactor windows to get focused component from interactive
 ** TODO Prompt: better colours for selected option in list
 ** TODO Prompt: handle deleting all input
+** TODO Prompt bug: key repeat is blocked by keys handling code
 ** TODO Meta map for cells
 ** TODO Table view for cells
 ** TODO Cells vizualisation

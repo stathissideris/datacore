@@ -61,6 +61,7 @@
     #{:ctrl :p}           :prompt/prev-suggestion
     #{:ctrl :n}           :prompt/next-suggestion
     :tab                  :prompt/complete
+    :enter                :prompt/accept
     #{:meta :shortcut :g} :prompt/cancel
     #{:ctrl :a}           :prompt/home
     #{:ctrl :e}           :prompt/end
