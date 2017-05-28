@@ -7,6 +7,9 @@
             [datacore.ui.interactive :as in :refer [defin]])
   (:import [javafx.scene.control ListCell]))
 
+(def state
+  (atom {}))
+
 (defn list-cell []
   (let [tf (fx/text-flow)]
     (proxy [ListCell] []
@@ -20,7 +23,7 @@
              (-> tf .getChildren (.setAll (map fx/text (:text item))))
              (.setGraphic this tf))))))))
 
-(defn make-popup [{:keys [autocomplete-fun initial-text]}]
+(defn make-popup [{:keys [autocomplete-fun initial-text accept-fn cancel-fn]}]
   ;;.centerOnScreen
   ;;.setOpacity
   (let [autocomplete-list (atom [])
@@ -95,7 +98,7 @@
       :raw-root     prompt
       :window-style :transparent})))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;; interactive ;;;;;;;;;;;;;;;;;;;;
 
 (def ^:private scroll-to* (-> javafx.scene.control.ListView (.getMethod "scrollTo" (into-array [Integer/TYPE]))))
 
@@ -144,6 +147,34 @@
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
   (.end (fx/find-by-id component "input")))
+
+(defin backward-char
+  {:alias :prompt/backward-char
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (.backward (fx/find-by-id component "input")))
+
+(defin forward-char
+  {:alias :prompt/forward-char
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (.forward (fx/find-by-id component "input")))
+
+(defin delete-forward-char
+  {:alias :prompt/delete-forward-char
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (.deleteNextChar (fx/find-by-id component "input")))
+
+(defin cancel
+  {:alias :prompt/cancel
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (when-let [stage (fx/stage-of component)]
+    (.close stage))
+  (let [cancel-fn (:cancel-fn @state)]
+    (reset! state {})
+    (when cancel-fn (cancel-fn))))
 
 (defin complete
   {:alias :prompt/complete
