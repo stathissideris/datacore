@@ -140,7 +140,7 @@
               (message/message (subs (str match) 1))
               (clear-chain!)
               (consume-event fx-event press event)
-              (interactive/call match)
+              (future (interactive/call match))
               match))))
       (catch Exception e
         (.printStackTrace e)

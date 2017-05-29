@@ -18,7 +18,7 @@
      (defn ~name ~@rest)
      (register! (resolve (quote ~name)) ~options)))
 
-(defmulti resolve-param identity)
+(defmulti resolve-param :type)
 
 (defmethod resolve-param ::main-component
   [_]
@@ -28,17 +28,31 @@
   [_]
   (c/value state/focused-component))
 
+(defn expand-param [[name param]]
+  (if (keyword? param)
+    [name {:type param}]
+    [name param]))
+
 (defn call [match]
   (if-let [{:keys [var params]} (get functions match)]
     (do
       (prn var params)
       (let [fun (deref var)]
         (if (not-empty params)
-          (let [resolved-params (reduce (fn [m [k v]] (assoc m k (resolve-param v))) {} params)]
+          (let [params          (map expand-param params)
+                resolved-params (reduce (fn [m [k v]] (assoc m k (resolve-param v))) {} params)]
             (prn 'params resolved-params)
             (fun resolved-params))
           (fun))))
     ::no-function))
+
+(defin execute-function
+  {:alias  :interactive/execute-function
+   :params [[:function ::function]]}
+  [{:keys [function]}]
+  (call function))
+
+;;;;;;;;;;;;;;;;;;;; autocomplete ;;;;;;;;;;;;;;;;;;;;
 
 (defn- underline-match [text match]
   (cond (not text)

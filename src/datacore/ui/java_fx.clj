@@ -25,9 +25,12 @@
 (defn init []
   (Platform/setImplicitExit false))
 
+(defn on-fx-thread? []
+  (Platform/isFxApplicationThread))
+
 (defn run-later! [fun]
   (let [p (promise)]
-    (if (Platform/isFxApplicationThread)
+    (if (on-fx-thread?)
       (deliver p (fun))
       (Platform/runLater
        (fn []
@@ -535,19 +538,19 @@
      :size    (.getSize default-font)}))
 
 (def font-weight-map
-  {:black       FontWeight/BLACK
-   :bold        FontWeight/BOLD
-   :extra-bold  FontWeight/EXTRA_BOLD
-   :extra-light FontWeight/EXTRA_LIGHT
-   :light       FontWeight/LIGHT
-   :medium      FontWeight/MEDIUM
-   :normal      FontWeight/NORMAL
-   :semi-bold   FontWeight/SEMI_BOLD
-   :thin        FontWeight/THIN})
+  {"black"       FontWeight/BLACK
+   "bold"        FontWeight/BOLD
+   "extra-bold"  FontWeight/EXTRA_BOLD
+   "extra-light" FontWeight/EXTRA_LIGHT
+   "light"       FontWeight/LIGHT
+   "medium"      FontWeight/MEDIUM
+   "normal"      FontWeight/NORMAL
+   "semi-bold"   FontWeight/SEMI_BOLD
+   "thin"        FontWeight/THIN})
 
 (def font-posture-map
-  {:italic  FontPosture/ITALIC
-   :regular FontPosture/REGULAR})
+  {"italic"  FontPosture/ITALIC
+   "regular" FontPosture/REGULAR})
 
 (defn font [{:keys [family weight posture size] :as options}]
   (let [options (cond-> options
@@ -563,7 +566,7 @@
    :left    TextAlignment/LEFT
    :right   TextAlignment/RIGHT})
 
-(defn span [{:keys [underline strike align] :as attr} content]
+(defn span [{:keys [underline strike align fill] :as attr} content]
   (let [font-attr (not-empty (select-keys attr [:family :weight :posture :size]))
         f         (when font-attr (font font-attr))
         text
@@ -572,6 +575,8 @@
           (.setStrikethrough (or strike false))
           (.setTextAlignment (text-alignment-map (or align :left))))]
     (when f (.setFont text f))
+    (when fill
+      (.setFill text fill))
     text))
 
 (extend-type clojure.lang.APersistentVector
@@ -596,7 +601,28 @@
   ([nodes]
    (if (empty? nodes)
      (TextFlow.)
-     (TextFlow. (into-array Node (map text nodes))))))
+     (TextFlow. (into-array Node (map text (remove nil? nodes)))))))
+
+(defmethod fset [TextFlow :fx/children]
+  [tf _ nodes]
+  (-> tf .getChildren (.setAll (mapv text (remove nil? nodes)))))
+
+;;;;;;;;;;;;;;;;;;;; color ;;;;;;;;;;;;;;;;;;;;
+
+(defn color
+  ([web]
+   (Color/web web))
+  ([r g b]
+   (Color/color r g b))
+  ([r g b a]
+   (Color/color r g b a)))
+
+(defn darker [color] (.darker color))
+(defn brighter [color] (.brighter color))
+(defn desaturated [color] (.desaturate color))
+(defn saturated [color] (.saturate color))
+(defn grayscale [color] (.grayscale color))
+(defn inverted [color] (.invert color))
 
 (comment
   (make

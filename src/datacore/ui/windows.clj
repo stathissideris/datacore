@@ -14,22 +14,26 @@
    (fx/focus-owner @view/focused-stage)))
 
 (defn- split-pane-index-of [item split-pane]
-  (util/index-of item (fx/get-field split-pane :items)))
+  (when item
+    (util/index-of item (fx/get-field split-pane :items))))
 
 (defn- replace-in-split-pane! [split-pane old new]
-  (let [idx (split-pane-index-of old split-pane)]
-    (when-not idx
-      (throw (ex-info "Cannot find component in split-pane"
-                      {:old-component (fx/tree old)
-                       :new-component (fx/tree new)
-                       :split-pane    (fx/tree split-pane)})))
-    (.set (.getItems split-pane) (int idx) new)))
+  (when (and split-pane old new)
+    (let [idx (split-pane-index-of old split-pane)]
+      (when-not idx
+        (throw (ex-info "Cannot find component in split-pane"
+                        {:old-component (fx/tree old)
+                         :new-component (fx/tree new)
+                         :split-pane    (fx/tree split-pane)})))
+      (.set (.getItems split-pane) (int idx) new))))
 
 (defn- replace! [reference-component new-component]
   (let [parent (fx/parent reference-component)]
-    (if (fx/has-style-class? parent "root")
-      (fx/set-field! parent :center new-component)
-      (replace-in-split-pane! (fx/parent parent) reference-component new-component))))
+    (when parent
+      (fx/run-later!
+       #(if (fx/has-style-class? parent "root")
+          (fx/set-field! parent :center new-component)
+          (replace-in-split-pane! (fx/parent parent) reference-component new-component))))))
 
 (defn replace-focused! [component]
   (replace! (focus-owner) component))
@@ -44,7 +48,7 @@
         parent  (fx/parent focused)]
     (when-not (fx/has-style-class? parent "root")
       (let [root (get-root focused)]
-        (fx/set-field! root :center focused)))))
+        (fx/run-later! #(fx/set-field! root :center focused))))))
 
 (defin delete
   {:alias :windows/delete}
