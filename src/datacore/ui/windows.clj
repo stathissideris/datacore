@@ -121,19 +121,20 @@
 (defn- swap-to-direction [direction]
   (let [focused (focus-owner)
         other   (view/focusable-in-direction focused direction)]
-    (when (and focused other)
-      (let [this-sp   (-> focused fx/parent fx/parent)
-            other-sp  (-> other fx/parent fx/parent)
-            this-idx  (split-pane-index-of focused this-sp)
-            other-idx (split-pane-index-of other other-sp)]
-        (if (#{:right :down} direction)
-          (do
-            (.set (.getItems other-sp) other-idx focused)
-            (.set (.getItems this-sp) this-idx other))
-          (do
-            (.set (.getItems this-sp) this-idx other)
-            (.set (.getItems other-sp) other-idx focused)))
-        (view/focus! focused)))))
+    (fx/run-later!
+     #(when (and focused other)
+        (let [this-sp   (-> focused fx/parent fx/parent)
+              other-sp  (-> other fx/parent fx/parent)
+              this-idx  (split-pane-index-of focused this-sp)
+              other-idx (split-pane-index-of other other-sp)]
+          (if (#{:right :down} direction)
+            (do
+              (.set (.getItems other-sp) other-idx focused)
+              (.set (.getItems this-sp) this-idx other))
+            (do
+              (.set (.getItems this-sp) this-idx other)
+              (.set (.getItems other-sp) other-idx focused)))
+          (view/focus! focused))))))
 
 (defin swap-left
   {:alias :windows/swap-left}
