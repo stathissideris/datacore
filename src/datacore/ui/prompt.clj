@@ -7,8 +7,7 @@
             [datacore.ui.interactive :as in :refer [defin]])
   (:import [javafx.scene.control ListCell]))
 
-(def state
-  (atom {}))
+(def state (atom nil))
 
 (defn list-cell []
   (let [tf (fx/text-flow)]
@@ -26,79 +25,80 @@
 (defn make-popup [{:keys [title prompt-text autocomplete-fn initial-input accept-fn cancel-fn]}]
   ;;.centerOnScreen
   ;;.setOpacity
-  (let [autocomplete-list (atom [])
-        prompt
-        (fx/make-tree
-         {:fx/type     :scene.layout/v-box
-          :style-class ["focus-parent"]
-          :dc/meta     {::view/type ::view/prompt}
-          :style       (str "-fx-padding: 40px;"
-                            "-fx-background-color: rgba(0,0,0,0);")
-          :children
-          [{:fx/type :scene.layout/v-box
-            :style (str "-fx-padding: 0px;"
-                        "-fx-background-color: rgba(0,0,0,0);"
-                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10)")
-            :pref-width 400 ;;if not set, :wrap-text does not work on label below
+  (when-not @state
+    (let [autocomplete-list (atom [])
+          prompt
+          (fx/make-tree
+           {:fx/type     :scene.layout/v-box
+            :style-class ["focus-parent"]
+            :dc/meta     {::view/type ::view/prompt}
+            :style       (str "-fx-padding: 40px;"
+                              "-fx-background-color: rgba(0,0,0,0);")
             :children
-            [{:fx/type     :scene.text/text-flow
-              :fx/children [[:span {:fill (-> "#887373" fx/color fx/darker) :size 16} title]
-                            "\n"
-                            [:span {:fill (fx/color "#887373")} prompt-text]]
-              :style       (str "-fx-padding: 0.9em 0.7em 0.6em 0.8em;"
-                                "-fx-background-color: #f4f2f3;"
-                                "-fx-background-radius: 8 8 0 0;"
-                                "-fx-border-width: 1 1 0 1;"
-                                "-fx-border-radius: 6 6 0 0;"
-                                "-fx-border-color: #d5d5d5;"
-                                "-fx-wrap-text: true;")}
-             {:fx/type          :scene.control/text-field
-              :id               "input"
-              :style            (str "-fx-font-size: 2.5em;"
-                                     "-fx-border-width: 5px;"
-                                     "-fx-background-color: #f4f2f3;"
-                                     "-fx-border-color: #d5d5d5;"
+            [{:fx/type :scene.layout/v-box
+              :style (str "-fx-padding: 0px;"
+                          "-fx-background-color: rgba(0,0,0,0);"
+                          "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10)")
+              :pref-width 400 ;;if not set, :wrap-text does not work on label below
+              :children
+              [{:fx/type     :scene.text/text-flow
+                :fx/children [[:span {:fill (-> "#887373" fx/color fx/darker) :size 16} title]
+                              "\n"
+                              [:span {:fill (fx/color "#887373")} prompt-text]]
+                :style       (str "-fx-padding: 0.9em 0.7em 0.6em 0.8em;"
+                                  "-fx-background-color: #f4f2f3;"
+                                  "-fx-background-radius: 8 8 0 0;"
+                                  "-fx-border-width: 1 1 0 1;"
+                                  "-fx-border-radius: 6 6 0 0;"
+                                  "-fx-border-color: #d5d5d5;"
+                                  "-fx-wrap-text: true;")}
+               {:fx/type          :scene.control/text-field
+                :id               "input"
+                :style            (str "-fx-font-size: 2.5em;"
+                                       "-fx-border-width: 5px;"
+                                       "-fx-background-color: #f4f2f3;"
+                                       "-fx-border-color: #d5d5d5;"
+                                       "-fx-border-style: solid;"
+                                       "-fx-border-width: 1px;")
+                :text             initial-input
+                :fx/prop-listener [:text
+                                   (fn [_ _ _ text]
+                                     (when autocomplete-fn
+                                       (future
+                                         (reset! autocomplete-list (autocomplete-fn text)))))]}
+               (when autocomplete-fn
+                 {:fx/type      :scene.control/list-view
+                  :id           "autocomplete-list"
+                  :style        (str "-fx-font-size: 1.5em;"
+                                     "-fx-border-color: white;"
                                      "-fx-border-style: solid;"
-                                     "-fx-border-width: 1px;")
-              :text             initial-input
-              :fx/prop-listener [:text
-                                 (fn [_ _ _ text]
-                                   (when autocomplete-fn
-                                     (future
-                                       (reset! autocomplete-list (autocomplete-fn text)))))]}
-             (when autocomplete-fn
-               {:fx/type      :scene.control/list-view
-                :id           "autocomplete-list"
-                :style        (str "-fx-font-size: 1.5em;"
-                                   "-fx-border-color: white;"
-                                   "-fx-border-style: solid;"
-                                   "-fx-border-width: 1px;"
-                                   "-fx-border-radius: 0 0 5 5;"
-                                   "-fx-background-radius: 0 0 2 2;")
-                :items        (observable-list
-                               (if autocomplete-fn
-                                 (autocomplete-fn initial-input)
-                                 []))
-                :cell-factory (fx/callback
-                               (fn [list]
-                                 (list-cell)))})]}]})
-        window            (view/build-view
-                           {:type         :datacore.ui.view/window
-                            :raw-root     prompt
-                            :window-style :transparent})]
-    (add-watch
-     autocomplete-list :autocomplete
-     (fn [_ _ _ new]
-       (let [list  (fx/find-by-id prompt "autocomplete-list")
-             items (observable-list (vec new))]
-         (fx/run-later!
-          #(do
-             (fx/set-field! list :items items)
-             (-> list .getSelectionModel .selectFirst))))))
-    (reset! state {:accept-fn accept-fn
-                   :cancel-fn cancel-fn})
-    (in/call :prompt/end)
-    window))
+                                     "-fx-border-width: 1px;"
+                                     "-fx-border-radius: 0 0 5 5;"
+                                     "-fx-background-radius: 0 0 2 2;")
+                  :items        (observable-list
+                                 (if autocomplete-fn
+                                   (autocomplete-fn initial-input)
+                                   []))
+                  :cell-factory (fx/callback
+                                 (fn [list]
+                                   (list-cell)))})]}]})
+          window            (view/build-view
+                             {:type         :datacore.ui.view/window
+                              :raw-root     prompt
+                              :window-style :transparent})]
+      (add-watch
+       autocomplete-list :autocomplete
+       (fn [_ _ _ new]
+         (let [list  (fx/find-by-id prompt "autocomplete-list")
+               items (observable-list (vec new))]
+           (fx/run-later!
+            #(do
+               (fx/set-field! list :items items)
+               (-> list .getSelectionModel .selectFirst))))))
+      (reset! state {:accept-fn accept-fn
+                     :cancel-fn cancel-fn})
+      (in/call :prompt/end)
+      window)))
 
 ;;;;;;;;;;;;;;;;;;;; interactive ;;;;;;;;;;;;;;;;;;;;
 
@@ -181,7 +181,7 @@
   (when-let [stage (fx/stage-of component)]
     (fx/run-later! #(.close stage)))
   (let [cancel-fn (:cancel-fn @state)]
-    (reset! state {})
+    (reset! state nil)
     (when cancel-fn (cancel-fn))))
 
 (defin complete
@@ -203,16 +203,19 @@
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
   (let [input-box (fx/find-by-id component "input")
+        input     (.getText input-box)
         list      (fx/find-by-id component "autocomplete-list")
         selection (.getSelectionModel list)
         length    (some-> list .getItems .size)
         selected  (or (.getSelectedItem selection)
                       (when (= 1 length) (some-> list .getItems first)))
+        value     (:value selected)
         accept-fn (:accept-fn @state)
         stage     (fx/stage-of component)]
-    (when stage (fx/run-later! #(.close stage)))
-    (when accept-fn (accept-fn {:input-text    (.getText input-box)
-                                :selected-item (:value selected)}))))
+    @(fx/run-later! #(when stage (.close stage)))
+    (reset! state nil)
+    (when accept-fn (accept-fn {:input-text    input
+                                :selected-item value}))))
 
 (defmethod in/resolve-param ::in/function
   [{:keys [title prompt initial-input]}]
