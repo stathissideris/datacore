@@ -36,19 +36,21 @@
 (defn call [match]
   (if-let [{:keys [var params]} (get functions match)]
     (do
-      (prn var params)
+      (prn 'CALLED var params)
       (let [fun (deref var)]
         (if (not-empty params)
           (let [params          (map expand-param params)
                 resolved-params (reduce (fn [m [k v]] (assoc m k (resolve-param v))) {} params)]
-            (prn 'params resolved-params)
+            (prn 'PARAMS var resolved-params)
             (fun resolved-params))
           (fun))))
     ::no-function))
 
 (defin execute-function
   {:alias  :interactive/execute-function
-   :params [[:function ::function]]}
+   :params [[:function {:type   ::function
+                        :title  "execute-function"
+                        :prompt "Select the function to execute"}]]}
   [{:keys [function]}]
   (call function))
 

@@ -156,13 +156,12 @@
 (defmethod build-view ::cell
   [{:keys [cell focused?]}]
   (let [view (build-view cell)]
-    (-> view
-        (fx/set-fields!
-         {:style-class        ["focus-indicator"]
-          :dc/indicate-focus? focused?
-          :dc/meta            {::type (cell-view-type cell)}
-          :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})
-        fx/unmanaged)))
+    (fx/set-fields!
+     view
+     {:style-class        ["focus-indicator"]
+      :dc/indicate-focus? focused?
+      :dc/meta            {::type (cell-view-type cell)}
+      :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})))
 
 ;;;;;;;;;;;;;;;;
 

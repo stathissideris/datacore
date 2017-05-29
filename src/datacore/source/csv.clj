@@ -5,16 +5,19 @@
             [datacore.util :as util]
             [datacore.cells :as c]
             [datacore.state :as state]
+            [datacore.ui.java-fx :as fx]
             [datacore.ui.view :as view]
+            [datacore.ui.interactive :as in :refer [defin]]
+            [datacore.ui.windows :as windows]
             [hawk.core :as hawk]))
 
-(defn load-csv [{:keys [filename separator quote] :as options}]
+(defn load-csv* [{:keys [filename separator quote] :as options}]
   (with-open [in-file (io/reader filename)]
     (doall
      (apply csv/read-csv in-file (mapcat identity options)))))
 
 (defn- data-map [options]
-  (let [rows    (load-csv options)
+  (let [rows    (load-csv* options)
         columns (mapv util/string->data-key (first rows))]
     {:original-column-labels (zipmap columns (first rows))
      :columns                columns
@@ -55,3 +58,19 @@
                                            (util/data-key->label c))) columns))})))
    csv-cell
    {:label :table-view}))
+
+(defin load-csv
+  {:alias :csv/load-csv
+   :params [[:filename {:type   ::in/file
+                        :title  "Load CSV"
+                        :prompt "Select CSV file to load"}]]}
+  [{:keys [filename]}]
+  (let [csv  (file {:filename filename})
+        view (default-view csv)
+        component (view/build-view
+                   {:type       :datacore.ui.view/cell
+                    :cell       view
+                    :focused?   true
+                    :focusable? true})]
+    (fx/run-later!
+     #(windows/replace-focused! component))))

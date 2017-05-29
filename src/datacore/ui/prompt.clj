@@ -222,12 +222,25 @@
   (let [out (promise)]
     (fx/run-later!
      #(-> (make-popup
-           {:title           "execute-function"
-            :prompt-text     (str "Select the function to execute")
+           {:title           title
+            :prompt-text     prompt
             :autocomplete-fn in/function-autocomplete
             :initial-input   "w" ;;TODO if you make this an empty string the JVM crashes!!!!
             :accept-fn       (fn [selected]
-                               (prn 'SELECTED selected)
+                               (deliver out (:selected-item selected)))})
+          fx/show!))
+    @out))
+
+(defmethod in/resolve-param ::in/file
+  [{:keys [title prompt initial-input]}]
+  (let [out (promise)]
+    (fx/run-later!
+     #(-> (make-popup
+           {:title           title
+            :prompt-text     prompt
+            :autocomplete-fn in/file-autocomplete
+            :initial-input   "/" ;;TODO if you make this an empty string the JVM crashes!!!!
+            :accept-fn       (fn [selected]
                                (deliver out (:selected-item selected)))})
           fx/show!))
     @out))
