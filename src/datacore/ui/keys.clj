@@ -1,6 +1,7 @@
 (ns datacore.ui.keys
   (:require [clojure.string :as str]
             [clojure.set :as set]
+            [datacore.util :as util]
             [datacore.ui.interactive :as interactive]
             [datacore.ui.timer :as timer]
             [datacore.ui.message :as message]
@@ -140,7 +141,7 @@
               (message/message (subs (str match) 1))
               (clear-chain!)
               (consume-event fx-event press event)
-              (future (interactive/call match))
+              (util/future (interactive/call match))
               match))))
       (catch Exception e
         (.printStackTrace e)

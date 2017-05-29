@@ -4,7 +4,8 @@
             [datacore.ui.util :as uu]
             [datacore.ui.view :as view]
             [datacore.cells :as c]
-            [datacore.ui.interactive :as in :refer [defin]])
+            [datacore.ui.interactive :as in :refer [defin]]
+            [datacore.util :as util])
   (:import [javafx.scene.control ListCell]))
 
 (def state (atom nil))
@@ -71,7 +72,7 @@
                 :fx/prop-listener [:text
                                    (fn [_ _ _ text]
                                      (when autocomplete-fn
-                                       (future
+                                       (util/future
                                          (reset! autocomplete-list (autocomplete-fn text)))))]}
                (when autocomplete-fn
                  {:fx/type      :scene.control/list-view

@@ -1,10 +1,11 @@
 (ns datacore.util
-  (:refer-clojure :exclude [meta alter-meta!])
+  (:refer-clojure :exclude [meta alter-meta! future])
   (:require [clojure.string :as str]
             [clojure.spec :as s]
             [clojure.core.match :refer [match]]
             [clojure.data :as data]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.repl :as repl]))
 
 (defn camel->kebab [from]
   (let [s (str/split (name from) #"(?=[A-Z])" )]
@@ -68,6 +69,30 @@
    (map first
         (filter #(= (second %) x)
                 (map-indexed vector coll)))))
+
+(defmacro with-err-str
+  "Evaluates exprs in a context in which *err* is bound to a fresh
+  StringWriter.  Returns the string created by any nested printing
+  calls."
+  {:added "1.0"}
+  [& body]
+  `(let [s# (new java.io.StringWriter)]
+     (binding [*err* s#]
+       ~@body
+       (str s#))))
+
+(def uncaught-exception (atom nil))
+(defn handle-uncaught [throwable]
+  (reset! uncaught-exception throwable)
+  (let [trace (with-err-str (repl/pst throwable 150))]
+    (println "UNCAUGHT EXCEPTION" trace)))
+
+(defmacro future [& body]
+  `(clojure.core/future
+     (try
+       ~@body
+       (catch Exception e#
+         (handle-uncaught e#)))))
 
 ;;;;;;;;;;;;;;;;;;;; meta ;;;;;;;;;;;;;;;;;;;;
 

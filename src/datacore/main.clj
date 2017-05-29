@@ -1,29 +1,15 @@
 (ns datacore.main
-  (:require [clojure.repl :as repl]
-            [datacore.cells :as c]
+  (:require [datacore.cells :as c]
             [datacore.state :as state]
+            [datacore.util :as util]
             [datacore.ui.view :as view]
             [datacore.ui.java-fx :as fx]
             [datacore.ui.windows :as windows]))
 
-(defmacro with-err-str
-  "Evaluates exprs in a context in which *err* is bound to a fresh
-  StringWriter.  Returns the string created by any nested printing
-  calls."
-  {:added "1.0"}
-  [& body]
-  `(let [s# (new java.io.StringWriter)]
-     (binding [*err* s#]
-       ~@body
-       (str s#))))
-
-(def uncaught-exception (atom nil))
 (defn- global-exception-handler []
   (reify Thread$UncaughtExceptionHandler
-    (uncaughtException [this thread throwable]
-      (reset! uncaught-exception throwable)
-      (let [trace (with-err-str (repl/pst throwable 150))]
-        (println "UNCAUGHT EXCEPTION" trace)))))
+    (uncaughtException [_ _ throwable]
+      (util/handle-uncaught throwable))))
 
 (defn init []
   ;;(set! *warn-on-reflection* true)
