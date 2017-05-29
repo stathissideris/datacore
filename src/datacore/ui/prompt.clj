@@ -22,7 +22,13 @@
              (-> tf .getChildren (.setAll (map fx/text (:text item))))
              (.setGraphic this tf))))))))
 
-(defn make-popup [{:keys [title prompt-text autocomplete-fn initial-input accept-fn cancel-fn]}]
+(defn make-popup [{:keys [title
+                          prompt-text
+                          autocomplete-fn
+                          initial-input
+                          accept-fn
+                          valid?-fn
+                          cancel-fn]}]
   ;;.centerOnScreen
   ;;.setOpacity
   (when-not @state
@@ -42,6 +48,7 @@
               :pref-width 400 ;;if not set, :wrap-text does not work on label below
               :children
               [{:fx/type     :scene.text/text-flow
+                :id          "info-text"
                 :fx/children [[:span {:fill (-> "#887373" fx/color fx/darker) :size 16} title]
                               "\n"
                               [:span {:fill (fx/color "#887373")} prompt-text]]
@@ -96,7 +103,8 @@
                (fx/set-field! list :items items)
                (-> list .getSelectionModel .selectFirst))))))
       (reset! state {:accept-fn accept-fn
-                     :cancel-fn cancel-fn})
+                     :cancel-fn cancel-fn
+                     :valid?-fn valid?-fn})
       (in/call :prompt/end)
       window)))
 
@@ -202,20 +210,29 @@
   {:alias :prompt/accept
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
-  (let [input-box (fx/find-by-id component "input")
-        input     (.getText input-box)
-        list      (fx/find-by-id component "autocomplete-list")
-        selection (.getSelectionModel list)
-        length    (some-> list .getItems .size)
-        selected  (or (.getSelectedItem selection)
-                      (when (= 1 length) (some-> list .getItems first)))
-        value     (:value selected)
-        accept-fn (:accept-fn @state)
-        stage     (fx/stage-of component)]
-    @(fx/run-later! #(when stage (.close stage)))
-    (reset! state nil)
-    (when accept-fn (accept-fn {:input-text    input
-                                :selected-item value}))))
+  (let [input-box  (fx/find-by-id component "input")
+        input      (.getText input-box)
+        list       (fx/find-by-id component "autocomplete-list")
+        selection  (.getSelectionModel list)
+        length     (some-> list .getItems .size)
+        selected   (or (.getSelectedItem selection)
+                       (when (= 1 length) (some-> list .getItems first)))
+        value      (:value selected)
+        accept-fn  (:accept-fn @state)
+        valid?-fn  (:valid?-fn @state)
+        validation (if valid?-fn (valid?-fn selected) true)
+        stage      (fx/stage-of component)]
+    (if (true? validation)
+      (do
+        @(fx/run-later! #(when stage (.close stage)))
+        (reset! state nil)
+        (when accept-fn (accept-fn {:input-text    input
+                                    :selected-item value})))
+      (let [txt (fx/find-by-id component "info-text")]
+        (fx/run-later!
+         #(doto (fx/get-field txt :children)
+            (.add (fx/text "\n"))
+            (.add (fx/text [:span {:fill (fx/color "#ff0000")} validation]))))))))
 
 (defmethod in/resolve-param ::in/function
   [{:keys [title prompt initial-input]}]
@@ -240,6 +257,7 @@
             :prompt-text     prompt
             :autocomplete-fn in/file-autocomplete
             :initial-input   "/" ;;TODO if you make this an empty string the JVM crashes!!!!
+            :valid?-fn       in/validate-file
             :accept-fn       (fn [selected]
                                (deliver out (:selected-item selected)))})
           fx/show!))

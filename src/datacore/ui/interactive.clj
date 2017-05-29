@@ -74,7 +74,7 @@
                    (remove nil?)
                    (vec)))))))
 
-(defn- wrap-function [name input]
+(defn- function-item [name input]
   {:text  (underline-match (-> name str (subs 1)) input)
    :raw   (-> name str (subs 1))
    :value name})
@@ -84,17 +84,22 @@
     (if (empty? input)
       (->> functions
            keys
-           (map #(wrap-function % input))
+           (map #(function-item % input))
            (sort-by :raw)
            (take 50))
       (->> functions
            keys
-           (map #(wrap-function % input))
+           (map #(function-item % input))
            (filter #(str/includes? (:raw %) input))
            (sort-by :text)
            (take 50)))))
 
-(defn- wrap-filename [file input]
+(defn validate-file [item]
+  (if (fs/directory? (:value item))
+    "Please select a file, not a directory"
+    true))
+
+(defn- file-item [file input]
   (let [parts           (str/split (str file) #"/")
         input-last-part (some-> input (str/split #"/") last)
         text            (str (if (= 2 (count parts)) "/" ".../")
@@ -111,7 +116,7 @@
 
           (and (str/ends-with? input "/")
                (fs/directory? input))
-          (map #(wrap-filename % input) (fs/list-dir input))
+          (map #(file-item % input) (fs/list-dir input))
 
           (and (not (fs/exists? input))
                (fs/exists? (fs/parent input)))
@@ -123,5 +128,4 @@
                  (map #(assoc % :text (underline-match (-> % :text first) last-part)))))
 
           (fs/exists? input)
-          [(wrap-filename (-> input fs/file .getCanonicalFile str)
-                          input)])))
+          [(file-item (-> input fs/file .getCanonicalFile str) input)])))
