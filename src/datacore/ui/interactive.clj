@@ -92,7 +92,7 @@
            keys
            (map #(function-item % input))
            (filter #(str/includes? (:raw %) input))
-           (sort-by :text)
+           (sort-by :raw)
            (take 50)))))
 
 (defn validate-file [item]

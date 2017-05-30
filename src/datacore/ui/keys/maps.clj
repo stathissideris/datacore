@@ -57,18 +57,19 @@
 (def prompt-keymap
   {:name :datacore.ui.view/prompt
    :mapping
-   {:up         :prompt/prev-suggestion
-    :down       :prompt/next-suggestion
-    #{:ctrl :p} :prompt/prev-suggestion
-    #{:ctrl :n} :prompt/next-suggestion
-    :tab        :prompt/complete
-    :enter      :prompt/accept
-    #{:ctrl :g} :prompt/cancel
-    #{:ctrl :a} :prompt/home
-    #{:ctrl :e} :prompt/end
-    #{:ctrl :b} :prompt/backward-char
-    #{:ctrl :f} :prompt/forward-char
-    #{:ctrl :d} :prompt/delete-forward-char}})
+   {:up                 :prompt/prev-suggestion
+    :down               :prompt/next-suggestion
+    #{:ctrl :p}         :prompt/prev-suggestion
+    #{:ctrl :n}         :prompt/next-suggestion
+    :tab                :prompt/complete
+    :enter              :prompt/accept
+    #{:ctrl :g}         :prompt/cancel
+    #{:ctrl :a}         :prompt/home
+    #{:ctrl :e}         :prompt/end
+    #{:ctrl :b}         :prompt/backward-char
+    #{:ctrl :f}         :prompt/forward-char
+    #{:ctrl :d}         :prompt/delete-forward-char
+    #{:ctrl :backspace} :prompt/kill-last-word}})
 
 (def table-keymap
   {:name :datacore.ui.view/table

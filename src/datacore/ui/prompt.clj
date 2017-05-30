@@ -5,7 +5,8 @@
             [datacore.ui.view :as view]
             [datacore.cells :as c]
             [datacore.ui.interactive :as in :refer [defin]]
-            [datacore.util :as util])
+            [datacore.util :as util]
+            [clojure.string :as str])
   (:import [javafx.scene.control ListCell]))
 
 (def state (atom nil))
@@ -182,6 +183,27 @@
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
   (.deleteNextChar (fx/find-by-id component "input")))
+
+(defn- alpha? [x]
+  (some? (re-matches #"[A-Za-z]" (str x))))
+
+(defn- kill-last-word* [s]
+  (->> (partition-by alpha? s)
+       butlast
+       butlast
+       (map #(apply str %))
+       (apply str)))
+
+(defin kill-last-word
+  {:alias :prompt/kill-last-word
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (let [input (fx/find-by-id component "input")
+        text  (kill-last-word* (.getText input))]
+    (fx/run-later!
+     #(doto input
+        (.setText text)
+        (.end)))))
 
 (defin cancel
   {:alias :prompt/cancel
