@@ -24,6 +24,9 @@
       (str (.toUpperCase (subs s 0 1))
            (subs s 1)))))
 
+(defn kw-str [kw]
+  (some-> kw str (subs 1)))
+
 (defn string->data-key [s]
   (-> s
       str/lower-case
@@ -56,6 +59,13 @@
   [n coll missing]
   (concat (take n coll)
           (repeat (- n (count coll)) missing)))
+
+(defn- flatten-keys* [a ks m]
+  (if (map? m)
+    (reduce into (map (fn [[k v]] (flatten-keys* a (conj ks k) v)) (seq m)))
+    (assoc a ks m)))
+
+(defn flatten-keys [m] (flatten-keys* {} [] m))
 
 (defn time-in-millis [] (System/currentTimeMillis))
 

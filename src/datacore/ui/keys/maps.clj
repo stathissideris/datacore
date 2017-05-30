@@ -81,3 +81,22 @@
 (c/defcell keymaps {:root                    root-keymap
                     :datacore.ui.view/prompt prompt-keymap
                     :datacore.ui.view/table  table-keymap})
+
+(defn keys-for-function [{:keys [mapping] :as keymap} function]
+  (->> (util/flatten-keys mapping)
+       (filter #(= function (second %)))
+       (map first)))
+
+(defn keys-for-function-in-keymaps [keymaps function]
+  (apply concat
+   (for [{:keys [name] :as keymap} (vals keymaps)]
+     (map #(vector name %) (keys-for-function keymap function)))))
+
+(defn set-key!
+  ([key-sequence function-alias]
+   (set-key! :root key-sequence function-alias))
+  ([keymap-name key-sequence function-alias]
+   (c/swap! keymaps assoc-in
+            (concat [keymap-name :mapping]
+                    key-sequence)
+            function-alias)))

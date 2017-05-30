@@ -16,24 +16,22 @@
 
 (defmethod view/build-view :datacore.ui.view/web
   [view-cell]
-  (let [view   (fx/make :scene.web/web-view)
-        engine (.getEngine view)]
-    (load engine (c/value view-cell))
-    (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
-    (with-status-line
-      view (c/formula (fn [{:keys [url content content-type]}]
-                        (str "Web View: "
-                             (cond url url
-                                   content (str "Local content" content-type)
-                                   :else "Nothing to show")))
-                      view-cell
-                      {:label :web-view-status-line}))))
+  @(fx/run-later!
+    #(let [view   (fx/make :scene.web/web-view)
+           engine (.getEngine view)]
+       (load engine (c/value view-cell))
+       (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
+       (with-status-line
+         view (c/formula (fn [{:keys [url content content-type]}]
+                           (str "Web View: "
+                                (cond url url
+                                      content (str "Local content" content-type)
+                                      :else "Nothing to show")))
+                         view-cell
+                         {:label :web-view-status-line})))))
 
 (defn view [web-input]
   (c/formula
-   (fn [input]
-     (merge
-      input
-      {:type :datacore.ui.view/web}))
+   (fn [input] (merge input {::view/type ::view/web}))
    web-input
    {:label :web-view}))

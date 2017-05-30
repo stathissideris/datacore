@@ -61,12 +61,17 @@
 
 (defin load-csv
   {:alias :csv/load-csv
+   :help   [:span "Load a CSV file into a table view. The file is "
+            [:i "watched"] " by default -- any changes to the file"
+            " are reflected to the view automatically."
+            [:p "This function also works on TSV files."]]
    :params [[:filename {:type   ::in/file
                         :title  "Load CSV"
-                        :prompt "Select CSV file to load"}]]}
+                        :prompt "Select CSV file to load"
+                        :help   "The CSV file to load"}]]}
   [{:keys [filename]}]
-  (let [csv  (file {:filename filename})
-        view (default-view csv)
+  (let [csv       (file {:filename filename})
+        view      (default-view csv)
         component (view/build-view
                    {:type       :datacore.ui.view/cell
                     :cell       view

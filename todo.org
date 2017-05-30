@@ -19,13 +19,17 @@
 ** TODO Prompt bug: key repeat is blocked by keys handling code
 ** TODO Prompt: show focus in main window even if prompt has focus
 ** TODO Prompt: multiple choice
+** TODO Prompt: fix layout when we have no autocomplete
+** TODO Prompt: go to previous parameter
 ** TODO Bug: focus messed up after loading CSV
 ** TODO Meta map for cells
+** TODO Table selection modes
 ** TODO Table view for cells
 ** TODO Cells vizualisation
 ** TODO Bug: prevent Cmd+Q from closing JVM
 ** TODO Bug: Swap to different window that does not have a splitter
 ** TODO Bug: Swap to different window with splitters messes up focus/focus indicator
+** TODO Web view: can't indicate focus!
 ** TODO Make view cells output stuff such as selection etc
 ** TODO Move diff to clojure.util.diff
 ** TODO Move splitter with keyboard

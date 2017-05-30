@@ -48,6 +48,7 @@
 
 (defin execute-function
   {:alias  :interactive/execute-function
+   :help   "Call any interactive function"
    :params [[:function {:type   ::function
                         :title  "execute-function"
                         :prompt "Select the function to execute"}]]}
