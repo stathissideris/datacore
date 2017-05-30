@@ -40,7 +40,7 @@
     [:html
      [:body
       [:h1 (-> alias str (subs 1))]
-      [:p help]
+      [:p (or help "(undocumented)")]
       (when params
         [:div
          [:h2 "parameters"]

@@ -3,7 +3,8 @@
   (:require [datacore.ui.view :as view]
             [datacore.ui.java-fx :as fx]
             [datacore.cells :as c]
-            [datacore.ui.util :refer [with-status-line]]))
+            [datacore.ui.util :refer [with-status-line]])
+  (:import [javafx.scene.input KeyEvent MouseEvent]))
 
 (defn- load [engine {:keys [url content content-type] :as input}]
   (cond url
@@ -17,7 +18,10 @@
 (defmethod view/build-view :datacore.ui.view/web
   [view-cell]
   @(fx/run-later!
-    #(let [view   (fx/make :scene.web/web-view)
+    #(let [view   (fx/make-tree
+                   {:fx/type         :scene.web/web-view
+                    :style-class     ["focus-indicator"]
+                    :fx/event-filter [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]})
            engine (.getEngine view)]
        (load engine (c/value view-cell))
        (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
