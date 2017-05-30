@@ -7,16 +7,32 @@
             [datacore.ui.java-fx :as fx]
             [datacore.ui.windows :as windows]
             [datacore.util :as util]
-            [hiccup.core :refer [html]]))
+            [hiccup.core :refer [html]]
+            [clojure.string :as str]))
+
+(defn- friendly-key [key]
+  (->> (map name (disj key :meta :ctrl :shortcut :shift))
+       (concat
+        (remove nil?
+         [(when (:ctrl key) "ctrl")
+          (when (:shift key) "shift")
+          (when (and (:meta key) (:shortcut key)) "command")
+          ;;TODO option
+          ]))
+       (str/join "+")))
+
+(defn- friendly-key-sequence [key-seq]
+  [:span (str/join ", " (map friendly-key key-seq))])
 
 (defn- key-help [{:keys [alias]} keymaps]
-  (when-let [key-combos (not-empty (keymaps/keys-for-function-in-keymaps keymaps alias))]
+  (when-let [key-seqs (not-empty (keymaps/keys-for-function-in-keymaps keymaps alias))]
     [:div
      [:h2 "keys"]
      [:p "You can run this function using the following key sequences:"]
      [:ul
-      (for [[keymap sequence] key-combos]
-        [:li [:tt (pr-str sequence)] " (in keymap " [:tt (util/kw-str keymap)] ")"])]]))
+      (for [[keymap sequence] key-seqs]
+        [:li (friendly-key-sequence sequence)
+         [:small " (keymap "] [:tt (util/kw-str keymap)] ")"])]]))
 
 (defn- function-help [{:keys [alias help params] :as fun} keymaps]
   {:content
@@ -35,6 +51,9 @@
              (when (:help param) " - ")
              (:help param)])]])
       (key-help fun keymaps)]])})
+
+;; try: (keymaps/set-key! [#{:meta :shortcut :q}] :interactive/execute-function)
+;; to see help be updated live!
 
 (defin describe-function
   {:alias :help/describe-function
