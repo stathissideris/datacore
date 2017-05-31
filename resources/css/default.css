@@ -34,6 +34,11 @@ body.dc-help {
   font-size: 1.3em;
 }
 
+.dc-help h2 {
+  font-style: italic;
+  font-size: 1.1em;
+}
+
 .dc-help .keymap {
   font-size: 0.8em;
   padding: .3em .8em;
@@ -44,24 +49,15 @@ body.dc-help {
   font-family: "Monaco", monospace;
 }
 
-.dc-help h2 {
-  font-style: italic;
-  font-size: 1.1em;
-}
-
 .dc-help .key-press {
-	display: inline-block;
-	min-width: 1em;
-	padding: .3em .5em;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.3em 0.5em;
+  margin: 0 0.2em;
+  box-shadow: 0 1px 0px rgba(0, 0, 0, 0.2), 0 0 0 2px #fff inset;
+  background-color: #f7f7f7;
   margin: .4em .2em;
-	font: normal .85em/1 "Lucida Grande", Lucida, Arial, sans-serif;
-	text-align: center;
-	text-decoration: none;
-	border-radius: .3em;
-	border: none;
-	cursor: default;
-  background: rgb(120, 120, 120);
-	color: rgb(250, 250, 250);
-	text-shadow: -1px -1px 0 rgb(70, 70, 70);
-	box-shadow: inset 0 0 1px rgb(150, 150, 150), inset 0 -.05em .4em rgb(80, 80, 80), 0 .1em 0 rgb(30, 30, 30), 0 .1em .1em rgba(0, 0, 0, .3);
+	font-family: "Lucida Grande", Lucida, Arial, sans-serif;
+  font-size: 0.8em;
 }
