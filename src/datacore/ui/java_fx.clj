@@ -4,7 +4,9 @@
             [clojure.spec :as s]
             [datacore.util :as util]
             [datacore.cells :as c]
-            [clojure.walk :as walk])
+            [clojure.walk :as walk]
+            [hawk.core :as hawk]
+            [me.raynes.fs :as fs])
   (:import [javafx.collections ObservableList ListChangeListener]
            [javafx.scene.control.SplitPane]
            [javafx.embed.swing JFXPanel]
@@ -16,7 +18,9 @@
            [javafx.scene Node]
            [com.sun.javafx.stage StageHelper]
            [javafx.util Callback]
-           [javafx.scene.text Font FontWeight FontPosture TextAlignment TextFlow]))
+           [javafx.scene.text Font FontWeight FontPosture TextAlignment TextFlow]
+           [javafx.scene.web WebView]
+           [java.net URI]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -201,6 +205,45 @@
                                      :field  field
                                      :value  value})))))))))))
   object)
+
+(defn- reload-stylesheet! [component path]
+  (doto component
+    (-> .getStylesheets (.remove path))
+    (-> .getStylesheets (.add path))))
+
+(defn- watch-sheet! [component path]
+  (let [wp (some-> path URI. fs/file .getPath)]
+    {:path         path
+     :watcher-path wp
+     :file-watcher
+     (hawk/watch! [{:paths   [wp]
+                    :handler (fn [_ _]
+                               (run-later!
+                                #(reload-stylesheet! component path)))}])}))
+
+(defmethod fset [Object :fx/stylesheets]
+  [o _ paths]
+  (let [paths (map util/resource->external-form paths)]
+    (doto o
+      (-> .getStylesheets .clear)
+      (-> .getStylesheets (.addAll paths))
+      (util/alter-meta! assoc :stylesheets (mapv #(watch-sheet! o %) paths)))))
+
+(defmethod fset [WebView :fx/stylesheet]
+  [o _ path]
+  (let [path (util/resource->external-form path)
+        wp   (some-> path URI. fs/file .getPath)]
+    (-> o .getEngine (.setUserStyleSheetLocation path))
+    (util/alter-meta!
+     o assoc :stylesheet
+     {:path         path
+      :watcher-path wp
+      :watcher      (hawk/watch! [{:paths   [wp]
+                                   :handler (fn [_ _]
+                                              (run-later!
+                                               #(doto o
+                                                  (-> .getEngine (.setUserStyleSheetLocation nil))
+                                                  (-> .getEngine (.setUserStyleSheetLocation path)))))}])})))
 
 (defmulti fget (fn [o field] [(class o) field]))
 
@@ -475,6 +518,8 @@
   (when root
     (merge
      {:component root}
+     (when-let [m (not-empty (util/meta root))]
+       {:meta m})
      (when (children? root)
        {:children (mapv tree (children root))}))))
 

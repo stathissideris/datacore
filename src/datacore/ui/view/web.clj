@@ -21,6 +21,7 @@
     #(let [view   (fx/make-tree
                    {:fx/type         :scene.web/web-view
                     :style-class     ["web-view" "main-component"]
+                    :fx/stylesheet   "/css/default.css"
                     :fx/event-filter [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]})
            engine (.getEngine view)]
        (load engine (c/value view-cell))

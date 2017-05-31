@@ -156,8 +156,6 @@
   []
   (swap-to-direction :down))
 
-;; multiple windows
-
 (defin new-window
   {:alias :windows/new}
   []

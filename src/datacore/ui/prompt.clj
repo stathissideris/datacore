@@ -38,7 +38,7 @@
           prompt
           (fx/make-tree
            {:fx/type     :scene.layout/v-box
-            :style-class ["focus-parent"]
+            :style-class ["focus-parent" "prompt"]
             :dc/meta     {::view/type ::view/prompt}
             :style       (str "-fx-padding: 40px;"
                               "-fx-background-color: rgba(0,0,0,0);")

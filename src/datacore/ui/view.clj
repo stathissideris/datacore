@@ -122,6 +122,7 @@
     :fx/args          (concat
                        [(build-view ::nothing)]
                        dimensions)
+    :fx/stylesheets   ["/css/default.css"]
     :fx/prop-listener
     [:focus-owner (fn [_ _ _ new]
                     (when new

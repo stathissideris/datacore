@@ -104,6 +104,11 @@
        (catch Exception e#
          (handle-uncaught e#)))))
 
+(defn resource->external-form [x]
+  (if (str/starts-with? x "file:")
+    x
+    (.toExternalForm (.getResource Class x))))
+
 ;;;;;;;;;;;;;;;;;;;; meta ;;;;;;;;;;;;;;;;;;;;
 
 (def ^:private meta-map (atom {}))
