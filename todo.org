@@ -21,7 +21,7 @@
 ** TODO Prompt: multiple choice
 ** TODO Prompt: fix layout when we have no autocomplete
 ** TODO Prompt: go to previous parameter
-** TODO Bug: focus messed up after loading CSV
+** TODO Bug: focus messed up after loading CSV (or after replacing any element)
 ** TODO Meta map for cells
 ** TODO Table selection modes
 ** TODO Table view for cells

@@ -36,7 +36,7 @@
       (focus!-1 component)))
   component)
 
-(def focused-style (str "-fx-border-width: 4 4 4 4;"
+(def focused-style (str "-fx-border-width: 3 3 3 3;"
                         "-fx-border-color: #155477;"))
 (def unfocused-style "-fx-border-width: 0 0 0 0;")
 
