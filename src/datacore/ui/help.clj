@@ -35,11 +35,12 @@
          [:small " (keymap "] [:tt (util/kw-str keymap)] ")"])]]))
 
 (defn- function-help [{:keys [alias help params] :as fun} keymaps]
-  {:content
+  {:title (str "Help for function " (util/kw-str alias))
+   :content
    (html
     [:html
      [:body
-      [:h1 (-> alias str (subs 1))]
+      [:h1 (util/kw-str alias)]
       [:p (or help "(undocumented)")]
       (when params
         [:div

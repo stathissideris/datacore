@@ -20,19 +20,21 @@
   @(fx/run-later!
     #(let [view   (fx/make-tree
                    {:fx/type         :scene.web/web-view
-                    :style-class     ["focus-indicator"]
+                    :style-class     ["web-view" "main-component"]
                     :fx/event-filter [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]})
            engine (.getEngine view)]
        (load engine (c/value view-cell))
        (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
-       (with-status-line
-         view (c/formula (fn [{:keys [url content content-type]}]
-                           (str "Web View: "
-                                (cond url url
-                                      content (str "Local content" content-type)
-                                      :else "Nothing to show")))
-                         view-cell
-                         {:label :web-view-status-line})))))
+       (-> (with-status-line
+             view (c/formula (fn [{:keys [url content title]}]
+                               (or title
+                                   (str "Web view: "
+                                        (cond url url
+                                              content "Local content"
+                                              :else "Nothing to show"))))
+                             view-cell
+                             {:label :web-view-status-line}))
+           (fx/set-field! :style-class ["focus-indicator"])))))
 
 (defn view [web-input]
   (c/formula

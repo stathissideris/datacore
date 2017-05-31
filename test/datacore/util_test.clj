@@ -1,5 +1,5 @@
 (ns datacore.util-test
-  (:refer-clojure :exclude [meta alter-meta!])
+  (:refer-clojure :exclude [meta alter-meta! future])
   (:require [datacore.util :refer :all]
             [clojure.test :refer :all]
             [clojure.spec :as s]
