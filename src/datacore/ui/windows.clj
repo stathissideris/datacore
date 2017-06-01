@@ -36,7 +36,8 @@
           (replace-in-split-pane! (fx/parent parent) reference-component new-component))))))
 
 (defn replace-focused! [component]
-  (replace! (focus-owner) component))
+  (replace! (focus-owner) component)
+  (timer/delayed 20 #(view/focus! component)))
 
 (defn- get-root [component]
   (some->> (fx/parents component) (filter #(fx/has-style-class? % "root")) first))

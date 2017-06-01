@@ -15,13 +15,14 @@
 ** PROG File prompt
 ** DONE Refactor windows to get focused component from interactive
 ** PROG Prompt: better colours for selected option in list
+** TODO Maybe display cell errors in UI panels?
 ** TODO Prompt: handle deleting all input
 ** TODO Prompt bug: key repeat is blocked by keys handling code
 ** TODO Prompt: show focus in main window even if prompt has focus
 ** TODO Prompt: multiple choice
 ** TODO Prompt: fix layout when we have no autocomplete
 ** TODO Prompt: go to previous parameter
-** TODO Bug: focus messed up after loading CSV (or after replacing any element)
+** DONE Bug: focus messed up after loading CSV (or after replacing any element)
 ** TODO Meta map for cells
 ** TODO Table selection modes
 ** TODO Table view for cells
@@ -35,10 +36,15 @@
 ** TODO Move splitter with keyboard
 ** TODO Close window with keyboard
 ** TODO Help system
-*** interactive/functions can be a cell
-*** help text for functions will be a cell with keymaps and interactive/functions as cells
-** TODO Config based on clj files
+*** TODO interactive/functions can be a cell
+*** DONE help text for functions will be a cell with keymaps and interactive/functions as cells
+*** TODO Allow links to other functions in help content
 ** TODO Settings system
 ** TODO Custom table view
-** PROG Re-introduce custom CSS and reactive CSS
+** DONE Re-introduce custom CSS and reactive CSS
+** TODO User CSS
+** TODO Config based on clj files
+** TODO User code loading
+** TODO Maven integration and hotloading
+** TODO Config
 ** TODO Bug: file prompt does not match ~.~
