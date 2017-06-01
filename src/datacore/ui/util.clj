@@ -4,7 +4,8 @@
   (:import [javafx.util Callback]
            [javafx.stage StageStyle]
            [java.util Date]
-           [org.scenicview ScenicView]))
+           ;;[org.scenicview ScenicView]
+           ))
 
 (defn callback [fun]
   (reify Callback
@@ -20,8 +21,9 @@
               :text    label
               :style   "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"})}))
 
-(defn scenic-view [node]
-  (ScenicView/show node))
+(comment
+  (defn scenic-view [node]
+    (ScenicView/show node)))
 
 (defn inspect [cell]
   (fx/run-later!
