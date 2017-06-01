@@ -19,11 +19,15 @@
   [view-cell]
   @(fx/run-later!
     #(let [view   (fx/make-tree
-                   {:fx/type         :scene.web/web-view
-                    :style-class     ["web-view" "main-component"]
-                    :fx/stylesheet   "/css/default.css"
-                    :fx/event-filter [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]})
-           engine (.getEngine view)]
+                   {:fx/type  :scene.layout/stack-pane
+                    :style (str "-fx-border-width: 0 0 1 0;"
+                                "-fx-border-color: #c8c8c8;")
+                    :children
+                    [{:fx/type         :scene.web/web-view
+                      :style-class     ["web-view" "main-component"]
+                      :fx/stylesheet   "/css/default.css"
+                      :fx/event-filter [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]}]})
+           engine (fx/get-field-in view [:children 0 :engine])]
        (load engine (c/value view-cell))
        (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
        (-> (with-status-line
