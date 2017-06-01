@@ -14,7 +14,7 @@
 ** DONE Run function using prompt (text prompt with autocomplete)
 ** PROG File prompt
 ** DONE Refactor windows to get focused component from interactive
-** TODO Prompt: better colours for selected option in list
+** PROG Prompt: better colours for selected option in list
 ** TODO Prompt: handle deleting all input
 ** TODO Prompt bug: key repeat is blocked by keys handling code
 ** TODO Prompt: show focus in main window even if prompt has focus
@@ -40,5 +40,5 @@
 ** TODO Config based on clj files
 ** TODO Settings system
 ** TODO Custom table view
-** TODO Re-introduce custom CSS and reactive CSS
+** PROG Re-introduce custom CSS and reactive CSS
 ** TODO Bug: file prompt does not match ~.~

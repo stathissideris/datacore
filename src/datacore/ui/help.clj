@@ -13,18 +13,21 @@
 (defn- friendly-key [key]
   [:span
    {:class "key-press"}
-   (->> (map name (disj key :meta :ctrl :shortcut :shift))
-        (concat
-         (remove nil?
-                 [(when (:ctrl key) "ctrl")
-                  (when (:shift key) "shift")
-                  (when (and (:meta key) (:shortcut key)) "command")
-                  ;;TODO option
-                  ]))
-        (str/join "+"))])
+   (if (keyword? key)
+     (name key)
+     (->> (disj key :meta :ctrl :shortcut :shift)
+          (map name)
+          (concat
+           (remove nil?
+                   [(when (:ctrl key) "ctrl")
+                    (when (:shift key) "shift")
+                    (when (and (:meta key) (:shortcut key)) "command")
+                    ;;TODO option
+                    ]))
+          (str/join "+")))])
 
 (defn- friendly-key-sequence [key-seq]
-  [:span {:class "key-sequence"} (interpose ", " (remove nil? (map friendly-key key-seq)))])
+  [:span {:class "key-sequence"} (interpose "," (remove nil? (map friendly-key key-seq)))])
 
 (defn- key-help [{:keys [alias]} keymaps]
   (when-let [key-seqs (not-empty (keymaps/keys-for-function-in-keymaps keymaps alias))]
