@@ -6,7 +6,8 @@
             [datacore.cells :as c]
             [datacore.ui.interactive :as in :refer [defin]]
             [datacore.util :as util]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [me.raynes.fs :as fs])
   (:import [javafx.scene.control ListCell]))
 
 (def state (atom nil))
@@ -279,7 +280,8 @@
            {:title           title
             :prompt-text     prompt
             :autocomplete-fn in/file-autocomplete
-            :initial-input   "/" ;;TODO if you make this an empty string the JVM crashes!!!!
+            :initial-input   (str (fs/home) ;;TODO if you make this an empty string the JVM crashes!!!!
+                                  java.io.File/separator)
             :valid?-fn       in/validate-file
             :accept-fn       (fn [selected]
                                (deliver out (:selected-item selected)))})
