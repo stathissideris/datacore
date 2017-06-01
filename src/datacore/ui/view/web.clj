@@ -3,7 +3,8 @@
   (:require [datacore.ui.view :as view]
             [datacore.ui.java-fx :as fx]
             [datacore.cells :as c]
-            [datacore.ui.util :refer [with-status-line]])
+            [datacore.ui.util :refer [with-status-line]]
+            [datacore.ui.interactive :as in :refer [defin]])
   (:import [javafx.scene.input KeyEvent MouseEvent]))
 
 (defn- load [engine {:keys [url content content-type] :as input}]
@@ -46,3 +47,31 @@
    (fn [input] (merge input {::view/type ::view/web}))
    web-input
    {:label :web-view}))
+
+(defin scroll-up
+  {:alias :web/scroll-up
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (fx/run-later!
+   #(-> component .getEngine (.executeScript "window.scrollBy(0, -50);"))))
+
+(defin scroll-down
+  {:alias :web/scroll-down
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (fx/run-later!
+   #(-> component .getEngine (.executeScript "window.scrollBy(0, 50);"))))
+
+(defin scroll-to-top
+  {:alias :web/scroll-to-top
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (fx/run-later!
+   #(-> component .getEngine (.executeScript "window.scrollTo(0, 0);"))))
+
+(defin scroll-to-bottom
+  {:alias :web/scroll-to-bottom
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (fx/run-later!
+   #(-> component .getEngine (.executeScript "window.scrollTo(0, document.body.scrollHeight);"))))

@@ -79,9 +79,18 @@
     #{:ctrl :a} :table/scroll-to-first-column
     #{:ctrl :e} :table/scroll-to-last-column}})
 
+(def web-keymap
+  {:name :datacore.ui.view/web
+   :mapping
+   {:esc        {#{:shift :comma}  :web/scroll-to-top
+                 #{:shift :period} :web/scroll-to-bottom}
+    #{:ctrl :v}           :web/scroll-down
+    #{:meta :shortcut :v} :web/scroll-up}})
+
 (c/defcell keymaps {:root                    root-keymap
                     :datacore.ui.view/prompt prompt-keymap
-                    :datacore.ui.view/table  table-keymap})
+                    :datacore.ui.view/table  table-keymap
+                    :datacore.ui.view/web    web-keymap})
 
 (defn keys-for-function [{:keys [mapping] :as keymap} function]
   (->> (util/flatten-keys mapping)
