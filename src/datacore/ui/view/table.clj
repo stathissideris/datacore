@@ -53,6 +53,25 @@
       (let [column (-> component .getColumns last)]
         (-> component .getSelectionModel (.clearAndSelect selected-row column))))))
 
+(def ^:private scroll-to* (-> javafx.scene.control.TableView (.getMethod "scrollTo" (into-array [Integer/TYPE]))))
+
+(defn- scroll-to [list index]
+  (fx/run-later!
+   #(.invoke scroll-to* list (object-array [(int index)]))))
+
+(defin scroll-up
+  {:alias :table/scroll-up
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (let [[first-row last-row] (fx/get-field component :fx/visible-range)]
+    (scroll-to component (max 0 (- first-row (- last-row first-row))))))
+
+(defin scroll-down
+  {:alias :table/scroll-down
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (let [[_ last-row] (fx/get-field component :fx/visible-range)]
+    (scroll-to component last-row)))
 (defn column [name cell-value-fn]
   (fx/make
    :scene.control/table-column

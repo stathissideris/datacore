@@ -49,3 +49,4 @@
 ** TODO Maven integration and hotloading
 ** TODO Config
 ** TODO Bug: file prompt does not match ~.~
+** TODO Consider using a non-editable HTMLEditor instead of WebView

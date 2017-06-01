@@ -74,10 +74,12 @@
 (def table-keymap
   {:name :datacore.ui.view/table
    :mapping
-   {:esc        {#{:shift :comma}  :table/scroll-to-top
-                 #{:shift :period} :table/scroll-to-bottom}
-    #{:ctrl :a} :table/scroll-to-first-column
-    #{:ctrl :e} :table/scroll-to-last-column}})
+   {:esc                  {#{:shift :comma}  :table/scroll-to-top
+                           #{:shift :period} :table/scroll-to-bottom}
+    #{:ctrl :v}           :table/scroll-down
+    #{:meta :shortcut :v} :table/scroll-up
+    #{:ctrl :a}           :table/scroll-to-first-column
+    #{:ctrl :e}           :table/scroll-to-last-column}})
 
 (def web-keymap
   {:name :datacore.ui.view/web

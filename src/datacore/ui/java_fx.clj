@@ -8,7 +8,7 @@
             [hawk.core :as hawk]
             [me.raynes.fs :as fs])
   (:import [javafx.collections ObservableList ListChangeListener]
-           [javafx.scene.control.SplitPane]
+           [javafx.scene.control SplitPane TableView ListView]
            [javafx.embed.swing JFXPanel]
            [javafx.application Platform]
            [javafx.stage StageStyle]
@@ -247,9 +247,15 @@
 
 (defmulti fget (fn [o field] [(class o) field]))
 
-(defmethod fget [Object :fx/visible-range]
+(defmethod fget [ListView :fx/visible-range]
   [o _]
   (let [virtual-flow (some-> o .getSkin .getChildren (.get 0))]
+    [(-> virtual-flow .getFirstVisibleCell .getIndex)
+     (-> virtual-flow .getLastVisibleCell .getIndex)]))
+
+(defmethod fget [TableView :fx/visible-range]
+  [o _]
+  (let [virtual-flow (some-> o .getSkin .getChildren (.get 1))]
     [(-> virtual-flow .getFirstVisibleCell .getIndex)
      (-> virtual-flow .getLastVisibleCell .getIndex)]))
 
