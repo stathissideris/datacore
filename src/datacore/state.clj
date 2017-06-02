@@ -13,7 +13,8 @@
   keymaps/keymaps
   focused-component)
 
-(do
+(comment
+  (do
   (require '[datacore.ui.java-fx :as fx])
   (require '[datacore.ui.windows :as windows])
   (require '[datacore.ui.view :as view])
@@ -23,7 +24,6 @@
   (def csv-view (csv/default-view csv))
   )
 
-(comment
   (windows/new-window)
 
   ;;show cell in window
