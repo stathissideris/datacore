@@ -5,7 +5,8 @@
             [clojure.core.match :refer [match]]
             [clojure.data :as data]
             [clojure.set :as set]
-            [clojure.repl :as repl]))
+            [clojure.repl :as repl])
+  (:import java.util.WeakHashMap))
 
 (defn camel->kebab [from]
   (let [s (str/split (name from) #"(?=[A-Z])" )]
@@ -111,16 +112,17 @@
 
 ;;;;;;;;;;;;;;;;;;;; meta ;;;;;;;;;;;;;;;;;;;;
 
-(def ^:private meta-map (atom {}))
-(defn meta [x]
-  (get @meta-map x))
+(def ^:private meta-map (WeakHashMap.))
+(defn meta [o]
+  (.get meta-map o))
 
-(defn add-meta! [x m]
-  (swap! meta-map assoc x m))
+(defn add-meta! [o m]
+  (.put meta-map o m))
 
-(defn alter-meta! [x fun & args]
-  (swap! meta-map update x #(apply fun % args))
-  (meta x))
+(defn alter-meta! [o fun & args]
+  (locking meta-map
+    (.put meta-map o (apply fun (meta o) args))
+    (meta o)))
 
 ;;;;;;;;;;;;;;;;;;;; diff ;;;;;;;;;;;;;;;;;;;;
 
