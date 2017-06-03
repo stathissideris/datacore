@@ -8,40 +8,54 @@
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
            [java.util Date]
-           [javafx.scene.control SelectionMode ControlUtils]))
+           [javafx.scene.control
+            SelectionMode ControlUtils TableView TableColumnBase TableSelectionModel]))
 
-(defn selected-cells [table]
-  (into []
-        (for [cell (-> table .getSelectionModel .getSelectedCells)]
-          {:column (.getColumn cell)
-           :row    (.getRow cell)})))
+(defmethod fx/fget [TableView :dc/cursor]
+  [table _]
+  (let [cell (some-> table .getSelectionModel .getSelectedCells first)]
+    (when cell
+      {:column       (.getTableColumn cell)
+       :column-index (.getColumn cell)
+       :row          (.getRow cell)})))
+
+(defmethod fx/fset [TableView :dc/cursor]
+  [table _ {:keys [row column]}]
+  (let [model (some-> table .getSelectionModel)]
+    (doto model
+      (.clearSelection)
+      (.select row (or column (-> table .getColumns first))))))
 
 (defin scroll-to-top
   {:alias :table/scroll-to-top
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (.scrollTo component (-> component .getItems first))
-  (doto (-> component .getSelectionModel)
-    (.clearSelection)
-    (.selectFirst)))
+  (let [first-column (-> component .getColumns first)]
+    (.scrollTo component (-> component .getItems first))
+    (.scrollToColumn component first-column)
+    (doto (-> component .getSelectionModel)
+      (.clearSelection)
+      (.select 0 first-column))))
 
 (defin scroll-to-bottom
   {:alias :table/scroll-to-bottom
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (.scrollTo component (-> component .getItems last))
-  (doto (-> component .getSelectionModel)
-    (.clearSelection)
-    (.selectLast)))
+  (let [last-column (-> component .getColumns last)]
+    (.scrollTo component (-> component .getItems last))
+    (.scrollToColumn component last-column)
+    (doto (-> component .getSelectionModel)
+      (.clearSelection)
+      (.select (-> component .getItems .size dec) last-column))))
 
 (defin scroll-to-first-column
   {:alias :table/scroll-to-first-column
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
   (.scrollToColumnIndex component 0)
-  (when-let [selected-row (some-> component selected-cells first :row)]
+  (when-let [row (:row (fx/get-field component :dc/cursor))]
     (let [column (-> component .getColumns first)]
-      (-> component .getSelectionModel (.clearAndSelect selected-row column)))))
+      (-> component .getSelectionModel (.clearAndSelect row column)))))
 
 (defin scroll-to-last-column
   {:alias :table/scroll-to-last-column
@@ -49,29 +63,44 @@
   [{:keys [component]}]
   (let [last-index (-> component .getColumns count dec)]
     (.scrollToColumnIndex component last-index)
-    (when-let [selected-row (some-> component selected-cells first :row)]
+    (when-let [row (:row (fx/get-field component :dc/cursor))]
       (let [column (-> component .getColumns last)]
-        (-> component .getSelectionModel (.clearAndSelect selected-row column))))))
+        (-> component .getSelectionModel (.clearAndSelect row column))))))
 
-(def ^:private scroll-to* (-> javafx.scene.control.TableView (.getMethod "scrollTo" (into-array [Integer/TYPE]))))
+(def ^:private scroll-to* (-> TableView (.getMethod "scrollTo" (into-array [Integer/TYPE]))))
 
-(defn- scroll-to [list index]
+(defn- scroll-to [table index]
   (fx/run-later!
-   #(.invoke scroll-to* list (object-array [(int index)]))))
+   #(.invoke scroll-to* table (object-array [(int index)]))))
 
 (defin scroll-up
   {:alias :table/scroll-up
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (let [[first-row last-row] (fx/get-field component :fx/visible-range)]
-    (scroll-to component (max 0 (- first-row (- last-row first-row))))))
+  (let [[first-row last-row] (fx/get-field component :fx/visible-range)
+        column               (:column (fx/get-field component :dc/cursor))
+        row                  (max 0 (- first-row (- last-row first-row)))]
+    (scroll-to component row)
+    (fx/set-field! component :dc/cursor {:column column :row row})))
 
 (defin scroll-down
   {:alias :table/scroll-down
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (let [[_ last-row] (fx/get-field component :fx/visible-range)]
-    (scroll-to component last-row)))
+  (let [[_ last-row] (fx/get-field component :fx/visible-range)
+        column       (:column (fx/get-field component :dc/cursor))]
+    (scroll-to component last-row)
+    (fx/set-field! component :dc/cursor {:column column :row last-row})))
+
+(defin recenter
+  {:alias :table/recenter
+   :params [[:table ::in/main-component]]}
+  [{:keys [table]}]
+  (let [[first-row last-row] (fx/get-field table :fx/visible-range)
+        cursor-row           (:row (fx/get-field table :dc/cursor))
+        center-row           (+ first-row (/ (- last-row first-row) 2))]
+    (scroll-to table (inc (- first-row (- center-row cursor-row))))))
+
 (defn column [name cell-value-fn]
   (fx/make
    :scene.control/table-column

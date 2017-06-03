@@ -79,7 +79,8 @@
     #{:ctrl :v}           :table/scroll-down
     #{:meta :shortcut :v} :table/scroll-up
     #{:ctrl :a}           :table/scroll-to-first-column
-    #{:ctrl :e}           :table/scroll-to-last-column}})
+    #{:ctrl :e}           :table/scroll-to-last-column
+    #{:ctrl :l}           :table/recenter}})
 
 (def web-keymap
   {:name :datacore.ui.view/web
