@@ -93,9 +93,10 @@
                                  (fn [list]
                                    (list-cell)))})]}]})
           window            (view/build-view
-                             {:type         :datacore.ui.view/window
-                              :raw-root     prompt
-                              :window-style :transparent})]
+                             {:type           :datacore.ui.view/window
+                              :raw-root       prompt
+                              :window-style   :transparent
+                              :always-on-top? true})]
       (add-watch
        autocomplete-list :autocomplete
        (fn [_ _ _ new]
