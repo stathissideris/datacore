@@ -1,5 +1,5 @@
 (ns datacore.cells
-  (:refer-clojure :exclude [swap! reset! add-watch remove-watch])
+  (:refer-clojure :exclude [swap! reset! add-watch remove-watch meta alter-meta!])
   (:require [clojure.data.priority-map :as pm]
             [clojure.set :as set]
             [clojure.pprint :refer [print-table pprint] :as pp]
@@ -21,9 +21,10 @@
 (defn cell-id? [cell-id] (instance? datacore.cells.CellID cell-id))
 
 (defn make-cells []
-  {:cells {}     ;;map of cell IDs to cell values
-   :sinks {}     ;;map of cell IDs to sets of sinks
+  {:cells   {}   ;;map of cell IDs to cell values
+   :sinks   {}   ;;map of cell IDs to sets of sinks
    :sources {}   ;;map of cell IDs to sets of sources
+   :meta    {}   ;;map of cell IDs to maps of metadata
 })
 
 (def ^:private global-cells (atom (make-cells)))
@@ -271,6 +272,7 @@
             $ (sources cells cell-id))
     (update $ :sinks dissoc cell-id)
     (update $ :cells dissoc cell-id)
+    (update $ :meta dissoc cell-id)
     (reduce (fn [cells sink-id] (touch cells sink-id))
             $ (sinks cells cell-id))))
 (s/fdef destroy
@@ -604,6 +606,17 @@
 
 (defn reset! [cell value]
   (swap! cell (fn [& _] value)))
+
+(defn meta [cell-id]
+  (get-in @global-cells [:meta cell-id]))
+
+(defn alter-meta! [cell-id fun & args]
+  (get-in (core/swap! global-cells #(apply update-in % [:meta cell-id] fun args))
+          [:meta cell-id]))
+
+(defn set-meta! [cell-id m]
+  (get-in (core/swap! global-cells assoc-in [:meta cell-id] m)
+          [:meta cell-id]))
 
 (defn linked?
   ([source sink]

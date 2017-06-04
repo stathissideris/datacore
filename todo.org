@@ -24,7 +24,7 @@
 ** TODO Prompt: go to previous parameter
 ** DONE Bug: focus messed up after loading CSV (or after replacing any element)
 ** TODO Bug: Command+x, command+v seem to send multiple events
-** TODO Meta map for cells
+** DONE Meta map for cells
 ** TODO Table selection modes
 ** TODO Table view for cells
 ** TODO Cells vizualisation
