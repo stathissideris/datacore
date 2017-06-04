@@ -70,6 +70,14 @@ Differences to Javelin:
  * [FRP - Three principles for GUI elements with bidirectional data flow](http://apfelmus.nfshost.com/blog/2012/03/29-frp-three-principles-bidirectional-gui.html) - very interesting comments too!
  * [HotDrink JavaScript library](https://github.com/HotDrink/hotdrink)
 
+## Related projects
+
+ * [Strukt](https://www.freerobotcollective.com/) has very similar goals - [HN thread](https://news.ycombinator.com/item?id=14471153)
+ * https://handsontable.com
+ * https://www.ag-grid.com
+ * https://median.tech
+ * [Google Sheets explore functionality](https://www.blog.google/products/g-suite/visualize-data-instantly-machine-learning-google-sheets/) - [HN thread](https://news.ycombinator.com/item?id=14469645)
+
 ## License
 
 Copyright © 2017 Stathis Sideris
