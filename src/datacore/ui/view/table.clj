@@ -126,36 +126,43 @@
                           {:label :table-view-columns})})
     (c/formula :label view-cell {:label :table-status-line})))
 
-(defmethod view/build-view :datacore.ui.view/table
+(defmethod view/build-cell-view ::view/table
   [view-cell]
-  (let [table     (fx/make :scene.control/table-view
-                           {:fx/setup
-                            (fn [table]
-                              (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
-                              (fx/set-field! table :style-class ["table-view" "main-component"])
-                              (fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
-                              (-> table
-                                  .getSelectionModel
-                                  .getSelectedItems
-                                  (.addListener
-                                   (fx/list-change-listener
-                                    (fn [selected]
-                                      (println "TABLE SELECTION: " (pr-str selected)))))))})
-        set-data! (fn [{:keys [columns column-labels data]}]
-                    (fx/run-later!
-                     #(doto table
-                        (fx/set-field!
-                         :columns (map (fn [c]
-                                         (column (if-let [l (get column-labels c)] l (str c))
-                                                 (fn [row] (get row c))))
-                                       columns))
-                        (fx/set-field! :items (observable-list data)))))]
+  (let [control-cell (c/cell {})
+        table        (fx/make-tree
+                      {:fx/type  :scene.control/table-view
+                       :fx/setup
+                       (fn [table]
+                         (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
+                         (fx/set-field! table :style-class ["table-view" "main-component"])
+                         (fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
+                         (-> table
+                             .getSelectionModel
+                             .getSelectedItems
+                             (.addListener
+                              (fx/list-change-listener
+                               (fn [selected]
+                                 ;;(c/swap! control-cell assoc :selection selected)
+                                 )))))})
+        set-data!    (fn [{:keys [columns column-labels data]}]
+                       (fx/run-later!
+                        #(doto table
+                           (fx/set-field!
+                            :columns (map (fn [c]
+                                            (column (if-let [l (get column-labels c)] l (str c))
+                                                    (fn [row] (get row c))))
+                                          columns))
+                           (fx/set-field! :items (observable-list data)))))]
     (set-data! (c/value view-cell))
+    (c/link-slot! control-cell view-cell 1)
+    (c/alter-meta! control-cell assoc :roles #{:control})
+    (c/alter-meta! view-cell assoc :roles #{:view})
     (c/add-watch! view-cell :table-view (fn [_ _ new] (set-data! new)))
     (with-status-line
       table (c/formula #(str (:label %) " - "
                              (-> % :data count) " rows - "
                              (-> % :columns count) " columns - "
-                             (Date. (:last-modified %)))
+                             (Date. (:last-modified %))
+                             " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
                        view-cell
                        {:label :table-status-line}))))

@@ -13,11 +13,12 @@
   keymaps/keymaps
   focused-component)
 
+(require '[datacore.ui.view :as view])
+
 (comment
   (do
   (require '[datacore.ui.java-fx :as fx])
   (require '[datacore.ui.windows :as windows])
-  (require '[datacore.ui.view :as view])
   (require '[datacore.source.csv :as csv])
   (require '[datacore.ui.java-fx :as fx])
   (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
@@ -31,7 +32,7 @@
    #(windows/replace-focused!
      (fx/make-tree
       (view/build-view
-       {:type       :datacore.ui.view/cell
+       {::view/type ::view/cell
         :cell       csv-view
         :focused?   true
         :focusable? true}))))
@@ -43,22 +44,17 @@
   (windows/replace-focused!
    (fx/make-tree
     (view/build-view
-     {:type       :datacore.ui.view/cell
-      :cell       csv-view
+     {::view/type ::view/cell
+      :cell       web-view
       :focused?   true
       :focusable? true})))
   (c/reset! web-input {:url "http://www.imdb.com/title/tt0088247/"})
   (c/reset! web-input {:url "http://www.imdb.com/title/tt0478126/"})
   (c/reset! web-input {:url "http://chart.apis.google.com/chart?cht=bvs&chs=500x250&chd=t:100,200,300,400,500,600,700&chds=0,700&chl=Savings||Checking||Money"})
+  (c/reset! web-input {:url "https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d19849.480026927366!2d-0.1058117!3d51.546506550000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2suk!4v1496623719065"})
   (c/reset! web-input {:content (slurp "/Users/sideris/devel/dali/examples/output/architecture.svg")})
   (c/reset! web-input {:content "<html><body><h1>Test</h1><p>This is a <i>test</i>.</p></body></html>"})
-
-
-  ;;open prompt window
-  (swap-layout! update :children conj
-                {:type         :datacore.ui.view/window
-                 :window-style :transparent
-                 :root         {:type :datacore.ui.view/prompt}})
+  (c/reset! web-input {:content "<iframe src=\"https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d19849.480026927366!2d-0.1058117!3d51.546506550000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2suk!4v1496623719065\" width=\"600\" height=\"450\" frameborder=\"0\" style=\"border:0\" allowfullscreen></iframe>"})
 
   (defmacro simple-cell [name expr]
     `(c/deformula ~name

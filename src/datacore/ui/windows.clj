@@ -75,7 +75,7 @@
         split-pane
         (fx/make-tree
          {:fx/type     :scene.control/split-pane
-          :items       [focused (view/build-view {:type ::view/nothing})]
+          :items       [focused (view/build-view {::view/type ::view/nothing})]
           :orientation (if (= orientation :horizontal)
                          javafx.geometry.Orientation/HORIZONTAL
                          javafx.geometry.Orientation/VERTICAL)})]
@@ -164,10 +164,10 @@
    #(fx/show!
      (fx/make-tree
       (view/build-view
-       {:type       :datacore.ui.view/window
+       {::view/type ::view/window
         :title      "datacore"
         :dimensions [1000 800]
         :root       (view/build-view
-                     {:type       :datacore.ui.view/nothing
+                     {::view/type ::view/nothing
                       :focused?   true
                       :focusable? true})})))))

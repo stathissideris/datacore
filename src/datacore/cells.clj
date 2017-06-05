@@ -103,8 +103,8 @@
                            (-> x name symbol)
                            x))
                        (:code v))))
-      :sinks    (not-empty (set (map #(.-id %) (get-in cells [:sinks cell-id]))))
-      :sources  (not-empty (set (map #(.-id %) (get-in cells [:sources cell-id]))))})))
+      :sinks    (not-empty (set (map #(when % (.-id %)) (get-in cells [:sinks cell-id]))))
+      :sources  (not-empty (set (map #(when % (.-id %)) (get-in cells [:sources cell-id]))))})))
 
 (defn all-cells []
   (let [cells @global-cells]

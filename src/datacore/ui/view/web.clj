@@ -16,7 +16,7 @@
           (fx/run-later! #(.loadContent engine content))
         :else nil))
 
-(defmethod view/build-view :datacore.ui.view/web
+(defmethod view/build-cell-view :datacore.ui.view/web
   [view-cell]
   @(fx/run-later!
     #(let [view   (fx/make-tree

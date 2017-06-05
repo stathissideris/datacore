@@ -46,7 +46,7 @@
 
 (defn default-view [csv-cell]
   (c/formula
-   (fn [{:keys [label columns column-labels original-column-labels] :as contents}]
+   (fn [{:keys [label columns column-labels original-column-labels] :as contents} control]
      (merge
       contents
       {::view/type ::view/table}
@@ -55,8 +55,9 @@
         {:column-labels (zipmap columns
                                 (map (fn [c]
                                        (or (get original-column-labels c)
-                                           (util/data-key->label c))) columns))})))
-   csv-cell
+                                           (util/data-key->label c))) columns))})
+      control))
+   csv-cell ::c/unlinked
    {:label :table-view}))
 
 (defin load-csv
@@ -73,8 +74,8 @@
   (let [csv       (file {:filename filename})
         view      (default-view csv)
         component (view/build-view
-                   {:type       :datacore.ui.view/cell
-                    :cell       view
+                   {::view/type ::view/cell
+                    :cell    view
                     :focused?   true
                     :focusable? true})]
     (fx/run-later!

@@ -16,12 +16,8 @@
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
-(defn- cell-view-type [cell]
-  (::type (c/value cell)))
-
-(defmulti build-view
-  (fn [x] (or (:type x)
-              (when (c/cell-id? x) (cell-view-type x)))))
+(defmulti build-view ::type)
+(defmulti build-cell-view (comp ::type c/value))
 
 (defn- focus!-1 [component]
   (fx/run-later!
@@ -48,6 +44,14 @@
   [component _ meta]
   (util/add-meta! component meta))
 
+(defmethod fx/fset [Object :dc/cell]
+  [component _ cell]
+  (util/alter-meta! component assoc :dc/cell cell))
+
+(defmethod fx/fget [Object :dc/cell]
+  [component _]
+  (:dc/cell (util/meta component)))
+
 (def nothing-counter (atom 0))
 (defn- build-nothing []
   (swap! nothing-counter inc)
@@ -62,10 +66,6 @@
                           (focus! (.getTarget e))))})
 
 (defmethod build-view ::nothing
-  [tree]
-  (build-nothing))
-
-(defmethod build-view nil
   [tree]
   (build-nothing))
 
@@ -84,13 +84,6 @@
    :text-fill (c/formula (comp {:message Color/BLACK
                                 :error   (Color/web "0xF57000")}
                                :type) message/current-message)})
-
-(defn build-window-contents [tree message]
-  {:fx/type :scene.layout/border-pane
-   :center  (if-not tree
-              (build-view {:type ::nothing})
-              (build-view tree))
-   :bottom  (message-line)})
 
 (def window-style-map
   {:normal      StageStyle/DECORATED
@@ -120,7 +113,7 @@
   (merge
    {:fx/type          :scene/scene
     :fx/args          (concat
-                       [(build-view ::nothing)]
+                       [(build-view {::type ::nothing})]
                        dimensions)
     :fx/stylesheets   ["/css/default.css"]
     :fx/prop-listener
@@ -129,15 +122,18 @@
                       (let [new-focus-parent (ui-util/focus-parent new)]
                         (swap! stage->component assoc (fx/stage-of new-focus-parent) new-focus-parent)
                         (c/reset! state/focused-component new-focus-parent))))]}
-   (when root
-     {:root (build-window-contents root message/current-message)})
-   (when raw-root
-     {:root raw-root})
+   (cond
+     raw-root
+     {:root raw-root}
+     root
+     {:root {:fx/type :scene.layout/border-pane
+             :center  root
+             :bottom  (message-line)}})
    (when (= window-style :transparent)
      {:fill Color/TRANSPARENT})))
 
 (defmethod build-view ::window
-  [{:keys [title window-style] :as params}]
+  [{:keys [title window-style always-on-top?] :as params}]
   (fx/make-tree
    (merge
     (when window-style
@@ -146,6 +142,7 @@
       {:title title})
     {:fx/type          :stage/stage
      :scene            (build-scene params)
+     :always-on-top    (or always-on-top? false)
      :fx/event-filter  [KeyEvent/ANY (keys/key-handler)]
      :fx/prop-listener
      [:focused (fn [stage _ _ focused?]
@@ -156,13 +153,13 @@
 
 (defmethod build-view ::cell
   [{:keys [cell focused?]}]
-  (let [view (build-view cell)]
-    (fx/set-fields!
-     view
-     {:style-class        ["focus-indicator"]
-      :dc/indicate-focus? focused?
-      :dc/meta            {::type (cell-view-type cell)}
-      :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})))
+  (let [view (build-cell-view cell)]
+   (fx/set-fields!
+    view
+    {:style-class        ["focus-indicator"]
+     :dc/indicate-focus? focused?
+     :dc/cell            cell
+     :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})))
 
 ;;;;;;;;;;;;;;;;
 

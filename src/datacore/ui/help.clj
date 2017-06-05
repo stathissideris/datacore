@@ -82,7 +82,7 @@
                         {:label :help-content})
           help-view    (web/view help-content)
           component    (view/build-view
-                        {:type       :datacore.ui.view/cell
+                        {::view/type ::view/cell
                          :cell       help-view
                          :focused?   true
                          :focusable? true})]

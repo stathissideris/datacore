@@ -1,5 +1,5 @@
 (ns datacore.cells-test
-  (:refer-clojure :exclude [swap! reset!])
+  (:refer-clojure :exclude [swap! reset! meta alter-meta!])
   (:require [datacore.cells :refer :all]
             [clojure.test :refer :all]
             [clojure.core :as core]
