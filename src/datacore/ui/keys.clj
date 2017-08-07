@@ -92,8 +92,9 @@
 (defn- also-consume-this? [event]
   (when-let [last-consumed (-> key-input c/value :last-consumed)]
     (debug 'last-consumed last-consumed)
-    (= (dissoc event :type)
-       (dissoc last-consumed :type))))
+    (and (not= (:type event) :key-pressed)
+         (= (dissoc event :type)
+            (dissoc last-consumed :type)))))
 
 (defn call [match]
   (when (= :interactive/no-function (interactive/call match))
