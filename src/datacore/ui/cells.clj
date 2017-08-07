@@ -4,7 +4,9 @@
             [datacore.ui.interactive :refer [defin]]
             [datacore.ui.windows :as windows]
             [datacore.cells :as c]
-            [datacore.ui.util :refer [with-status-line]]))
+            [datacore.ui.util :refer [with-status-line]]
+            [datacore.ui.view.table :as table]
+            [datacore.ui.observable :refer [observable-list]]))
 
 (defn cell-graph-elements [cells-atom]
   [{:fx/type :scene.shape/rectangle
@@ -34,11 +36,42 @@
                       :children (cell-graph-elements cells-atom)}})
       "cells!")}))
 
+(defn cells-table
+  [cells-atom]
+  (let [table     (fx/make-tree
+                   {:fx/type  :scene.control/table-view
+                    :fx/setup
+                    (fn [table]
+                      ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
+                      (fx/set-field! table :style-class ["table-view" "main-component"])
+                      (fx/set-field-in! table [:selection-model :cell-selection-enabled] true))})
+        set-data! (fn [data]
+                    (fx/run-later!
+                     #(doto table
+                        (fx/set-field!
+                         :columns (map (fn [c]
+                                         (table/column (str c)
+                                                       (fn [row] (get row c))))
+                                       (keys (first data))))
+                        (fx/set-field! :items (observable-list data)))))]
+    (set-data! (c/all-cells))
+    (add-watch cells-atom :table-view (fn [_ _ _ _] (set-data! (c/all-cells))))
+    (with-status-line
+      table
+      "cells!")))
+
 ;; interactive
 
 (defin show-graph
   {:alias :cells/show-graph}
   []
   (let [component (cells-graph @#'c/global-cells)]
+    (fx/run-later!
+     #(windows/replace-focused! component))))
+
+(defin show-table
+  {:alias :cells/show-table}
+  []
+  (let [component (cells-table @#'c/global-cells)]
     (fx/run-later!
      #(windows/replace-focused! component))))
