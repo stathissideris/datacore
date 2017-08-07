@@ -16,8 +16,8 @@
 ** DONE Refactor windows to get focused component from interactive
 ** PROG Prompt: better colours for selected option in list
 ** TODO Maybe display cell errors in UI panels?
-** TODO Prompt: handle deleting all input
-** TODO Prompt bug: key repeat is blocked by keys handling code
+** DONE Prompt: handle deleting all input in function autocomplete
+** DONE Prompt bug: key repeat is blocked by keys handling code
 ** TODO Prompt: show focus in main window even if prompt has focus
 ** TODO Prompt: multiple choice
 ** TODO Prompt: fix layout when we have no autocomplete

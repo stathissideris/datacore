@@ -61,7 +61,7 @@
   (cond (not text)
         nil
 
-        (not match)
+        (or (not match) (empty? match))
         [text]
 
         :else
