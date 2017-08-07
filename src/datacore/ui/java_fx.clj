@@ -492,6 +492,24 @@
   (child [this index]
     (.get (children this) index)))
 
+(extend-type javafx.scene.control.ScrollPane
+  Parent
+  (children [this]
+    [(.getContent this)])
+  (children? [this]
+    true)
+  (child [this index]
+    (.getContent this)))
+
+(extend-type javafx.scene.Group
+  Parent
+  (children [this]
+    (.getChildren this))
+  (children? [this]
+    (< 0 (count (children this))))
+  (child [this index]
+   (.get (children this) index)))
+
 (extend-type Object
   Parent
   (children [this] nil)

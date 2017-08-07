@@ -75,8 +75,7 @@
         view      (default-view csv)
         component (view/build-view
                    {::view/type ::view/cell
-                    :cell    view
-                    :focused?   true
-                    :focusable? true})]
+                    :cell       view
+                    :focused?   true})]
     (fx/run-later!
      #(windows/replace-focused! component))))

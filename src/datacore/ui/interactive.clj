@@ -36,7 +36,9 @@
 (defn call [match]
   (if-let [{:keys [var params]} (get functions match)]
     (do
-      (prn 'CALLED var params)
+      (if params
+        (prn 'CALLED var params)
+        (prn 'CALLED var))
       (let [fun (deref var)]
         (if (not-empty params)
           (let [params          (map expand-param params)

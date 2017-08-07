@@ -95,7 +95,9 @@
 ;;focus
 
 (defn- focus-to-direction [direction]
-  (view/focus! (view/focusable-in-direction (focus-owner) direction)))
+  (let [destination (view/focusable-in-direction (focus-owner) direction)]
+    (view/focus! destination)
+    destination))
 
 (defin focus-left
   {:alias :windows/focus-left}
@@ -169,5 +171,4 @@
         :dimensions [1000 800]
         :root       (view/build-view
                      {::view/type ::view/nothing
-                      :focused?   true
-                      :focusable? true})})))))
+                      :focused?   true})})))))

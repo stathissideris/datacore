@@ -84,7 +84,6 @@
           component    (view/build-view
                         {::view/type ::view/cell
                          :cell       help-view
-                         :focused?   true
-                         :focusable? true})]
+                         :focused?   true})]
       (fx/run-later!
        #(windows/replace-focused! component)))))
