@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [method-sig])
   (:require [clojure.tools.namespace.repl :as repl :refer (clear refresh-all)]
             [datacore.util :as util]
-            [clojure.spec.test :as stest]))
+            [clojure.spec.test :as stest]
+            [datacore.main]))
 
 (defn refresh []
   (repl/refresh))
@@ -128,3 +129,6 @@
                                [java.util.List :delegate-deref]
                                [java.util.Collection :delegate-deref]
                                [java.lang.Iterable :delegate-deref]]))
+
+(defn start []
+  (datacore.main/init))

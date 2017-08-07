@@ -64,6 +64,7 @@
     :tab                :prompt/complete
     :enter              :prompt/accept
     #{:ctrl :g}         :prompt/cancel
+    :esc                :prompt/cancel
     #{:ctrl :a}         :prompt/home
     #{:ctrl :e}         :prompt/end
     #{:ctrl :b}         :prompt/backward-char
@@ -90,10 +91,11 @@
     #{:ctrl :v}           :web/scroll-down
     #{:meta :shortcut :v} :web/scroll-up}})
 
-(c/defcell keymaps {:root                    root-keymap
-                    :datacore.ui.view/prompt prompt-keymap
-                    :datacore.ui.view/table  table-keymap
-                    :datacore.ui.view/web    web-keymap})
+(c/defcellonce keymaps nil)
+(c/reset! keymaps {:root                    root-keymap
+                   :datacore.ui.view/prompt prompt-keymap
+                   :datacore.ui.view/table  table-keymap
+                   :datacore.ui.view/web    web-keymap})
 
 (defn keys-for-function [{:keys [mapping] :as keymap} function]
   (->> (util/flatten-keys mapping)

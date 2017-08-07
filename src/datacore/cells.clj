@@ -469,6 +469,12 @@
   [name x]
   `(def ~name (cell ~(keyword name) ~x)))
 
+(defmacro defcellonce
+  "Make new global cell once, the keywordized name becomes the
+  label (has side-effects)."
+  [name x]
+  `(defonce ~name (cell ~(keyword name) ~x)))
+
 (defn option-map? [x]
   (and (not (cell-id? x)) (map? x)))
 
