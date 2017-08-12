@@ -59,7 +59,7 @@
                  (reset! table-cells-atom
                          (map #(update % :value
                                        (fn [x] (if (instance? javafx.scene.Node x)
-                                                 (str x)
+                                                 "JavaFX component"
                                                  x)))
                               (c/all-cells)))))
     (view/build-view

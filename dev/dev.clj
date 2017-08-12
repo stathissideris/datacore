@@ -3,7 +3,6 @@
   (:require [clojure.tools.namespace.repl :as repl :refer (clear refresh-all)]
             [datacore.util :as util]
             [clojure.spec.test :as stest]
-            [datacore.main]
             [datacore.ui.java-fx :as fx]))
 
 (defn refresh []
@@ -136,4 +135,4 @@
     (fx/run-later! #(.close stage))))
 
 (defn start []
-  (datacore.main/init))
+  (@(resolve 'datacore.main/init)))

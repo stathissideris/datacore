@@ -12,6 +12,7 @@
                  [hawk "0.2.11"]
                  [hiccup "1.0.5"]]
   :resource-paths ["resources"]
+  :main datacore.main
   :profiles {:dev {:source-paths   ["dev"]
                    :resource-paths ["lib/scenicView.jar"]
                    :dependencies   [[org.clojure/tools.namespace "0.2.11"]
