@@ -62,9 +62,13 @@
                                                  (str x)
                                                  x)))
                               (c/all-cells)))))
-    (with-status-line
-      table
-      "cells!")))
+    (view/build-view
+     {::view/type ::view/default
+      :focused? true
+      :view
+      (with-status-line
+        table
+        "cells!")})))
 
 ;; interactive
 

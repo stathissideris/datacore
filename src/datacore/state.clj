@@ -86,6 +86,14 @@
    (def _ (c/mute! filter-cell))
    (def _ (c/unmute! filter-cell))
 
+   (simple-cell assoc-cell (map #(assoc % :description "fofiko") data))
+   (def _ (c/linear-insert! filter-cell assoc-cell csv-view))
+   (def _
+     (c/swap-function!
+      assoc-cell
+      (fn [data]
+        (update data :data
+                (fn [rows] (map #(assoc % :description "fof kkkk") rows))))))
 
    (c/deformula sort-cell
      (fn [data]

@@ -128,7 +128,7 @@
 
 (defmethod view/build-cell-view ::view/table
   [view-cell]
-  (let [control-cell (c/cell {})
+  (let [control-cell (c/cell :table-control {})
         table        (fx/make-tree
                       {:fx/type  :scene.control/table-view
                        :fx/setup
@@ -143,21 +143,21 @@
                               (fx/list-change-listener
                                (fn [selected]
                                  ;;(c/swap! control-cell assoc :selection selected)
-                                 )))))})
-        set-data!    (fn [{:keys [columns column-labels data]}]
-                       (fx/run-later!
-                        #(doto table
-                           (fx/set-field!
-                            :columns (map (fn [c]
-                                            (column (if-let [l (get column-labels c)] l (str c))
-                                                    (fn [row] (get row c))))
-                                          columns))
-                           (fx/set-field! :items (observable-list data)))))]
-    (set-data! (c/value view-cell))
-    (c/link-slot! control-cell view-cell 1)
-    (c/alter-meta! control-cell assoc :roles #{:control})
+                                 )))))})]
+    (fx/run-later!
+     #(fx/set-fields!
+       table
+       {:items   (observable-list (c/formula :data view-cell))
+        :columns (c/formula
+                  (fn [{:keys [columns column-labels]}]
+                    (map (fn [c]
+                           (column (if-let [l (get column-labels c)] l (str c))
+                                   (fn [row] (get row c))))
+                         columns))
+                  view-cell)}))
+    ;;(c/link-slot! control-cell view-cell 1)
+    ;;(c/alter-meta! control-cell assoc :roles #{:control})
     (c/alter-meta! view-cell assoc :roles #{:view})
-    (c/add-watch! view-cell :table-view (fn [_ _ new] (set-data! new)))
     (with-status-line
       table (c/formula #(str (:label %) " - "
                              (-> % :data count) " rows - "
