@@ -126,8 +126,9 @@
 
 ;;;;;;;;;;;;;;;;;;;; diff ;;;;;;;;;;;;;;;;;;;;
 
+;;;;; incomplete fast diff implementation ;;;;;
+
 (comment
-  ;;incomplete diff impl
 
   (defn- bigger? [[x1 y1] [x2 y2]]
     (and (> x2 x1) (> y2 y1)))
@@ -152,6 +153,29 @@
       (prn p)
       (prn '----)
       (map rest (sort (build-chains #{[[0 0]]} p))))))
+
+;;;;; simple diff ;;;;;
+
+(defn- diff-item
+  [a b]
+  (cond
+    (and (not (nil? a))
+         (not (nil? b))) (if (= a b)
+                           [:same b]
+                           [:edit b])
+    (and (nil? a)
+         (not (nil? b))) [:insert b]
+
+    (and (not (nil? a))
+         (nil? b))       [:delete a]))
+
+(defn simple-list-diff [a-list b-list]
+  (for [idx (range (max (count a-list) (count b-list)))]
+    (let [a (nth a-list idx nil)
+          b (nth b-list idx nil)]
+      (diff-item a b))))
+
+;;;;; naive and slow diff ;;;;;
 
 (defn longest [xs ys] (if (> (count xs) (count ys)) xs ys))
 

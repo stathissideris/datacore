@@ -38,24 +38,30 @@
 
 (defn cells-table
   [cells-atom]
-  (let [table     (fx/make-tree
-                   {:fx/type  :scene.control/table-view
-                    :fx/setup
-                    (fn [table]
-                      ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
-                      (fx/set-field! table :style-class ["table-view" "main-component"])
-                      (fx/set-field-in! table [:selection-model :cell-selection-enabled] true))})
-        set-data! (fn [data]
-                    (fx/run-later!
-                     #(doto table
-                        (fx/set-field!
-                         :columns (map (fn [c]
-                                         (table/column (str c)
-                                                       (fn [row] (get row c))))
-                                       (keys (first data))))
-                        (fx/set-field! :items (observable-list data)))))]
-    (set-data! (c/all-cells))
-    (add-watch cells-atom :table-view (fn [_ _ _ _] (set-data! (c/all-cells))))
+  (let [table            (fx/make-tree
+                          {:fx/type  :scene.control/table-view
+                           :fx/setup
+                           (fn [table]
+                             ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
+                             (fx/set-field! table :style-class ["table-view" "main-component"])
+                             (fx/set-field-in! table [:selection-model :cell-selection-enabled] true))})
+        table-cells-atom (atom [])]
+    (fx/set-field!
+     table
+     :columns (map (fn [c]
+                     (table/column (str c)
+                                   (fn [row] (get row c))))
+                   [:id :label :formula? :enabled? :value :error :sinks :sources]))
+    (-> table .getColumns (nth 4) (.setPrefWidth 200))
+    (fx/set-field! table :items (observable-list table-cells-atom))
+    (add-watch cells-atom :table-view
+               (fn [_ _ old new]
+                 (reset! table-cells-atom
+                         (map #(update % :value
+                                       (fn [x] (if (instance? javafx.scene.Node x)
+                                                 (str x)
+                                                 x)))
+                              (c/all-cells)))))
     (with-status-line
       table
       "cells!")))
