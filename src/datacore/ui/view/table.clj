@@ -161,6 +161,12 @@
     (fun)
     (fx/set-field! table :dc/selected-cells cells)))
 
+(defmethod view/got-focus TableView
+  [this]
+  (when (empty? (fx/get-field this :dc/selected-cells))
+    (fx/run-later!
+     #(fx/set-field! this :dc/selected-cells [{:row 0 :column 0}]))))
+
 #_(defmethod view/build-view :datacore.view/table
   [view-cell]
   (with-status-line

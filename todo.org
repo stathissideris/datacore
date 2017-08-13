@@ -32,13 +32,12 @@
 *** DONE Re-introduce custom CSS and reactive CSS
 ** To do
 *** Bugs
-**** TODO Bug: focus switching slow when cell table is shown
+**** TODO Bug: CSV view+Cells view makes focus switching slow
 **** TODO Bug: selection is lost when cells table is updated
-**** TODO Bug: No selection when table first focuses
+**** DONE Bug: No selection when table first focuses
 **** TODO Bug fix confusing build-view, build-cell-view multimethod mess
 **** TODO Bug: Command+x, command+v seem to send multiple events
 **** TODO Bug: sometimes table scrolling (if you keep the key down) results in harmless NPEs
-**** TODO Bug: CSV view+Cells view makes focus switching slow
 **** TODO Bug: prevent Cmd+Q from closing JVM
 **** TODO Bug: Swap to different window that does not have a splitter
 **** TODO Bug: Swap to different window with splitters messes up focus/focus indicator

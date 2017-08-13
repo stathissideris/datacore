@@ -18,6 +18,9 @@
 
 (defmulti build-view ::type)
 (defmulti build-cell-view (comp ::type c/value))
+(defmulti got-focus class)
+(defmethod got-focus :default [this]
+  (println "Ignore (got-focus) for class:" (class this)))
 
 (defn- focus!-1 [component]
   (fx/run-later!
@@ -26,9 +29,12 @@
      (.requestFocus component))))
 
 (defn focus! [component]
+  (def cc component)
   (when component
     (if-let [c (ui.util/main-component component)]
-      (focus!-1 c)
+      (do
+        (focus!-1 c)
+        (got-focus c))
       (focus!-1 component)))
   component)
 
