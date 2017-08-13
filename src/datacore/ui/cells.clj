@@ -61,7 +61,7 @@
                               (c/all-cells)))))
     (fx/set-field!
      component
-     :fx/prop-listener [:visible (fn [source observable old visible]
+     :fx/prop-listener [:visible (fn [source observable old visible] ;;this only works because datacore.ui.windows/replace! sets the visilbity to false
                                    (println "Visibility change!" old visible watcher-name)
                                    (if-not visible
                                      (remove-watch cells-atom watcher-name)))])

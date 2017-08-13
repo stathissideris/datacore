@@ -27,15 +27,18 @@
                          :split-pane    (fx/tree split-pane)})))
       (.set (.getItems split-pane) (int idx) new))))
 
-(defn- replace! [reference-component new-component]
-  (let [parent (fx/parent reference-component)]
-    (when parent
-      (fx/run-later!
-       #(if (fx/has-style-class? parent "root")
-          (fx/set-field! parent :center new-component)
-          (do
-            (replace-in-split-pane! (fx/parent parent) reference-component new-component)
-            (.setVisible reference-component false)))))))
+(defn- replace!
+  ([reference-component new-component]
+   (replace! reference-component new-component true))
+  ([reference-component new-component hide-replaced?]
+   (let [parent (fx/parent reference-component)]
+     (when parent
+       (fx/run-later!
+        #(do
+           (if (fx/has-style-class? parent "root")
+             (fx/set-field! parent :center new-component)
+             (replace-in-split-pane! (fx/parent parent) reference-component new-component))
+           (when hide-replaced? (.setVisible reference-component false))))))))
 
 (defn replace-focused! [component]
   (replace! (focus-owner) component)
@@ -81,7 +84,7 @@
           :orientation (if (= orientation :horizontal)
                          javafx.geometry.Orientation/HORIZONTAL
                          javafx.geometry.Orientation/VERTICAL)})]
-    (replace! focused split-pane)
+    (replace! focused split-pane false)
     (timer/delayed 20 #(view/focus! focused))))
 
 (defin split-below

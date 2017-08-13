@@ -32,7 +32,7 @@
 *** DONE Re-introduce custom CSS and reactive CSS
 ** To do
 *** Bugs
-**** PROG Bug: CSV view+Cells view makes focus switching slow
+**** DONE Bug: CSV view+Cells view makes focus switching slow
 **** DONE Bug: No selection when table first focuses
 **** DONE Bug fix confusing build-view, build-cell-view multimethod mess
 **** TODO Bug: Command+x, command+v seem to send multiple events
