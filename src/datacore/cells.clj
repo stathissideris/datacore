@@ -615,6 +615,7 @@
                                  (get-in cells [:sinks cell-id]))))))))
 
 (defn swap! [cell-id fun & args]
+  (prn 'swap (.id cell-id) fun args)
   (get-in (core/swap! global-cells swap cell-id fun args)
           [:cells cell-id :value]))
 

@@ -33,7 +33,9 @@
       (fx/run-later!
        #(if (fx/has-style-class? parent "root")
           (fx/set-field! parent :center new-component)
-          (replace-in-split-pane! (fx/parent parent) reference-component new-component))))))
+          (do
+            (replace-in-split-pane! (fx/parent parent) reference-component new-component)
+            (.setVisible reference-component false)))))))
 
 (defn replace-focused! [component]
   (replace! (focus-owner) component)

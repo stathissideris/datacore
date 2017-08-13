@@ -45,30 +45,38 @@
                              ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
                              (fx/set-field! table :style-class ["table-view" "main-component"])
                              (fx/set-field-in! table [:selection-model :cell-selection-enabled] true))})
-        table-cells-atom (atom [])]
-    (fx/set-field!
-     table
-     :columns (map (fn [c]
-                     (table/column (str c)
-                                   (fn [row] (get row c))))
-                   [:id :roles :label :formula? :enabled? :value :error :sinks :sources :meta]))
-    (-> table .getColumns (nth 4) (.setPrefWidth 200))
-    (fx/set-field! table :items (observable-list table-cells-atom))
-    (add-watch cells-atom (gensym :table-view)
+        component        (with-status-line
+                           table
+                           "cells!")
+        table-cells-atom (atom [])
+        watcher-name     (gensym :table-view)]
+    (add-watch cells-atom watcher-name
                (fn [_ _ old new]
+                 (prn 'cell-atom-change)
                  (reset! table-cells-atom
                          (map #(update % :value
                                        (fn [x] (if (instance? javafx.scene.Node x)
                                                  "JavaFX component"
                                                  (-> x str (util/truncate-string 100)))))
                               (c/all-cells)))))
+    (fx/set-field!
+     component
+     :fx/prop-listener [:visible (fn [source observable old visible]
+                                   (println "Visibility change!" old visible watcher-name)
+                                   (if-not visible
+                                     (remove-watch cells-atom watcher-name)))])
+    (fx/set-fields!
+     table
+     {:items            (observable-list table-cells-atom)
+      :columns          (map (fn [c]
+                               (table/column (str c)
+                                             (fn [row] (get row c))))
+                             [:id :roles :label :formula? :enabled? :value :error :sinks :sources :meta])})
+    (-> table .getColumns (nth 5) (.setPrefWidth 200))
     (view/configure-view
      {:focused?   true
       ::view/type ::view/cells-table
-      :component
-      (with-status-line
-        table
-        "cells!")})))
+      :component  component})))
 
 ;; interactive
 
