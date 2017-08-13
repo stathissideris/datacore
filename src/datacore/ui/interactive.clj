@@ -28,6 +28,10 @@
   [_]
   (c/value state/focused-component))
 
+(defmethod resolve-param ::cell-data
+  [_]
+  (-> state/focused-component c/value (fx/get-field :dc/cell) c/value))
+
 (defn expand-param [[name param]]
   (if (keyword? param)
     [name {:type param}]

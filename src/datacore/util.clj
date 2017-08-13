@@ -117,7 +117,7 @@
   (.get meta-map o))
 
 (defn add-meta! [o m]
-  (.put meta-map o m))
+  (.put meta-map o (merge (.get meta-map o) m)))
 
 (defn alter-meta! [o fun & args]
   (locking meta-map

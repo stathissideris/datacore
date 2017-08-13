@@ -4,7 +4,8 @@
             [datacore.ui.java-fx :as fx]
             [datacore.ui.interactive :as in :refer [defin]]
             [datacore.cells :as c]
-            [datacore.ui.observable :refer [observable-list]])
+            [datacore.ui.observable :refer [observable-list]]
+            [clojure.pprint :refer [pprint]])
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
            [java.util Date]
@@ -102,6 +103,19 @@
         cursor-row           (:row (fx/get-field table :dc/cursor))
         center-row           (+ first-row (/ (- last-row first-row) 2))]
     (scroll-to table (inc (- first-row (- center-row cursor-row))))))
+
+(defmethod in/resolve-param ::in/table-cursor
+  [_]
+  (let [table (in/resolve-param {:type ::in/main-component})]
+    (fx/get-field table :dc/cursor)))
+
+(defin copy-row-as-edn
+  {:alias  :table/copy-row-as-edn
+   :params [[:data   ::in/cell-data]
+            [:cursor ::in/table-cursor]]}
+  [{:keys [data cursor]}]
+  (let [edn (with-out-str (some-> data :data (nth (:row cursor)) pprint))]
+    (fx/run-later! #(fx/to-clipboard edn))))
 
 (defn column [name cell-value-fn]
   (fx/make

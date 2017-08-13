@@ -16,6 +16,7 @@
            [javafx.scene.paint Color]
            [javafx.beans.value ChangeListener]
            [javafx.scene Node]
+           [javafx.scene.input Clipboard ClipboardContent]
            [com.sun.javafx.stage StageHelper]
            [javafx.util Callback]
            [javafx.scene.text Font FontWeight FontPosture TextAlignment TextFlow]
@@ -692,6 +693,13 @@
 (defn saturated [color] (.saturate color))
 (defn grayscale [color] (.grayscale color))
 (defn inverted [color] (.invert color))
+
+;;;;;;;;;;;;;;;;;;;; clipboard ;;;;;;;;;;;;;;;;;;;;
+
+(defn to-clipboard [text]
+  (doto (Clipboard/getSystemClipboard)
+    (.setContent (doto (ClipboardContent.)
+                   (.putString text)))))
 
 (comment
   (make
