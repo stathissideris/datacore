@@ -164,12 +164,13 @@
 
 ;;TODO maybe rename to setup-view or something
 ;;TODO assert existence of "main-component" inside passed view
-(defmethod build-view ::default
-  [{:keys [view focused?]}]
+(defmethod build-view :default
+  [{:keys [view focused?] :as m}]
   (fx/set-fields!
    view
    {:style-class        ["focus-indicator"]
     :dc/indicate-focus? (or focused? true)
+    :dc/meta            {::type (::type m)}
     :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]}))
 
 ;;;;;;;;;;;;;;;;

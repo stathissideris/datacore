@@ -13,8 +13,6 @@
   keymaps/keymaps
   focused-component)
 
-(require '[datacore.ui.view :as view])
-
 (comment
   (do
   (require '[datacore.ui.java-fx :as fx])
@@ -28,24 +26,24 @@
   (windows/new-window)
 
   ;;show cell in window
-  (fx/run-later!
-   #(windows/replace-focused!
-     (fx/make-tree
-      (view/build-view
-       {::view/type ::view/cell
-        :cell       csv-view
-        :focused?   true}))))
+  ;; (fx/run-later!
+  ;;  #(windows/replace-focused!
+  ;;    (fx/make-tree
+  ;;     (view/build-view
+  ;;      {::view/type ::view/cell
+  ;;       :cell       csv-view
+  ;;       :focused?   true}))))
 
   (do
     (require '[datacore.ui.view.web :as web])
     (c/defcell web-input {})
     (def web-view (web/view web-input)))
-  (windows/replace-focused!
-   (fx/make-tree
-    (view/build-view
-     {::view/type ::view/cell
-      :cell       web-view
-      :focused?   true})))
+  ;; (windows/replace-focused!
+  ;;  (fx/make-tree
+  ;;   (view/build-view
+  ;;    {::view/type ::view/cell
+  ;;     :cell       web-view
+  ;;     :focused?   true})))
   (c/reset! web-input {:url "http://www.imdb.com/title/tt0088247/"})
   (c/reset! web-input {:url "http://www.imdb.com/title/tt0478126/"})
   (c/reset! web-input {:url "http://chart.apis.google.com/chart?cht=bvs&chs=500x250&chd=t:100,200,300,400,500,600,700&chds=0,700&chl=Savings||Checking||Money"})

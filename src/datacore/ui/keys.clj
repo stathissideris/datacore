@@ -12,8 +12,8 @@
 
 (def modifiers [:alt :ctrl :meta :shift :shortcut])
 
+(def last-consumed (atom nil))
 (def initial-state {:chain []
-                    :last-consumed nil
                     :timer nil})
 
 (c/defcell key-input initial-state)
@@ -85,12 +85,12 @@
 
 (defn- consume-event [^Event e press event]
   (debug 'CONSUMED press event)
-  (c/swap! key-input assoc :last-consumed event)
+  (reset! last-consumed event)
   (.consume e)
   nil)
 
 (defn- also-consume-this? [event]
-  (when-let [last-consumed (-> key-input c/value :last-consumed)]
+  (when-let [last-consumed @last-consumed]
     (debug 'last-consumed last-consumed)
     (and (not= (:type event) :key-pressed)
          (= (dissoc event :type)
@@ -118,7 +118,7 @@
             (debug 'ALSO-CONSUMING)
             (consume-event fx-event press event)
             (when (= type :key-released)
-              (c/swap! key-input assoc :last-consumed nil)) ;;...but stop consuming at :key-released
+              (reset! last-consumed nil)) ;;...but stop consuming at :key-released
             nil)
 
           (and (= type :key-pressed) (not match))

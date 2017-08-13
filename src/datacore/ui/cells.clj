@@ -66,7 +66,7 @@
                                                  (-> x str (util/truncate-string 100)))))
                               (c/all-cells)))))
     (view/build-view
-     {::view/type ::view/default
+     {::view/type ::view/table
       :focused? true
       :view
       (with-status-line
