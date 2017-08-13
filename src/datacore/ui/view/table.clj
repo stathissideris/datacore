@@ -178,20 +178,22 @@
     ;;(c/link-slot! control-cell view-cell 1)
     ;;(c/alter-meta! control-cell assoc :roles #{:control})
     (-> (fx/make-tree
-         {:fx/type     :scene.control/table-view
-          :style-class ["table-view" "main-component"]
-          :items       (observable-list (c/formula :data view-cell))
-          :columns     (c/formula
-                        (fn [{:keys [columns column-labels]}]
-                          (map (fn [c]
-                                 (column (if-let [l (get column-labels c)] l (str c))
-                                         (fn [row] (get row c))))
-                               columns))
-                        view-cell)
+         {:fx/type                  :scene.control/table-view
+          :style-class              ["table-view" "main-component"]
+          :items                    (observable-list (c/formula :data view-cell))
+          :columns                  (c/formula
+                                     (fn [{:keys [columns column-labels]}]
+                                       (map (fn [c]
+                                              (column (if-let [l (get column-labels c)] l (str c))
+                                                      (fn [row] (get row c))))
+                                            columns))
+                                     view-cell)
+          [:selection-model
+           :selection-mode]         SelectionMode/MULTIPLE
+          [:selection-model
+           :cell-selection-enabled] true
           :fx/setup
           (fn [table]
-            (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
-            (fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
             (-> table
                 .getSelectionModel
                 .getSelectedItems

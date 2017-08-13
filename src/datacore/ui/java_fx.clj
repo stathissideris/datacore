@@ -157,6 +157,7 @@
   [o _ [prop fun]]
   (.addListener (get-property o prop) (change-listener o fun)))
 
+(declare set-field-in!)
 (defn set-field! [object field value]
   (when object
     (cond
@@ -165,6 +166,9 @@
 
       (int? field) ;;ObservableList
       (.set object field value)
+
+      (vector? field)
+      (set-field-in! object field value)
 
       (namespace field)
       (fset object field value)
