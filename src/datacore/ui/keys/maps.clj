@@ -36,7 +36,8 @@
      :3                :windows/split-right
      :0                :windows/delete
      #{:shift :equals} :windows/balance
-     #{:ctrl :f}       :open-file}
+     #{:ctrl :f}       :csv/load-csv
+     #{:ctrl :b}       :cells/show-table}
     :f1
     {:up    :windows/focus-up
      :down  :windows/focus-down
@@ -83,6 +84,13 @@
     #{:ctrl :e}           :table/scroll-to-last-column
     #{:ctrl :l}           :table/recenter}})
 
+(def cells-table-keymap
+  {:name :datacore.ui.view/cells-table
+   :mapping
+   (clojure.core/merge
+    (:mapping table-keymap)
+    {:enter :cells/open-view})})
+
 (def web-keymap
   {:name :datacore.ui.view/web
    :mapping
@@ -92,10 +100,11 @@
     #{:meta :shortcut :v} :web/scroll-up}})
 
 (c/defcellonce keymaps nil)
-(c/reset! keymaps {:root                    root-keymap
-                   :datacore.ui.view/prompt prompt-keymap
-                   :datacore.ui.view/table  table-keymap
-                   :datacore.ui.view/web    web-keymap})
+(c/reset! keymaps {:root                         root-keymap
+                   :datacore.ui.view/prompt      prompt-keymap
+                   :datacore.ui.view/table       table-keymap
+                   :datacore.ui.view/web         web-keymap
+                   :datacore.ui.view/cells-table cells-table-keymap})
 
 (defn keys-for-function [{:keys [mapping] :as keymap} function]
   (->> (util/flatten-keys mapping)

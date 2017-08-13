@@ -66,7 +66,7 @@
                                                  (-> x str (util/truncate-string 100)))))
                               (c/all-cells)))))
     (view/build-view
-     {::view/type ::view/table
+     {::view/type ::view/cells-table
       :focused? true
       :view
       (with-status-line
@@ -93,11 +93,12 @@
   {:alias  :cells/open-view
    :params [[:cursor ::in/table-cursor]]}
   [{:keys [cursor]}]
-  (let [component (some-> (c/all-cells)
-                          (nth (:row cursor))
-                          :cell
-                          c/meta
-                          :component)]
-    (fx/run-later!
-     (when component
-       #(windows/replace-focused! component)))))
+  (when cursor
+    (let [component (some-> (c/all-cells)
+                            (nth (:row cursor))
+                            :cell
+                            c/meta
+                            :component)]
+      (fx/run-later!
+       (when component
+         #(windows/replace-focused! component))))))
