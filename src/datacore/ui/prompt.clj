@@ -92,9 +92,8 @@
                   :cell-factory (fx/callback
                                  (fn [list]
                                    (list-cell)))})]}]})
-          window            (view/build-view
-                             {::view/type     ::view/window
-                              :raw-root       prompt
+          window            (view/window
+                             {:raw-root       prompt
                               :window-style   :transparent
                               :always-on-top? true})]
       (add-watch

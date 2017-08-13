@@ -74,10 +74,11 @@
                         :help   "The CSV file to load"}]]}
   [{:keys [filename]}]
   (let [csv       (file {:filename filename})
-        view      (default-view csv)
-        component (view/build-view
-                   {::view/type ::view/cell
-                    :cell       view
-                    :focused?   true})]
+        view-cell (default-view csv)
+        component (view/build-cell-view view-cell)]
+    (view/configure-view
+     {:cell      view-cell
+      :component component
+      :focused?  true})
     (fx/run-later!
      #(windows/replace-focused! component))))

@@ -111,9 +111,10 @@
                       keymaps/keymaps
                       {:label :help-content})
         _            (c/alter-meta! help-content assoc :roles #{:source})
-        component    (view/build-view
-                      {::view/type ::view/cell
-                       :cell       (web/view help-content)
-                       :focused?   true})]
+        view-cell    (web/view help-content)
+        component    (view/configure-view
+                      {:cell      view-cell
+                       :component (view/build-cell-view view-cell)
+                       :focused?  true})]
     (fx/run-later!
      #(windows/replace-focused! component))))

@@ -25,10 +25,9 @@
 
 (defn cells-graph
   [cells-atom]
-  (view/build-view
-   {::view/type ::view/default
-    :focused? true
-    :view
+  (view/configure-view
+   {:focused? true
+    :component
     (with-status-line
       (fx/make-tree
        {:fx/type     :scene.control/scroll-pane
@@ -36,8 +35,6 @@
         :content     {:fx/type  :scene/group
                       :children (cell-graph-elements cells-atom)}})
       "cells!")}))
-
-
 
 (defn cells-table
   [cells-atom]
@@ -65,10 +62,10 @@
                                                  "JavaFX component"
                                                  (-> x str (util/truncate-string 100)))))
                               (c/all-cells)))))
-    (view/build-view
-     {::view/type ::view/cells-table
-      :focused? true
-      :view
+    (view/configure-view
+     {:focused?   true
+      ::view/type ::view/cells-table
+      :component
       (with-status-line
         table
         "cells!")})))

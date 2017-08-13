@@ -16,7 +16,6 @@
            [javafx.scene.paint Color]
            [javafx.stage StageStyle]))
 
-(defmulti build-view ::type)
 (defmulti build-cell-view (comp ::type c/value))
 (defmulti got-focus class)
 (defmethod got-focus :default [this]
@@ -59,7 +58,7 @@
   (:dc/cell (util/meta component)))
 
 (def nothing-counter (atom 0))
-(defn- build-nothing []
+(defn nothing []
   (swap! nothing-counter inc)
   {:fx/type            :scene.layout/border-pane
    :style-class        ["focus-indicator"]
@@ -71,14 +70,10 @@
                         (fn [e]
                           (focus! (.getTarget e))))})
 
-(defmethod build-view ::nothing
-  [tree]
-  (build-nothing))
-
-(defmethod build-view ::split-pane
+(defn split-pane
   [{:keys [orientation children]}]
   {:fx/type     :scene.control/split-pane
-   :items       (map (comp build-view) children)
+   :items       children
    :orientation (if (= orientation :horizontal)
                   javafx.geometry.Orientation/HORIZONTAL
                   javafx.geometry.Orientation/VERTICAL)})
@@ -119,7 +114,7 @@
   (merge
    {:fx/type          :scene/scene
     :fx/args          (concat
-                       [(build-view {::type ::nothing})]
+                       [(nothing)]
                        dimensions)
     :fx/stylesheets   ["/css/default.css"]
     :fx/prop-listener
@@ -138,7 +133,7 @@
    (when (= window-style :transparent)
      {:fill Color/TRANSPARENT})))
 
-(defmethod build-view ::window
+(defn window
   [{:keys [title window-style always-on-top?] :as params}]
   (fx/make-tree
    (merge
@@ -157,27 +152,19 @@
                    (reset! focused-stage stage)
                    (c/reset! state/focused-component (get @stage->component stage))))]})))
 
-(defmethod build-view ::cell
-  [{:keys [cell focused?]}]
-  (let [view (build-cell-view cell)]
-   (fx/set-fields!
-    view
-    {:style-class        ["focus-indicator"]
-     :dc/indicate-focus? (or focused? true)
-     :dc/cell            cell
-     :dc/meta            {::type (::type (c/value cell))}
-     :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})))
-
-;;TODO maybe rename to setup-view or something
 ;;TODO assert existence of "main-component" inside passed view
-(defmethod build-view :default
-  [{:keys [view focused?] :as m}]
+(defn configure-view
+  [{:keys [cell component focused?] :as m}]
+  (when cell
+    (c/alter-meta! cell assoc :component component))
   (fx/set-fields!
-   view
+   component
    {:style-class        ["focus-indicator"]
     :dc/indicate-focus? (or focused? true)
-    :dc/meta            {::type (::type m)}
-    :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]}))
+    :dc/cell            cell
+    :dc/meta            {::type (if cell (::type (c/value cell)) (::type m))}
+    :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! component))]})
+  component)
 
 ;;;;;;;;;;;;;;;;
 
