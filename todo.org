@@ -1,60 +1,76 @@
-* To do [22/54] [40%]
-** DONE Swap views
-** DONE Fix move focus bug (skips closest)
-** DONE Focus on mouse click
-** DONE Bug: Table steals focus when window is split
-** DONE Maximize
-** DONE Balance window
-** DONE Bug: Fix id of "minibuffer" unmanaged component (appears on in last window)
-** DONE New window
-** DONE Move focus between windows
-** DONE Bug: first window always has focus
-** DONE Bug: focus loss from main component when clicking on cell window
-** DONE Change keymap based on mode
-** DONE Run function using prompt (text prompt with autocomplete)
-** PROG File prompt
-** DONE Refactor windows to get focused component from interactive
-** PROG Prompt: better colours for selected option in list
-** TODO Maybe display cell errors in UI panels?
-** DONE Prompt: handle deleting all input in function autocomplete
-** DONE Prompt bug: key repeat is blocked by keys handling code
-** TODO Prompt: show focus in main window even if prompt has focus
-** TODO Prompt: multiple choice
-** TODO Prompt: fix layout when we have no autocomplete
-** TODO Prompt: go to previous parameter
-** DONE Bug: focus messed up after loading CSV (or after replacing any element)
-** TODO Bug: Command+x, command+v seem to send multiple events
-** DONE Meta map for cells
-** TODO Table selection modes
-** DONE Table view for cells
-** TODO Show cell role for table view for cells
-** TODO View registry and a way to switch between views
-** DONE Icon in taskbar
-** DONE Bug: Table keymap not activated
-** TODO Bug: sometimes table scrolling (if you keep the key down) results in harmless NPEs
-** TODO Bug: CSV view+Cells view makes focus switching slow
-** TODO Cells vizualisation
-** TODO Bug: prevent Cmd+Q from closing JVM
-** TODO Bug: Swap to different window that does not have a splitter
-** TODO Bug: Swap to different window with splitters messes up focus/focus indicator
-** TODO Web view: can't indicate focus!
-** TODO Make view cells output stuff such as selection etc
-** TODO Move diff to clojure.util.diff
-** TODO Move splitter with keyboard
-** TODO Close window with keyboard
-** TODO Help system
-*** DONE interactive/functions can be a cell
-*** DONE help text for functions will be a cell with keymaps and interactive/functions as cells
-*** DONE Allow links to other functions in help content
-*** DONE Allow web links in help content
-*** TODO Help topics pages and links to them
-** TODO Settings system
-** TODO Custom table view
-** DONE Re-introduce custom CSS and reactive CSS
-** TODO User CSS
-** TODO Config based on clj files
-** TODO User code loading
-** TODO Maven integration and hotloading
-** TODO Config
-** TODO Bug: file prompt does not match ~.~
-** TODO Consider using a non-editable HTMLEditor instead of WebView
+* Datacore tasks
+** Old to do
+*** DONE Swap views
+*** DONE Fix move focus bug (skips closest)
+*** DONE Focus on mouse click
+*** DONE Bug: Table steals focus when window is split
+*** DONE Maximize
+*** DONE Balance window
+*** DONE Bug: Fix id of "minibuffer" unmanaged component (appears on in last window)
+*** DONE New window
+*** DONE Move focus between windows
+*** DONE Bug: first window always has focus
+*** DONE Bug: focus loss from main component when clicking on cell window
+*** DONE Change keymap based on mode
+*** DONE Run function using prompt (text prompt with autocomplete)
+*** DONE Help system
+**** DONE interactive/functions can be a cell
+**** DONE help text for functions will be a cell with keymaps and interactive/functions as cells
+**** DONE Allow links to other functions in help content
+**** DONE Allow web links in help content
+
+*** DONE Refactor windows to get focused component from interactive
+*** DONE Prompt: handle deleting all input in function autocomplete
+*** DONE Prompt bug: key repeat is blocked by keys handling code
+
+*** DONE Bug: focus messed up after loading CSV (or after replacing any element)
+*** DONE Meta map for cells
+*** DONE Table view for cells
+*** DONE Show cell role for table view for cells
+*** DONE Icon in taskbar
+*** DONE Bug: Table keymap not activated
+*** DONE Re-introduce custom CSS and reactive CSS
+** To do
+*** Bugs
+**** TODO Bug: focus switching slow when cell table is shown
+**** TODO Bug: selection is lost when cells table is updated
+**** TODO Bug: No selection when table first focuses
+**** TODO Bug fix confusing build-view, build-cell-view multimethod mess
+**** TODO Bug: Command+x, command+v seem to send multiple events
+**** TODO Bug: sometimes table scrolling (if you keep the key down) results in harmless NPEs
+**** TODO Bug: CSV view+Cells view makes focus switching slow
+**** TODO Bug: prevent Cmd+Q from closing JVM
+**** TODO Bug: Swap to different window that does not have a splitter
+**** TODO Bug: Swap to different window with splitters messes up focus/focus indicator
+**** TODO Bug: file prompt does not match ~.~
+**** TODO Web view: can't indicate focus!
+*** Prompt
+**** TODO Prompt: show focus in main window even if prompt has focus
+**** TODO Prompt: multiple choice
+**** TODO Prompt: fix layout when we have no autocomplete
+**** TODO Prompt: go to previous parameter
+**** PROG File prompt
+**** TODO Maybe display cell errors in UI panels?
+**** PROG Prompt: better colours for selected option in list
+*** Tables
+**** TODO Table selection modes
+*** Cells
+**** PROG Cells: graph vizualisation
+**** TODO Cells: Add icons for roles in cells table
+*** General
+**** PROG View registry and a way to switch between views
+**** TODO Make view cells output stuff such as selection etc
+**** TODO Move diff to clojure.util.diff
+**** TODO Move splitter with keyboard
+**** TODO Close window with keyboard
+**** TODO Config based on clj files
+**** TODO Settings system
+**** TODO User CSS
+**** TODO User code loading
+**** TODO Maven integration and hotloading
+**** TODO Consider using a non-editable HTMLEditor instead of WebView (Why???)
+*** Help
+**** TODO Help: topics
+**** TODO Help: table of contents
+**** TODO Help: reuse view when clicking links
+**** TODO Help: back-forward buttons and keys
