@@ -52,7 +52,6 @@
         watcher-name     (gensym :table-view)]
     (add-watch cells-atom watcher-name
                (fn [_ _ old new]
-                 (prn 'cell-atom-change)
                  (reset! table-cells-atom
                          (map #(update % :value
                                        (fn [x] (if (instance? javafx.scene.Node x)

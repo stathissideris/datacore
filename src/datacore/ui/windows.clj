@@ -35,6 +35,7 @@
      (when parent
        (fx/run-later!
         #(do
+           (.setVisible new-component true)
            (if (fx/has-style-class? parent "root")
              (fx/set-field! parent :center new-component)
              (replace-in-split-pane! (fx/parent parent) reference-component new-component))
