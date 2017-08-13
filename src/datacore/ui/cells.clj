@@ -1,7 +1,7 @@
 (ns datacore.ui.cells
   (:require [datacore.ui.java-fx :as fx]
             [datacore.ui.view :as view]
-            [datacore.ui.interactive :refer [defin]]
+            [datacore.ui.interactive :refer [defin] :as in]
             [datacore.ui.windows :as windows]
             [datacore.cells :as c]
             [datacore.util :as util]
@@ -88,3 +88,16 @@
   (let [component (cells-table @#'c/global-cells)]
     (fx/run-later!
      #(windows/replace-focused! component))))
+
+(defin open-view
+  {:alias  :cells/open-view
+   :params [[:cursor ::in/table-cursor]]}
+  [{:keys [cursor]}]
+  (let [component (some-> (c/all-cells)
+                          (nth (:row cursor))
+                          :cell
+                          c/meta
+                          :component)]
+    (fx/run-later!
+     (when component
+       #(windows/replace-focused! component)))))
