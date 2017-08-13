@@ -174,42 +174,37 @@
 
 (defmethod view/build-cell-view ::view/table
   [view-cell]
-  (let [control-cell (c/cell :table-control {})
-        table        (fx/make-tree
-                      {:fx/type  :scene.control/table-view
-                       :fx/setup
-                       (fn [table]
-                         (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
-                         (fx/set-field! table :style-class ["table-view" "main-component"])
-                         (fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
-                         (-> table
-                             .getSelectionModel
-                             .getSelectedItems
-                             (.addListener
-                              (fx/list-change-listener
-                               (fn [selected]
-                                 ;;(c/swap! control-cell assoc :selection selected)
-                                 )))))})
-        component    (with-status-line
-                       table (c/formula #(str (:label %) " - "
-                                              (-> % :data count) " rows - "
-                                              (-> % :columns count) " columns - "
-                                              (Date. (:last-modified %))
-                                              " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
-                                        view-cell
-                                        {:label :table-status-line}))]
-    (fx/run-later!
-     #(fx/set-fields!
-       table
-       {:items   (observable-list (c/formula :data view-cell))
-        :columns (c/formula
-                  (fn [{:keys [columns column-labels]}]
-                    (map (fn [c]
-                           (column (if-let [l (get column-labels c)] l (str c))
-                                   (fn [row] (get row c))))
-                         columns))
-                  view-cell)}))
+  (let [control-cell (c/cell :table-control {})]
     ;;(c/link-slot! control-cell view-cell 1)
     ;;(c/alter-meta! control-cell assoc :roles #{:control})
-    (c/alter-meta! view-cell assoc :component component)
-    component))
+    (-> (fx/make-tree
+         {:fx/type     :scene.control/table-view
+          :style-class ["table-view" "main-component"]
+          :items       (observable-list (c/formula :data view-cell))
+          :columns     (c/formula
+                        (fn [{:keys [columns column-labels]}]
+                          (map (fn [c]
+                                 (column (if-let [l (get column-labels c)] l (str c))
+                                         (fn [row] (get row c))))
+                               columns))
+                        view-cell)
+          :fx/setup
+          (fn [table]
+            (fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
+            (fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
+            (-> table
+                .getSelectionModel
+                .getSelectedItems
+                (.addListener
+                 (fx/list-change-listener
+                  (fn [selected]
+                    ;;(c/swap! control-cell assoc :selection selected)
+                    )))))})
+        (with-status-line
+          (c/formula #(str (:label %) " - "
+                           (-> % :data count) " rows - "
+                           (-> % :columns count) " columns - "
+                           (Date. (:last-modified %))
+                           " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
+                     view-cell
+                     {:label :table-status-line})))))
