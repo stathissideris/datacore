@@ -1,4 +1,4 @@
-* To do
+* To do [20/49] [40%]
 ** DONE Swap views
 ** DONE Fix move focus bug (skips closest)
 ** DONE Focus on mouse click
@@ -26,7 +26,8 @@
 ** TODO Bug: Command+x, command+v seem to send multiple events
 ** DONE Meta map for cells
 ** TODO Table selection modes
-** TODO Table view for cells
+** DONE Table view for cells
+** TODO Bug: CSV view+Cells view makes focus switching slow
 ** TODO Cells vizualisation
 ** TODO Bug: prevent Cmd+Q from closing JVM
 ** TODO Bug: Swap to different window that does not have a splitter

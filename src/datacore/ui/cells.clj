@@ -54,7 +54,7 @@
                    [:id :label :formula? :enabled? :value :error :sinks :sources]))
     (-> table .getColumns (nth 4) (.setPrefWidth 200))
     (fx/set-field! table :items (observable-list table-cells-atom))
-    (add-watch cells-atom :table-view
+    (add-watch cells-atom (gensym :table-view)
                (fn [_ _ old new]
                  (reset! table-cells-atom
                          (map #(update % :value
