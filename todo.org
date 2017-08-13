@@ -35,7 +35,7 @@
 **** TODO Bug: CSV view+Cells view makes focus switching slow
 **** TODO Bug: selection is lost when cells table is updated
 **** DONE Bug: No selection when table first focuses
-**** TODO Bug fix confusing build-view, build-cell-view multimethod mess
+**** DONE Bug fix confusing build-view, build-cell-view multimethod mess
 **** TODO Bug: Command+x, command+v seem to send multiple events
 **** TODO Bug: sometimes table scrolling (if you keep the key down) results in harmless NPEs
 **** TODO Bug: prevent Cmd+Q from closing JVM
