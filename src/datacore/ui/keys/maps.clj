@@ -86,8 +86,8 @@
 (def web-keymap
   {:name :datacore.ui.view/web
    :mapping
-   {:esc        {#{:shift :comma}  :web/scroll-to-top
-                 #{:shift :period} :web/scroll-to-bottom}
+   {:esc                  {#{:shift :comma}  :web/scroll-to-top
+                           #{:shift :period} :web/scroll-to-bottom}
     #{:ctrl :v}           :web/scroll-down
     #{:meta :shortcut :v} :web/scroll-up}})
 

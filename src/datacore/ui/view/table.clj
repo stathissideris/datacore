@@ -77,20 +77,22 @@
   {:alias :table/scroll-up
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (let [[first-row last-row] (fx/get-field component :fx/visible-range)
-        column               (:column (fx/get-field component :dc/cursor))
-        row                  (max 0 (- first-row (- last-row first-row)))]
-    (scroll-to component row)
-    (fx/set-field! component :dc/cursor {:column column :row row})))
+  (let [[first-row last-row] (fx/get-field component :fx/visible-range)]
+    (when (and first-row last-row)
+      (let [column (:column (fx/get-field component :dc/cursor))
+            row    (max 0 (- first-row (- last-row first-row)))]
+        (scroll-to component row)
+        (fx/set-field! component :dc/cursor {:column column :row row})))))
 
 (defin scroll-down
   {:alias :table/scroll-down
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
-  (let [[_ last-row] (fx/get-field component :fx/visible-range)
-        column       (:column (fx/get-field component :dc/cursor))]
-    (scroll-to component last-row)
-    (fx/set-field! component :dc/cursor {:column column :row last-row})))
+  (let [[_ last-row] (fx/get-field component :fx/visible-range)]
+    (when last-row
+      (let [column       (:column (fx/get-field component :dc/cursor))]
+        (scroll-to component last-row)
+        (fx/set-field! component :dc/cursor {:column column :row last-row})))))
 
 (defin recenter
   {:alias :table/recenter

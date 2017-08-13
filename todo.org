@@ -1,4 +1,4 @@
-* To do [20/49] [40%]
+* To do [22/52] [42%]
 ** DONE Swap views
 ** DONE Fix move focus bug (skips closest)
 ** DONE Focus on mouse click
@@ -27,6 +27,9 @@
 ** DONE Meta map for cells
 ** TODO Table selection modes
 ** DONE Table view for cells
+** DONE Icon in taskbar
+** DONE Bug: Table keymap not activated
+** TODO Bug: sometimes table scrolling (if you keep the key down) results in harmless NPEs
 ** TODO Bug: CSV view+Cells view makes focus switching slow
 ** TODO Cells vizualisation
 ** TODO Bug: prevent Cmd+Q from closing JVM

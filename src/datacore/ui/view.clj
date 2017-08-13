@@ -159,6 +159,7 @@
     {:style-class        ["focus-indicator"]
      :dc/indicate-focus? (or focused? true)
      :dc/cell            cell
+     :dc/meta            {::type (::type (c/value cell))}
      :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! view))]})))
 
 ;;TODO maybe rename to setup-view or something

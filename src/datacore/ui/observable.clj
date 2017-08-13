@@ -108,7 +108,7 @@
     (get [i] (nth (c/value x) i))
     (size [] (count (c/value x)))
     (iterator [] (.iterator (c/value x)))
-    (indexOf [i] (.indexOf @x i))
+    (indexOf [i] (.indexOf (c/value x) i))
     (forEach [consumer] (.forEach (c/value x) consumer))
     (isEmpty [] (empty? (c/value x)))
     (setAll [coll] (reset! x coll))

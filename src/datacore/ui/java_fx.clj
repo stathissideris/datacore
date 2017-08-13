@@ -250,14 +250,14 @@
 (defmethod fget [ListView :fx/visible-range]
   [o _]
   (let [virtual-flow (some-> o .getSkin .getChildren (.get 0))]
-    [(-> virtual-flow .getFirstVisibleCell .getIndex)
-     (-> virtual-flow .getLastVisibleCell .getIndex)]))
+    [(some-> virtual-flow .getFirstVisibleCell .getIndex)
+     (some-> virtual-flow .getLastVisibleCell .getIndex)]))
 
 (defmethod fget [TableView :fx/visible-range]
   [o _]
   (let [virtual-flow (some-> o .getSkin .getChildren (.get 1))]
-    [(-> virtual-flow .getFirstVisibleCell .getIndex)
-     (-> virtual-flow .getLastVisibleCell .getIndex)]))
+    [(some-> virtual-flow .getFirstVisibleCell .getIndex)
+     (some-> virtual-flow .getLastVisibleCell .getIndex)]))
 
 (defn get-field [object field]
   (cond (and (= object :fx/top-level) (= field :children))
