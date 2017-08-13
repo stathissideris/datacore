@@ -101,7 +101,6 @@
                         (-> (function-help (get functions function) keymaps)
                             (assoc :link-listener
                                    (fn [event href type]
-                                     (prn "CLICK LINK" href type)
                                      (.preventDefault event)
                                      (when (= type :click)
                                        (if (= "function" (url-protocol href))
