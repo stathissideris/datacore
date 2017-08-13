@@ -19,29 +19,32 @@
 (defmethod view/build-cell-view :datacore.ui.view/web
   [view-cell]
   @(fx/run-later!
-    #(let [view   (fx/make-tree
-                   {:fx/type  :scene.layout/stack-pane
-                    :style (str "-fx-border-width: 0 0 1 0;"
-                                "-fx-border-color: #c8c8c8;")
-                    :children
-                    [{:fx/type          :scene.web/web-view
-                      :style-class      ["web-view" "main-component"]
-                      :fx/stylesheet    "/css/default.css"
-                      :fx/event-filter  [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]
-                      :fx/link-listener (-> view-cell c/value :link-listener)}]})
-           engine (fx/get-field-in view [:children 0 :engine])]
-       (load engine (c/value view-cell))
-       (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
-       (-> (with-status-line
-             view (c/formula (fn [{:keys [url content title]}]
-                               (or title
-                                   (str "Web view: "
-                                        (cond url url
-                                              content "Local content"
-                                              :else "Nothing to show"))))
-                             view-cell
-                             {:label :web-view-status-line}))
-           (fx/set-field! :style-class ["focus-indicator"])))))
+    #(let [view      (fx/make-tree
+                      {:fx/type  :scene.layout/stack-pane
+                       :style (str "-fx-border-width: 0 0 1 0;"
+                                   "-fx-border-color: #c8c8c8;")
+                       :children
+                       [{:fx/type          :scene.web/web-view
+                         :style-class      ["web-view" "main-component"]
+                         :fx/stylesheet    "/css/default.css"
+                         :fx/event-filter  [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]
+                         :fx/link-listener (-> view-cell c/value :link-listener)}]})
+           engine    (fx/get-field-in view [:children 0 :engine])
+           _         (load engine (c/value view-cell))
+           _         (c/add-watch! view-cell :web-view (fn [_ _ new] (load engine new)))
+           component (-> (with-status-line
+                           view (c/formula (fn [{:keys [url content title]}]
+                                             (or title
+                                                 (str "Web view: "
+                                                      (cond url url
+                                                            content "Local content"
+                                                            :else "Nothing to show"))))
+                                           view-cell
+                                           {:label :web-view-status-line}))
+                         (fx/set-field! :style-class ["focus-indicator"]))]
+       (c/alter-meta! view-cell assoc :roles #{:view})
+       (c/alter-meta! view-cell assoc :component component)
+       component)))
 
 (defn view [web-input]
   (c/formula

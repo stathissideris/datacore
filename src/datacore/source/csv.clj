@@ -33,6 +33,7 @@
                    {:label         (fs/base-name filename)
                     :filename      filename
                     :last-modified (util/time-in-millis)}))]
+    (c/alter-meta! csv-cell assoc :roles #{:source})
     (hawk/watch! [{:paths   [filename]
                    :handler
                    (fn [_ _]
@@ -45,20 +46,21 @@
     csv-cell))
 
 (defn default-view [csv-cell]
-  (c/formula
-   (fn [{:keys [label columns column-labels original-column-labels] :as contents} control]
-     (merge
-      contents
-      {::view/type ::view/table}
-      ;;TODO also uniquify label
-      (when-not (not column-labels)
-        {:column-labels (zipmap columns
-                                (map (fn [c]
-                                       (or (get original-column-labels c)
-                                           (util/data-key->label c))) columns))})
-      control))
-   csv-cell ::c/unlinked
-   {:label :table-view}))
+  (-> (c/formula
+       (fn [{:keys [label columns column-labels original-column-labels] :as contents} control]
+         (merge
+          contents
+          {::view/type ::view/table}
+          ;;TODO also uniquify label
+          (when-not (not column-labels)
+            {:column-labels (zipmap columns
+                                    (map (fn [c]
+                                           (or (get original-column-labels c)
+                                               (util/data-key->label c))) columns))})
+          control))
+       csv-cell ::c/unlinked
+       {:label :table-view})
+      (c/set-meta! {:roles #{:view}})))
 
 (defin load-csv
   {:alias :csv/load-csv

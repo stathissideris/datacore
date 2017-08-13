@@ -121,7 +121,7 @@
 
 (defn alter-meta! [o fun & args]
   (locking meta-map
-    (.put meta-map o (apply fun (meta o) args))
+    (.put meta-map o (apply fun (or (meta o) {}) args))
     (meta o)))
 
 ;;;;;;;;;;;;;;;;;;;; diff ;;;;;;;;;;;;;;;;;;;;

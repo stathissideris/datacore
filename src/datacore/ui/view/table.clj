@@ -196,7 +196,15 @@
                               (fx/list-change-listener
                                (fn [selected]
                                  ;;(c/swap! control-cell assoc :selection selected)
-                                 )))))})]
+                                 )))))})
+        component    (with-status-line
+                       table (c/formula #(str (:label %) " - "
+                                              (-> % :data count) " rows - "
+                                              (-> % :columns count) " columns - "
+                                              (Date. (:last-modified %))
+                                              " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
+                                        view-cell
+                                        {:label :table-status-line}))]
     (fx/run-later!
      #(fx/set-fields!
        table
@@ -210,12 +218,5 @@
                   view-cell)}))
     ;;(c/link-slot! control-cell view-cell 1)
     ;;(c/alter-meta! control-cell assoc :roles #{:control})
-    (c/alter-meta! view-cell assoc :roles #{:view})
-    (with-status-line
-      table (c/formula #(str (:label %) " - "
-                             (-> % :data count) " rows - "
-                             (-> % :columns count) " columns - "
-                             (Date. (:last-modified %))
-                             " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
-                       view-cell
-                       {:label :table-status-line}))))
+    (c/alter-meta! view-cell assoc :component component)
+    component))

@@ -104,12 +104,13 @@
                                      (prn "CLICK LINK" href type)
                                      (.preventDefault event)
                                      (when (= type :click)
-                                      (if (= "function" (url-protocol href))
-                                        (describe-function {:function (url-function href)})
-                                        (fx/open-in-browser href)))))))
+                                       (if (= "function" (url-protocol href))
+                                         (describe-function {:function (url-function href)})
+                                         (fx/open-in-browser href)))))))
                       in/functions
                       keymaps/keymaps
                       {:label :help-content})
+        _            (c/alter-meta! help-content assoc :roles #{:source})
         component    (view/build-view
                       {::view/type ::view/cell
                        :cell       (web/view help-content)

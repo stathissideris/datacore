@@ -82,8 +82,11 @@
   ([cell-id]
    (cell->debug @global-cells cell-id))
   ([cells cell-id]
-   (let [c (get-in cells [:cells cell-id])]
+   (let [c    (get-in cells [:cells cell-id])
+         meta (get-in cells [:meta cell-id])]
      {:id       (:id c)
+      :cell     cell-id
+      :roles    (:roles meta)
       :label    (:label c)
       :formula? (:formula? c)
       :enabled? (if (:formula? c)
@@ -104,7 +107,8 @@
                            x))
                        (:code v))))
       :sinks    (not-empty (set (map #(when % (.-id %)) (get-in cells [:sinks cell-id]))))
-      :sources  (not-empty (set (map #(when % (.-id %)) (get-in cells [:sources cell-id]))))})))
+      :sources  (not-empty (set (map #(when % (.-id %)) (get-in cells [:sources cell-id]))))
+      :meta     meta})))
 
 (defn all-cells []
   (let [cells @global-cells]
@@ -416,7 +420,7 @@
 (defn linear-insert! [parent cell child]
   (core/swap! global-cells linear-insert parent cell child))
 
-(defn- register-cell [cells cell-id v {:keys [formula? code label sources] :as options}]
+(defn- register-cell [cells cell-id v {:keys [formula? code label sources meta] :as options}]
   (let [id        (.-id cell-id)
         new-cells (assoc-in cells [:cells cell-id]
                             (if formula?
@@ -621,12 +625,14 @@
   (get-in @global-cells [:meta cell-id]))
 
 (defn alter-meta! [cell-id fun & args]
-  (get-in (core/swap! global-cells #(apply update-in % [:meta cell-id] fun args))
-          [:meta cell-id]))
+  (get-in (core/swap! global-cells #(apply update-in % [:meta cell-id] (fnil fun {}) args))
+          [:meta cell-id])
+  cell-id)
 
 (defn set-meta! [cell-id m]
   (get-in (core/swap! global-cells assoc-in [:meta cell-id] m)
-          [:meta cell-id]))
+          [:meta cell-id])
+  cell-id)
 
 (defn linked?
   ([source sink]

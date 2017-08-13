@@ -4,6 +4,7 @@
             [datacore.ui.interactive :refer [defin]]
             [datacore.ui.windows :as windows]
             [datacore.cells :as c]
+            [datacore.util :as util]
             [datacore.ui.util :refer [with-status-line]]
             [datacore.ui.view.table :as table]
             [datacore.ui.observable :refer [observable-list]]))
@@ -36,6 +37,8 @@
                       :children (cell-graph-elements cells-atom)}})
       "cells!")}))
 
+
+
 (defn cells-table
   [cells-atom]
   (let [table            (fx/make-tree
@@ -51,7 +54,7 @@
      :columns (map (fn [c]
                      (table/column (str c)
                                    (fn [row] (get row c))))
-                   [:id :label :formula? :enabled? :value :error :sinks :sources]))
+                   [:id :roles :label :formula? :enabled? :value :error :sinks :sources :meta]))
     (-> table .getColumns (nth 4) (.setPrefWidth 200))
     (fx/set-field! table :items (observable-list table-cells-atom))
     (add-watch cells-atom (gensym :table-view)
@@ -60,7 +63,7 @@
                          (map #(update % :value
                                        (fn [x] (if (instance? javafx.scene.Node x)
                                                  "JavaFX component"
-                                                 x)))
+                                                 (-> x str (util/truncate-string 100)))))
                               (c/all-cells)))))
     (view/build-view
      {::view/type ::view/default
