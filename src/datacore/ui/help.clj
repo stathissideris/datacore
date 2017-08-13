@@ -7,6 +7,7 @@
             [datacore.ui.java-fx :as fx]
             [datacore.ui.windows :as windows]
             [datacore.util :as util]
+            [datacore.ui.util :as ui.util]
             [hiccup.core :refer [html]]
             [clojure.string :as str]))
 
@@ -43,7 +44,12 @@
           {:class "keymap"}
           "keymap: " [:span {:class "keymap-name"} (util/kw-str keymap)]]])]]))
 
-(defn- function-help [{:keys [alias help params] :as fun} keymaps]
+(defn- normalise-param [param]
+  (if (keyword? param)
+    {:dispatch param}
+    param))
+
+(defn- function-help [{:keys [alias help related params] :as fun} keymaps]
   {:title (str "Help for function " (util/kw-str alias))
    :content
    (html
@@ -57,14 +63,31 @@
          [:h2 "parameters"]
          [:ul
           (for [[param-name param] params]
-            [:li
-             [:span {:class "param-name"} (name param-name)]
-             (when (:help param) " - ")
-             (:help param)])]])
-      (key-help fun keymaps)]])})
+            (let [{:keys [dispatch help]} (normalise-param param)]
+              [:li
+               [:span {:class "param-name"} (name param-name)]
+               " - "
+               (or help (in/resolve-param-help dispatch))
+               " (" [:span {:class "resolve-param-dispatch"} (str dispatch)] ")"]))]])
+      (key-help fun keymaps)
+      (when related
+        [:div
+         [:h3 "see also"]
+         [:p
+          (interpose
+           [:span {:class "pre"} ", "]
+           (for [r related]
+             ;;[:a {:href (str "function:" r)} [:span {:class "function-name"} (subs (str r) 1)]]
+             [:span {:class "function-name"} [:a {:href (str "function:" r)} (subs (str r) 1)]]))]])]])})
 
 ;; try: (keymaps/set-key! [#{:meta :shortcut :q}] :interactive/execute-function)
 ;; to see help be updated live!
+
+(defn- url-protocol [url]
+  (second (re-find #"^(.+?):" url)))
+
+(defn- url-function [url]
+  (keyword (last (re-find #"^(.+?)::(.+?)$" url))))
 
 (defin describe-function
   {:alias :help/describe-function
@@ -72,18 +95,24 @@
                         :title  "describe-function"
                         :prompt "Show help for interactive function"}]]}
   [{:keys [function]}]
-  (when-let [fun (get in/functions function)]
-    (println (str "Help for function \"" (name function) "\": " (:help fun)))
-
-    (let [help-content (c/formula
-                        (fn [keymaps]
-                          (function-help fun keymaps))
-                        keymaps/keymaps
-                        {:label :help-content})
-          help-view    (web/view help-content)
-          component    (view/build-view
-                        {::view/type ::view/cell
-                         :cell       help-view
-                         :focused?   true})]
-      (fx/run-later!
-       #(windows/replace-focused! component)))))
+  (let [help-content (c/formula
+                      (fn [functions keymaps]
+                        (println (str "Help for function \"" (name function) "\""))
+                        (-> (function-help (get functions function) keymaps)
+                            (assoc :link-listener
+                                   (fn [event href type]
+                                     (prn "CLICK LINK" href type)
+                                     (.preventDefault event)
+                                     (when (= type :click)
+                                      (if (= "function" (url-protocol href))
+                                        (describe-function {:function (url-function href)})
+                                        (fx/open-in-browser href)))))))
+                      in/functions
+                      keymaps/keymaps
+                      {:label :help-content})
+        component    (view/build-view
+                      {::view/type ::view/cell
+                       :cell       (web/view help-content)
+                       :focused?   true})]
+    (fx/run-later!
+     #(windows/replace-focused! component))))

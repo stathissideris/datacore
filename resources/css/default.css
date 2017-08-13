@@ -28,10 +28,26 @@ body.dc-help {
   font-weight: bold;
 }
 
-.dc-help .function-name {
+.dc-help h1.function-name {
   font-family: "Monaco", monospace;
   font-weight: bold;
   font-size: 1.3em;
+}
+
+.dc-help .function-name {
+  font-family: "Monaco", monospace;
+  font-weight: bold;
+  font-size: 0.8em;
+}
+
+.dc-help a {
+  color: #807f6c;
+  border-bottom: 1px dashed;
+  text-decoration: none;
+}
+
+.dc-help a:hover {
+  background-color: lightgreen;
 }
 
 .dc-help h2 {
@@ -49,6 +65,10 @@ body.dc-help {
   font-family: "Monaco", monospace;
 }
 
+.dc-help .pre {
+  font-family: "Monaco", monospace;
+}
+
 .dc-help .key-press {
   display: inline-block;
   border: 1px solid #ccc;
@@ -59,4 +79,10 @@ body.dc-help {
   margin: .4em .2em;
 	font-family: "Lucida Grande", Lucida, Arial, sans-serif;
   font-size: 0.8em;
+}
+
+.dc-help .resolve-param-dispatch {
+  font-family: "Monaco", monospace;
+  font-size: 0.8em;
+  color: #807f6c;
 }

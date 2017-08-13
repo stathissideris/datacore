@@ -272,6 +272,8 @@
                                (deliver out (:selected-item selected)))})
           fx/show!))
     @out))
+(defmethod in/resolve-param-help ::in/function
+  [_] "You will be prompted to choose a function.")
 
 (defmethod in/resolve-param ::in/file
   [{:keys [title prompt initial-input]}]
@@ -288,6 +290,8 @@
                                (deliver out (:selected-item selected)))})
           fx/show!))
     @out))
+(defmethod in/resolve-param-help ::in/function
+  [_] "You will be prompted to choose a file.")
 
 (comment
   (do

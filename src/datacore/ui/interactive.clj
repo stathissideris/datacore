@@ -6,12 +6,11 @@
             [clojure.string :as str]
             [me.raynes.fs :as fs]))
 
-(def functions {})
+(def functions (c/cell :functions {}))
 
 (defn register! [var {:keys [alias] :as options}]
-  (alter-var-root
-   #'functions
-   assoc alias (merge {:var var} options)))
+  (c/swap! functions assoc alias (merge {:var var} options))
+  alias)
 
 (defmacro defin [name options & rest]
   `(do
@@ -19,18 +18,26 @@
      (register! (resolve (quote ~name)) ~options)))
 
 (defmulti resolve-param :type)
+(defmulti resolve-param-help identity)
+(defmethod resolve-param-help :default [_] nil)
 
 (defmethod resolve-param ::main-component
   [_]
   (-> state/focused-component c/value ui-util/main-component))
+(defmethod resolve-param-help ::main-component
+  [_] "The main view component within the focused view.")
 
 (defmethod resolve-param ::focus-parent
   [_]
   (c/value state/focused-component))
+(defmethod resolve-param-help ::focus-parent
+  [_] "The focused component containing the current view.")
 
 (defmethod resolve-param ::cell-data
   [_]
   (-> state/focused-component c/value (fx/get-field :dc/cell) c/value))
+(defmethod resolve-param-help ::cell-data
+  [_] "The data contained within the cell being viewed.")
 
 (defn expand-param [[name param]]
   (if (keyword? param)
@@ -38,7 +45,7 @@
     [name param]))
 
 (defn call [match]
-  (if-let [{:keys [var params]} (get functions match)]
+  (if-let [{:keys [var params]} (get (c/value functions) match)]
     (do
       (if params
         (prn 'CALLED var params)
@@ -90,11 +97,13 @@
   (let [input (-> input str/trim str/lower-case)]
     (if (empty? input)
       (->> functions
+           c/value
            keys
            (map #(function-item % input))
            (sort-by :raw)
            (take 50))
       (->> functions
+           c/value
            keys
            (map #(function-item % input))
            (filter #(str/includes? (:raw %) input))

@@ -12,6 +12,11 @@
            [javafx.scene.control
             SelectionMode ControlUtils TableView TableColumnBase TableSelectionModel]))
 
+(def scroll-fns [:table/scroll-up :table/scroll-down
+                 :table/scroll-to-top :table/scroll-to-bottom
+                 :table/scroll-to-first-column :table/scroll-to-last-column
+                 :table/recenter])
+
 (defmethod fx/fget [TableView :dc/cursor]
   [table _]
   (let [cell (some-> table .getSelectionModel .getSelectedCells first)]
@@ -29,6 +34,7 @@
 
 (defin scroll-to-top
   {:alias :table/scroll-to-top
+   :related scroll-fns
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
   (let [first-column (-> component .getColumns first)]
@@ -40,6 +46,7 @@
 
 (defin scroll-to-bottom
   {:alias :table/scroll-to-bottom
+   :related scroll-fns
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
   (let [last-column (-> component .getColumns last)]
@@ -51,6 +58,7 @@
 
 (defin scroll-to-first-column
   {:alias :table/scroll-to-first-column
+   :related scroll-fns
    :params [[:component ::in/main-component]]}
   [{:keys [component]}]
   (.scrollToColumnIndex component 0)
@@ -59,8 +67,9 @@
       (-> component .getSelectionModel (.clearAndSelect row column)))))
 
 (defin scroll-to-last-column
-  {:alias :table/scroll-to-last-column
-   :params [[:component ::in/main-component]]}
+  {:alias  :table/scroll-to-last-column
+   :related scroll-fns
+   :params  [[:component ::in/main-component]]}
   [{:keys [component]}]
   (let [last-index (-> component .getColumns count dec)]
     (.scrollToColumnIndex component last-index)
@@ -75,8 +84,10 @@
    #(.invoke scroll-to* table (object-array [(int index)]))))
 
 (defin scroll-up
-  {:alias :table/scroll-up
-   :params [[:component ::in/main-component]]}
+  {:alias   :table/scroll-up
+   :help    "Scroll table up"
+   :related scroll-fns
+   :params  [[:component ::in/main-component]]}
   [{:keys [component]}]
   (let [[first-row last-row] (fx/get-field component :fx/visible-range)]
     (when (and first-row last-row)
@@ -86,8 +97,10 @@
         (fx/set-field! component :dc/cursor {:column column :row row})))))
 
 (defin scroll-down
-  {:alias :table/scroll-down
-   :params [[:component ::in/main-component]]}
+  {:alias   :table/scroll-down
+   :help    "Scroll table down"
+   :related scroll-fns
+   :params  [[:component ::in/main-component]]}
   [{:keys [component]}]
   (let [[_ last-row] (fx/get-field component :fx/visible-range)]
     (when last-row
@@ -96,8 +109,9 @@
         (fx/set-field! component :dc/cursor {:column column :row last-row})))))
 
 (defin recenter
-  {:alias :table/recenter
-   :params [[:table ::in/main-component]]}
+  {:alias   :table/recenter
+   :related scroll-fns
+   :params  [[:table ::in/main-component]]}
   [{:keys [table]}]
   (let [[first-row last-row] (fx/get-field table :fx/visible-range)
         cursor-row           (:row (fx/get-field table :dc/cursor))
@@ -108,9 +122,14 @@
   [_]
   (let [table (in/resolve-param {:type ::in/main-component})]
     (fx/get-field table :dc/cursor)))
+(defmethod in/resolve-param-help ::in/table-cursor
+  [_] "The position of the cursor in the currently focused table.")
 
 (defin copy-row-as-edn
   {:alias  :table/copy-row-as-edn
+   :help   [:span "Put a pretty-printed "
+            [:a {:href "https://github.com/edn-format/edn"} "EDN"]
+            " representation of the row under the cursor into the system clipboard."]
    :params [[:data   ::in/cell-data]
             [:cursor ::in/table-cursor]]}
   [{:keys [data cursor]}]
@@ -123,6 +142,24 @@
    {:fx/args [name]
     :fx/setup
     #(.setCellValueFactory % (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x))))))}))
+
+(defmethod fx/fget [TableView :dc/selected-cells]
+  [table _]
+  (for [cell (-> table .getSelectionModel .getSelectedCells)]
+    {:row    (.getRow cell)
+     :column (.getColumn cell)}))
+
+(defmethod fx/fset [TableView :dc/selected-cells]
+  [table _ cells]
+  (let [model (.getSelectionModel table)]
+    (.clearSelection model)
+    (doseq [{:keys [row column]} cells]
+      (.select model row (nth (.getColumns table) column)))))
+
+(defn retain-selection [table fun]
+  (let [cells (fx/get-field table :dc/selected-cells)]
+    (fun)
+    (fx/set-field! table :dc/selected-cells cells)))
 
 #_(defmethod view/build-view :datacore.view/table
   [view-cell]

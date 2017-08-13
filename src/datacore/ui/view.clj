@@ -3,7 +3,7 @@
             [clojure.zip :as zip]
             [clojure.spec :as s]
             [datacore.util :as util]
-            [datacore.ui.util :as ui-util]
+            [datacore.ui.util :as ui.util]
             [datacore.util.geometry :as geom]
             [datacore.cells :as c]
             [datacore.state :as state]
@@ -27,7 +27,7 @@
 
 (defn focus! [component]
   (when component
-    (if-let [c (ui-util/main-component component)]
+    (if-let [c (ui.util/main-component component)]
       (focus!-1 c)
       (focus!-1 component)))
   component)
@@ -119,7 +119,7 @@
     :fx/prop-listener
     [:focus-owner (fn [_ _ _ new]
                     (when new
-                      (let [new-focus-parent (ui-util/focus-parent new)]
+                      (let [new-focus-parent (ui.util/focus-parent new)]
                         (swap! stage->component assoc (fx/stage-of new-focus-parent) new-focus-parent)
                         (c/reset! state/focused-component new-focus-parent))))]}
    (cond

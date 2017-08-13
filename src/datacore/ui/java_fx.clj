@@ -17,11 +17,13 @@
            [javafx.beans.value ChangeListener]
            [javafx.scene Node]
            [javafx.scene.input Clipboard ClipboardContent]
+           [javafx.concurrent Worker]
            [com.sun.javafx.stage StageHelper]
            [javafx.util Callback]
            [javafx.scene.text Font FontWeight FontPosture TextAlignment TextFlow]
            [javafx.scene.web WebView]
-           [java.net URI]))
+           [java.net URI]
+           [org.w3c.dom.events EventListener]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -700,6 +702,45 @@
   (doto (Clipboard/getSystemClipboard)
     (.setContent (doto (ClipboardContent.)
                    (.putString text)))))
+
+;;;;;;;;;;;;;;;;;;;; web ;;;;;;;;;;;;;;;;;;;;
+
+(defn dom-event-listener [fun]
+  (reify EventListener
+    (^void handleEvent [_ ^org.w3c.dom.events.Event event]
+     (fun event))))
+
+;;from: http://blogs.kiyut.com/tonny/2013/07/30/javafx-webview-addhyperlinklistener/
+(defmethod fset [WebView :fx/link-listener]
+  [this _ listener]
+  (when listener
+    (-> this .getEngine .getLoadWorker .stateProperty
+        (.addListener
+         (change-listener
+          (fn [_ old new]
+            (when (= new javafx.concurrent.Worker$State/SUCCEEDED)
+              (let [event-listener (dom-event-listener
+                                    (fn [event]
+                                      (when-let [href (some-> event .getTarget (.getAttribute "href"))]
+                                        (listener event href (keyword (.getType event))))))
+                    nodes (-> this .getEngine .getDocument (.getElementsByTagName "a"))]
+                (doseq [idx (range (.getLength nodes))]
+                  (.addEventListener (.item nodes idx) "click" event-listener false)
+                  (.addEventListener (.item nodes idx) "mouseover" event-listener false))))))))))
+
+;;see com.sun.deploy.uitoolkit.impl.fx.HostServicesFactory/showDocument
+(defn open-in-browser [url]
+  (let [os (System/getProperty "os.name")]
+    (cond
+      (str/starts-with? os "Mac OS")
+      (eval `(com.apple.eio.FileManager/openURL ~url))
+      (str/starts-with? os "Windows")
+      (-> (Runtime/getRuntime) (.exec (str "rundll32 url.dll,FileProtocolHandler " url)))
+      :else
+      (let [browsers ["google-chrome" "firefox" "opera" "konqueror" "mozilla"]]
+        ;;TODO linux: use Runtime.getRuntime().exec() to find which browser is installed
+        ;;and use the same method to invoke the browser with the passed URL
+        ))))
 
 (comment
   (make

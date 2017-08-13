@@ -1,4 +1,4 @@
-* To do [22/52] [42%]
+* To do [22/54] [40%]
 ** DONE Swap views
 ** DONE Fix move focus bug (skips closest)
 ** DONE Focus on mouse click
@@ -27,6 +27,8 @@
 ** DONE Meta map for cells
 ** TODO Table selection modes
 ** DONE Table view for cells
+** TODO Show cell role for table view for cells
+** TODO View registry and a way to switch between views
 ** DONE Icon in taskbar
 ** DONE Bug: Table keymap not activated
 ** TODO Bug: sometimes table scrolling (if you keep the key down) results in harmless NPEs
@@ -41,9 +43,11 @@
 ** TODO Move splitter with keyboard
 ** TODO Close window with keyboard
 ** TODO Help system
-*** TODO interactive/functions can be a cell
+*** DONE interactive/functions can be a cell
 *** DONE help text for functions will be a cell with keymaps and interactive/functions as cells
-*** TODO Allow links to other functions in help content
+*** DONE Allow links to other functions in help content
+*** DONE Allow web links in help content
+*** TODO Help topics pages and links to them
 ** TODO Settings system
 ** TODO Custom table view
 ** DONE Re-introduce custom CSS and reactive CSS
