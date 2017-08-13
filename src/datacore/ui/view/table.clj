@@ -177,36 +177,38 @@
   (let [control-cell (c/cell :table-control {})]
     ;;(c/link-slot! control-cell view-cell 1)
     ;;(c/alter-meta! control-cell assoc :roles #{:control})
-    (-> (fx/make-tree
-         {:fx/type                  :scene.control/table-view
-          :style-class              ["table-view" "main-component"]
-          :items                    (observable-list (c/formula :data view-cell))
-          :columns                  (c/formula
-                                     (fn [{:keys [columns column-labels]}]
-                                       (map (fn [c]
-                                              (column (if-let [l (get column-labels c)] l (str c))
-                                                      (fn [row] (get row c))))
-                                            columns))
-                                     view-cell)
-          [:selection-model
-           :selection-mode]         SelectionMode/MULTIPLE
-          [:selection-model
-           :cell-selection-enabled] true
-          :fx/setup
-          (fn [table]
-            (-> table
-                .getSelectionModel
-                .getSelectedItems
-                (.addListener
-                 (fx/list-change-listener
-                  (fn [selected]
-                    ;;(c/swap! control-cell assoc :selection selected)
-                    )))))})
-        (with-status-line
-          (c/formula #(str (:label %) " - "
-                           (-> % :data count) " rows - "
-                           (-> % :columns count) " columns - "
-                           (Date. (:last-modified %))
-                           " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
-                     view-cell
-                     {:label :table-status-line})))))
+    @(fx/run-later!
+      (fn []
+        (-> (fx/make-tree
+             {:fx/type                  :scene.control/table-view
+              :style-class              ["table-view" "main-component"]
+              :items                    (observable-list (c/formula :data view-cell))
+              :columns                  (c/formula
+                                         (fn [{:keys [columns column-labels]}]
+                                           (map (fn [c]
+                                                  (column (if-let [l (get column-labels c)] l (str c))
+                                                          (fn [row] (get row c))))
+                                                columns))
+                                         view-cell)
+              [:selection-model
+               :selection-mode]         SelectionMode/MULTIPLE
+              [:selection-model
+               :cell-selection-enabled] true
+              :fx/setup
+              (fn [table]
+                (-> table
+                    .getSelectionModel
+                    .getSelectedItems
+                    (.addListener
+                     (fx/list-change-listener
+                      (fn [selected]
+                        ;;(c/swap! control-cell assoc :selection selected)
+                        )))))})
+            (with-status-line
+              (c/formula #(str (:label %) " - "
+                               (-> % :data count) " rows - "
+                               (-> % :columns count) " columns - "
+                               (Date. (:last-modified %))
+                               " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
+                         view-cell
+                         {:label :table-status-line})))))))
