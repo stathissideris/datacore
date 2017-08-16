@@ -25,6 +25,7 @@
    :sinks   {}   ;;map of cell IDs to sets of sinks
    :sources {}   ;;map of cell IDs to sets of sources
    :meta    {}   ;;map of cell IDs to maps of metadata
+   :watch-blacklist #{}
 })
 
 (def ^:private global-cells (atom (make-cells)))
@@ -35,12 +36,13 @@
    (let [w        @watches
          cell-ids (keys (:cells new))]
      (doseq [cell-id cell-ids]
-       (when-let [cell-watches (get w cell-id)]
-         (let [old-value (-> old :cells (get cell-id) :value)
-               new-value (-> new :cells (get cell-id) :value)]
-           (when-not (= old-value new-value)
-             (doseq [[key fun] cell-watches]
-               (fun key old-value new-value)))))))))
+       (when-not (-> new :watch-blacklist (get cell-id))
+         (when-let [cell-watches (get w cell-id)]
+           (let [old-value (-> old :cells (get cell-id) :value)
+                 new-value (-> new :cells (get cell-id) :value)]
+             (when-not (= old-value new-value)
+               (doseq [[key fun] cell-watches]
+                 (fun key old-value new-value))))))))))
 
 (defn formula?
   ([cell-id]
@@ -616,7 +618,17 @@
 
 (defn swap! [cell-id fun & args]
   ;;(prn 'swap (.id cell-id) fun args)
-  (get-in (core/swap! global-cells swap cell-id fun args)
+  (get-in (core/swap! global-cells (fn [cells]
+                                     (-> cells
+                                         (swap cell-id fun args)
+                                         (update :watch-blacklist disj cell-id))))
+          [:cells cell-id :value]))
+
+(defn swap-secretly! [cell-id fun & args]
+  (get-in (core/swap! global-cells (fn [cells]
+                                     (-> cells
+                                         (swap cell-id fun args)
+                                         (update :watch-blacklist conj cell-id))))
           [:cells cell-id :value]))
 
 (defn reset! [cell value]

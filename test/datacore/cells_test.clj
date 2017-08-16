@@ -1,5 +1,5 @@
-(ns datacore.cells-test
   (:refer-clojure :exclude [swap! reset! meta alter-meta!])
+(ns datacore.cells-test
   (:require [datacore.cells :refer :all]
             [clojure.test :refer :all]
             [clojure.core :as core]
@@ -517,4 +517,28 @@
           a   (cell 10)
           b   (formula (fn [x] (core/swap! log inc) (* 2 x)) a)]
       (reset! a 9000)
-      (is (= 1 @log)))))
+      (is (= 1 @log))))
+
+  (testing "watches 8 - swap-secretly!"
+    (let [a          (cell 10)
+          swap-count (atom 0)]
+      (add-watch! a :a (fn [_ _ new] (core/swap! swap-count inc)))
+      (swap! a inc)
+      (is (= 1 @swap-count))
+      (swap-secretly! a inc)
+      (is (= 1 @swap-count))
+
+      (swap! a inc)
+      (is (= 2 @swap-count))
+      (swap-secretly! a inc)
+      (is (= 2 @swap-count))
+
+      (swap-secretly! a inc)
+      (is (= 2 @swap-count))
+      (swap-secretly! a inc)
+      (is (= 2 @swap-count))
+
+      (swap! a inc)
+      (is (= 3 @swap-count))
+      (swap! a inc)
+      (is (= 4 @swap-count)))))
