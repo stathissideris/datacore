@@ -19,11 +19,21 @@
   (require '[datacore.ui.windows :as windows])
   (require '[datacore.source.csv :as csv])
   (require '[datacore.ui.java-fx :as fx])
+  (require '[datacore.ui.view.edn :as edn])
+  (require '[datacore.ui.view :as view])
+
   (def csv (csv/file {:filename "test-resources/watchlist.csv"}))
   (def csv-view (csv/default-view csv))
   )
 
-  (windows/new-window)
+  ;;EDN view
+  (c/defcell edn-input {:foo "bar"})
+  (def edn-view-cell (edn/view-cell edn-input))
+  (windows/replace-focused!
+   (view/configure-view
+    {:cell      edn-view-cell
+     :component (view/build-cell-view edn-view-cell)
+     :focused?  true}))
 
   ;;show cell in window
   ;; (fx/run-later!

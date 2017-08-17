@@ -76,9 +76,4 @@
   (let [csv-cell  (file {:filename filename})
         view-cell (default-view csv-cell)
         component (view/build-cell-view view-cell)]
-    (view/configure-view
-     {:cell      view-cell
-      :component component
-      :focused?  true})
-    (fx/run-later!
-     #(windows/replace-focused! component))))
+    (fx/run-later! #(windows/replace-focused! component))))

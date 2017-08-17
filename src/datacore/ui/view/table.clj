@@ -5,6 +5,8 @@
             [datacore.ui.interactive :as in :refer [defin]]
             [datacore.cells :as c]
             [datacore.ui.observable :refer [observable-list]]
+            [datacore.ui.view.edn :as view.edn]
+            [datacore.ui.windows :as windows]
             [clojure.pprint :refer [pprint]])
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
@@ -136,6 +138,30 @@
   (let [edn (with-out-str (some-> data :data (nth (:row cursor)) pprint))]
     (fx/run-later! #(fx/to-clipboard edn))))
 
+(defin row-edn-view
+  {:alias :table/row-edn-view
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (prn 'component component)
+  (def cc component)
+  (let [cell     (fx/get-field component :dc/cell)
+        _ (prn 'cell cell)
+        edn-cell (c/formula (fn [{:keys [data control]}]
+                              {::view/type ::view/edn
+                               :data       (nth data (some-> control :selected-cells first :row))})
+                            cell)
+        _ (prn edn-cell)
+        view     (view/configure-view
+                  {:cell      edn-cell
+                   :component (view/build-cell-view edn-cell)})]
+    (fx/run-later!
+     (fn []
+       ;;(windows/split-right)
+       ;;(windows/focus-right)
+       (windows/replace-focused! view)
+       ;;(windows/focus-left)
+       ))))
+
 (defn column [name cell-value-fn]
   (fx/make
    :scene.control/table-column
@@ -187,32 +213,36 @@
                                              (fn [row] (get row c))))
                                    columns))
                             view-cell)]
-          (-> (fx/make-tree
-               {:fx/type                  :scene.control/table-view
-                :style-class              ["table-view" "main-component"]
-                :items                    (observable-list data-cell)
-                :columns                  columns-cell
-                [:selection-model
-                 :selection-mode]         SelectionMode/MULTIPLE
-                [:selection-model
-                 :cell-selection-enabled] true
-                :fx/setup
-                (fn [table]
-                  (-> table
-                      .getSelectionModel
-                      .getSelectedCells
-                      (.addListener
-                       (fx/list-change-listener
-                        (fn [selected-cells]
-                          (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
-                                          (for [cell selected-cells]
-                                            {:row    (.getRow cell)
-                                             :column (.getColumn cell)})))))))})
-              (with-status-line
-                (c/formula #(str (:label %) " - "
-                                 (-> % :data count) " rows - "
-                                 (-> % :columns count) " columns - "
-                                 (Date. (:last-modified %))
-                                 " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
-                           view-cell
-                           {:label :table-status-line}))))))))
+          (view/configure-view
+           {:cell      view-cell
+            :focused?  true
+            :component
+            (-> (fx/make-tree
+                 {:fx/type                  :scene.control/table-view
+                  :style-class              ["table-view" "main-component"]
+                  :items                    (observable-list data-cell)
+                  :columns                  columns-cell
+                  [:selection-model
+                   :selection-mode]         SelectionMode/MULTIPLE
+                  [:selection-model
+                   :cell-selection-enabled] true
+                  :fx/setup
+                  (fn [table]
+                    (-> table
+                        .getSelectionModel
+                        .getSelectedCells
+                        (.addListener
+                         (fx/list-change-listener
+                          (fn [selected-cells]
+                            (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
+                                            (for [cell selected-cells]
+                                              {:row    (.getRow cell)
+                                               :column (.getColumn cell)})))))))})
+                (with-status-line
+                  (c/formula #(str (:label %) " - "
+                                   (-> % :data count) " rows - "
+                                   (-> % :columns count) " columns - "
+                                   (Date. (:last-modified %))
+                                   " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
+                             view-cell
+                             {:label :table-status-line})))}))))))
