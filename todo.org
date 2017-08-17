@@ -42,6 +42,8 @@
 **** TODO Bug: Swap to different window with splitters messes up focus/focus indicator
 **** TODO Bug: file prompt does not match ~.~
 **** TODO Web view: can't indicate focus!
+**** TODO Why does the columns view seq get re-created every time you select a different cell in a table?
+**** TODO You can open an already visible view from the cells table
 *** Prompt
 **** TODO Prompt: show focus in main window even if prompt has focus
 **** TODO Prompt: multiple choice

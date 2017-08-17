@@ -25,7 +25,7 @@
    :sinks   {}   ;;map of cell IDs to sets of sinks
    :sources {}   ;;map of cell IDs to sets of sources
    :meta    {}   ;;map of cell IDs to maps of metadata
-   :watch-blacklist #{}
+   :watch?  true
 })
 
 (def ^:private global-cells (atom (make-cells)))
@@ -33,10 +33,10 @@
 (core/add-watch
  global-cells ::global
  (fn [_ _ old new]
-   (let [w        @watches
-         cell-ids (keys (:cells new))]
-     (doseq [cell-id cell-ids]
-       (when-not (-> new :watch-blacklist (get cell-id))
+   (when (get new :watch?)
+     (let [w        @watches
+           cell-ids (keys (:cells new))]
+       (doseq [cell-id cell-ids]
          (when-let [cell-watches (get w cell-id)]
            (let [old-value (-> old :cells (get cell-id) :value)
                  new-value (-> new :cells (get cell-id) :value)]
@@ -621,14 +621,14 @@
   (get-in (core/swap! global-cells (fn [cells]
                                      (-> cells
                                          (swap cell-id fun args)
-                                         (update :watch-blacklist disj cell-id))))
+                                         (assoc :watch? true))))
           [:cells cell-id :value]))
 
 (defn swap-secretly! [cell-id fun & args]
   (get-in (core/swap! global-cells (fn [cells]
                                      (-> cells
                                          (swap cell-id fun args)
-                                         (update :watch-blacklist conj cell-id))))
+                                         (assoc :watch? false))))
           [:cells cell-id :value]))
 
 (defn reset! [cell value]

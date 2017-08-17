@@ -57,7 +57,7 @@
                                     (map (fn [c]
                                            (or (get original-column-labels c)
                                                (util/data-key->label c))) columns))})
-          control))
+          (assoc contents :control control)))
        csv-cell ::c/unlinked
        {:label :table-view})
       (c/set-meta! {:roles #{:view}})))
@@ -73,8 +73,8 @@
                         :prompt "Select CSV file to load"
                         :help   "The CSV file to load"}]]}
   [{:keys [filename]}]
-  (let [csv       (file {:filename filename})
-        view-cell (default-view csv)
+  (let [csv-cell  (file {:filename filename})
+        view-cell (default-view csv-cell)
         component (view/build-cell-view view-cell)]
     (view/configure-view
      {:cell      view-cell

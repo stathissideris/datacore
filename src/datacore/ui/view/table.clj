@@ -175,14 +175,14 @@
 (defmethod view/build-cell-view ::view/table
   [view-cell]
   (let [control-cell (c/cell :table-control {})]
-    ;;(c/link-slot! control-cell view-cell 1)
-    ;;(c/alter-meta! control-cell assoc :roles #{:control})
+    (c/link-slot! control-cell view-cell 1)
+    (c/alter-meta! control-cell assoc :roles #{:control})
     @(fx/run-later!
       (fn []
         (-> (fx/make-tree
              {:fx/type                  :scene.control/table-view
               :style-class              ["table-view" "main-component"]
-              :items                    (observable-list (c/formula :data view-cell))
+              :items                    (observable-list (c/formula :data view-cell {:label :table-data}))
               :columns                  (c/formula
                                          (fn [{:keys [columns column-labels]}]
                                            (map (fn [c]
@@ -198,12 +198,14 @@
               (fn [table]
                 (-> table
                     .getSelectionModel
-                    .getSelectedItems
+                    .getSelectedCells
                     (.addListener
                      (fx/list-change-listener
-                      (fn [selected]
-                        ;;(c/swap! control-cell assoc :selection selected)
-                        )))))})
+                      (fn [selected-cells]
+                        (c/swap-secretly! control-cell assoc :selected-cells
+                                          (for [cell selected-cells]
+                                            {:row    (.getRow cell)
+                                             :column (.getColumn cell)})))))))})
             (with-status-line
               (c/formula #(str (:label %) " - "
                                (-> % :data count) " rows - "
