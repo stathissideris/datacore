@@ -179,38 +179,40 @@
     (c/alter-meta! control-cell assoc :roles #{:control})
     @(fx/run-later!
       (fn []
-        (-> (fx/make-tree
-             {:fx/type                  :scene.control/table-view
-              :style-class              ["table-view" "main-component"]
-              :items                    (observable-list (c/formula :data view-cell {:label :table-data}))
-              :columns                  (c/formula
-                                         (fn [{:keys [columns column-labels]}]
-                                           (map (fn [c]
-                                                  (column (if-let [l (get column-labels c)] l (str c))
-                                                          (fn [row] (get row c))))
-                                                columns))
-                                         view-cell)
-              [:selection-model
-               :selection-mode]         SelectionMode/MULTIPLE
-              [:selection-model
-               :cell-selection-enabled] true
-              :fx/setup
-              (fn [table]
-                (-> table
-                    .getSelectionModel
-                    .getSelectedCells
-                    (.addListener
-                     (fx/list-change-listener
-                      (fn [selected-cells]
-                        (c/swap-secretly! control-cell assoc :selected-cells
+        (let [data-cell    (c/formula :data view-cell {:label :table-data})
+              columns-cell (c/formula
+                            (fn [{:keys [columns column-labels]}]
+                              (map (fn [c]
+                                     (column (if-let [l (get column-labels c)] l (str c))
+                                             (fn [row] (get row c))))
+                                   columns))
+                            view-cell)]
+          (-> (fx/make-tree
+               {:fx/type                  :scene.control/table-view
+                :style-class              ["table-view" "main-component"]
+                :items                    (observable-list data-cell)
+                :columns                  columns-cell
+                [:selection-model
+                 :selection-mode]         SelectionMode/MULTIPLE
+                [:selection-model
+                 :cell-selection-enabled] true
+                :fx/setup
+                (fn [table]
+                  (-> table
+                      .getSelectionModel
+                      .getSelectedCells
+                      (.addListener
+                       (fx/list-change-listener
+                        (fn [selected-cells]
+                          (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
                                           (for [cell selected-cells]
                                             {:row    (.getRow cell)
                                              :column (.getColumn cell)})))))))})
-            (with-status-line
-              (c/formula #(str (:label %) " - "
-                               (-> % :data count) " rows - "
-                               (-> % :columns count) " columns - "
-                               (Date. (:last-modified %))
-                               " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
-                         view-cell
-                         {:label :table-status-line})))))))
+              (with-status-line
+                (c/formula #(str (:label %) " - "
+                                 (-> % :data count) " rows - "
+                                 (-> % :columns count) " columns - "
+                                 (Date. (:last-modified %))
+                                 " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
+                           view-cell
+                           {:label :table-status-line}))))))))

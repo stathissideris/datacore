@@ -519,23 +519,48 @@
       (reset! a 9000)
       (is (= 1 @log))))
 
-  (testing "watches 8 - swap-secretly!"
+  (testing "watches 8 - hidden-swap! hiding from own watchers"
     (let [a          (cell 10)
           swap-count (atom 0)]
       (add-watch! a :a (fn [_ _ new] (core/swap! swap-count inc)))
       (swap! a inc)
       (is (= 1 @swap-count))
-      (swap-secretly! a inc)
+      (hidden-swap! a #{a} inc)
       (is (= 1 @swap-count))
 
       (swap! a inc)
       (is (= 2 @swap-count))
-      (swap-secretly! a inc)
+      (hidden-swap! a #{a} inc)
       (is (= 2 @swap-count))
 
-      (swap-secretly! a inc)
+      (hidden-swap! a #{a} inc)
       (is (= 2 @swap-count))
-      (swap-secretly! a inc)
+      (hidden-swap! a #{a} inc)
+      (is (= 2 @swap-count))
+
+      (swap! a inc)
+      (is (= 3 @swap-count))
+      (swap! a inc)
+      (is (= 4 @swap-count))))
+
+  (testing "watches 8 - hidden-swap! hiding from watches of other cells"
+    (let [a          (cell 10)
+          b          (formula #(+ 10 %) a)
+          swap-count (atom 0)]
+      (add-watch! b :b (fn [_ _ new] (core/swap! swap-count inc)))
+      (swap! a inc)
+      (is (= 1 @swap-count))
+      (hidden-swap! a #{b} inc)
+      (is (= 1 @swap-count))
+
+      (swap! a inc)
+      (is (= 2 @swap-count))
+      (hidden-swap! a #{b} inc)
+      (is (= 2 @swap-count))
+
+      (hidden-swap! a #{b} inc)
+      (is (= 2 @swap-count))
+      (hidden-swap! a #{b} inc)
       (is (= 2 @swap-count))
 
       (swap! a inc)
