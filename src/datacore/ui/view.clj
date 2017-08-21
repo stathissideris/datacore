@@ -156,7 +156,9 @@
 (defn configure-view
   [{:keys [cell component focused?] :as m}]
   (when cell
-    (c/alter-meta! cell assoc :component component))
+    (-> cell
+        (c/alter-meta! assoc :component component)
+        (c/alter-meta! update :roles (fnil conj #{}) :view)))
   (fx/set-fields!
    component
    {:style-class        ["focus-indicator"]

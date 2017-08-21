@@ -46,21 +46,20 @@
     csv-cell))
 
 (defn default-view [csv-cell]
-  (-> (c/formula
-       (fn [{:keys [label columns column-labels original-column-labels] :as contents} control]
-         (merge
-          contents
-          {::view/type ::view/table}
-          ;;TODO also uniquify label
-          (when-not (not column-labels)
-            {:column-labels (zipmap columns
-                                    (map (fn [c]
-                                           (or (get original-column-labels c)
-                                               (util/data-key->label c))) columns))})
-          (assoc contents :control control)))
-       csv-cell ::c/unlinked
-       {:label :table-view})
-      (c/set-meta! {:roles #{:view}})))
+  (c/formula
+   (fn [{:keys [label columns column-labels original-column-labels] :as contents} control]
+     (merge
+      contents
+      {::view/type ::view/table}
+      ;;TODO also uniquify label
+      (when-not (not column-labels)
+        {:column-labels (zipmap columns
+                                (map (fn [c]
+                                       (or (get original-column-labels c)
+                                           (util/data-key->label c))) columns))})
+      (assoc contents :control control)))
+   csv-cell ::c/unlinked
+   {:label :table-view}))
 
 (defin load-csv
   {:alias :csv/load-csv

@@ -142,18 +142,14 @@
   {:alias :table/row-edn-view
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
-  (prn 'component component)
-  (def cc component)
-  (let [cell     (fx/get-field component :dc/cell)
-        _ (prn 'cell cell)
-        edn-cell (c/formula (fn [{:keys [data control]}]
-                              {::view/type ::view/edn
-                               :data       (nth data (some-> control :selected-cells first :row))})
-                            cell)
-        _ (prn edn-cell)
-        view     (view/configure-view
-                  {:cell      edn-cell
-                   :component (view/build-cell-view edn-cell)})]
+  (let [table-cell (fx/get-field component :dc/cell)
+        edn-cell   (c/formula (fn [{:keys [data control]}]
+                                {::view/type ::view/edn
+                                 :data       (when data (some->> control :selected-cells first :row (nth data)))})
+                              table-cell
+                              {:label :edn-view
+                               :meta  {:roles #{:transform}}})
+        view       (view/build-cell-view edn-cell)]
     (fx/run-later!
      (fn []
        ;;(windows/split-right)
@@ -205,14 +201,16 @@
     (c/alter-meta! control-cell assoc :roles #{:control})
     @(fx/run-later!
       (fn []
-        (let [data-cell    (c/formula :data view-cell {:label :table-data})
+        (let [data-cell    (c/formula :data view-cell {:label :table-data
+                                                       :meta  {:roles #{:system}}})
               columns-cell (c/formula
                             (fn [{:keys [columns column-labels]}]
                               (map (fn [c]
                                      (column (if-let [l (get column-labels c)] l (str c))
                                              (fn [row] (get row c))))
                                    columns))
-                            view-cell)]
+                            view-cell
+                            {:meta {:roles #{:system}}})]
           (view/configure-view
            {:cell      view-cell
             :focused?  true
@@ -245,4 +243,5 @@
                                    (Date. (:last-modified %))
                                    " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
                              view-cell
-                             {:label :table-status-line})))}))))))
+                             {:label :table-status-line
+                              :meta  {:roles #{:system}}})))}))))))

@@ -453,7 +453,10 @@
                                :value    v
                                :formula? false
                                :label    label
-                               :code     code}))]
+                               :code     code}))
+        new-cells (if-not meta
+                    new-cells
+                    (assoc-in new-cells [:meta cell-id] meta))]
     (if-not (seq sources)
       new-cells
       (reduce (fn [cells source]
@@ -526,7 +529,7 @@
         sources (if (not (cell-id? (last sources))) (butlast sources) sources)]
     (let [id (new-cell-id)]
       (clean-swap! global-cells register-cell id fun (merge options {:formula? true
-                                                                    :sources  sources}))
+                                                                     :sources  sources}))
       id)))
 (s/fdef formula
   :args (s/cat :function ifn?
