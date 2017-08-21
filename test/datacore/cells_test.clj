@@ -1,12 +1,12 @@
-  (:refer-clojure :exclude [swap! reset! meta alter-meta!])
 (ns datacore.cells-test
-  (:require [datacore.cells :refer :all]
+  (:refer-clojure :exclude [swap! reset! meta alter-meta!])
+  (:require [datacore.cells :as sut :refer :all]
             [clojure.test :refer :all]
             [clojure.core :as core]
             [clojure.spec :as s]
             [clojure.spec.test :as stest]))
 
-(def global-cells @#'datacore.cells/global-cells)
+(def global-cells @#'sut/global-cells)
 (core/swap! global-cells (fn [_] (make-cells)))
 
 (deftest test-specs
@@ -43,7 +43,7 @@
                   :label        :sources
                   :code         nil}))))
 
-(def cycles? @#'datacore.cells/cycles?)
+(def cycles? @#'sut/cycles?)
 (deftest test-cycles?
   (is (nil?  (cycles? {:a #{:b :c}} :a)))
   (is (true? (cycles? {:a #{:b :c} :b #{:a :z}} :a)))
@@ -52,7 +52,7 @@
   (is (true? (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:b}} :d)))
   (is (nil?  (cycles? {:a #{:b :c} :b #{:d} :d #{:e} :e #{:f}} :a))))
 
-(def all-blank-sources @#'datacore.cells/all-blank-sources)
+(def all-blank-sources @#'sut/all-blank-sources)
 (deftest test-all-blank-sources
   (let [cells     (make-cells)
         [a cells] (make-cell cells :a 100)
@@ -71,6 +71,18 @@
         [e cells] (make-formula cells (fn [x y] (* x y)) b d)]
     (is (= (* (+ 100 3)
               (+ 200 300)) (first (value cells e))))))
+
+(def all-downstream @#'sut/all-downstream)
+(deftest test-all-downstream
+  (let [cells     (make-cells)
+        [a cells] (make-cell cells 100)
+        [b cells] (make-formula cells (fn [x] (+ x 3)) a)
+        [c cells] (make-cell cells 200)
+        [d cells] (make-formula cells (fn [x] (+ x 300)) c)
+        [e cells] (make-formula cells (fn [x y] (* x y)) b d)]
+    (testing "a" (is (= #{a b e} (all-downstream cells a))))
+    (testing "b" (is (= #{b e} (all-downstream cells b))))
+    (testing "c" (is (= #{c d e} (all-downstream cells c))))))
 
 (deftest test-propagation
   (testing "one level"

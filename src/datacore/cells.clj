@@ -21,27 +21,31 @@
 (defn cell-id? [cell-id] (instance? datacore.cells.CellID cell-id))
 
 (defn make-cells []
-  {:cells   {}   ;;map of cell IDs to cell values
-   :sinks   {}   ;;map of cell IDs to sets of sinks
-   :sources {}   ;;map of cell IDs to sets of sources
-   :meta    {}   ;;map of cell IDs to maps of metadata
+  {:cells           {}   ;;map of cell IDs to cell values
+   :sinks           {}   ;;map of cell IDs to sets of sinks
+   :sources         {}   ;;map of cell IDs to sets of sources
+   :meta            {}   ;;map of cell IDs to maps of metadata
+   :touched         #{}
    :watch-blacklist #{}})
 
+(declare all-downstream)
 (def ^:private global-cells (atom (make-cells)))
 (def watches (atom {}))
 (core/add-watch
  global-cells ::global
- (fn [_ _ old new]
-   (let [w        @watches
-         cell-ids (keys (:cells new))]
-     (doseq [cell-id cell-ids]
-       (when-not (-> new :watch-blacklist (get cell-id))
-         (when-let [cell-watches (get w cell-id)]
-           (let [old-value (-> old :cells (get cell-id) :value)
-                 new-value (-> new :cells (get cell-id) :value)]
-             (when-not (= old-value new-value)
-               (doseq [[key fun] cell-watches]
-                 (fun key old-value new-value))))))))))
+ (fn [_ _ old {:keys [touched watch-blacklist] :as new}]
+   (let [w                  @watches
+         touched+downstream (set (mapcat (partial all-downstream new) touched))
+         watched-cells      (set (keys w))
+         to-notify          (-> touched+downstream
+                                (set/difference watch-blacklist)
+                                (set/intersection watched-cells))]
+     (doseq [cell-id to-notify]
+       (let [cell-watches (get w cell-id)
+             old-value    (-> old :cells (get cell-id) :value)
+             new-value    (-> new :cells (get cell-id) :value)]
+         (doseq [[name fun] cell-watches]
+           (fun name old-value new-value)))))))
 
 (defn formula?
   ([cell-id]
@@ -239,14 +243,25 @@
 (defn set-error [cells cell-id e]
   (update-formula cells cell-id assoc :error e))
 
+(defn- reset-touched [cells]
+  (assoc cells :touched #{}))
+
+(defn- clean-swap! [cells fun & args]
+  (core/swap! cells (fn [cells] (apply fun (reset-touched cells) args))))
+
 (defn- set-error! [cell-id e]
-  (core/swap! global-cells set-error cell-id e))
+  (clean-swap! global-cells set-error cell-id e))
 
 (defn- sources [cells cell-id]
   (get-in cells [:sources cell-id]))
 
 (defn- sinks [cells cell-id]
   (get-in cells [:sinks cell-id]))
+
+(defn- all-downstream [cells cell-id]
+  (into #{} (tree-seq (partial sinks cells)
+                      (partial sinks cells)
+                      cell-id)))
 
 (declare touch)
 (defn unlink
@@ -271,7 +286,7 @@
   :ret  ::cells-graph)
 
 (defn unlink! [source sink]
-  (core/swap! global-cells unlink source sink))
+  (clean-swap! global-cells unlink source sink))
 
 (defn destroy [cells cell-id]
   (as-> cells $
@@ -289,7 +304,7 @@
  :ret  ::cells-graph)
 
 (defn destroy! [cell-id]
-  (core/swap! global-cells destroy cell-id))
+  (clean-swap! global-cells destroy cell-id))
 
 (defn unlink-slot
   ([cells sink-id slot-idx]
@@ -304,7 +319,7 @@
   :ret ::cells-graph)
 
 (defn unlink-slot! [sink-id slot-idx]
-  (core/swap! global-cells unlink-slot sink-id slot-idx))
+  (clean-swap! global-cells unlink-slot sink-id slot-idx))
 
 (defn link-slot [cells source-id sink-id slot-idx]
   (-> cells
@@ -319,7 +334,7 @@
   :ret ::cells-graph)
 
 (defn link-slot! [source-id sink-id slot-idx]
-  (core/swap! global-cells link-slot source-id sink-id slot-idx))
+  (clean-swap! global-cells link-slot source-id sink-id slot-idx))
 
 (defn link
   "Attach the source to a new slot at the end of the slots of the
@@ -336,16 +351,14 @@
  :ret  ::cells-graph)
 
 (defn link! [source-id sink-id]
-  (core/swap! global-cells link source-id sink-id))
-
-(defn- upstream [cells cell-id]
-  (first (sources cells cell-id)))
-
-(defn- downstream [cells cell-id]
-  (first (sinks cells cell-id)))
+  (clean-swap! global-cells link source-id sink-id))
 
 (defn linear-move-up [cells cell-id]
-  (let [cell (lookup cells cell-id)]
+  (let [upstream   (fn [cells cell-id]
+                     (first (sources cells cell-id)))
+        downstream (fn [cells cell-id]
+                     (first (sinks cells cell-id)))
+        cell       (lookup cells cell-id)]
     (when (= ::unlinked (upstream cells cell-id))
       (throw (ex-info "Cannot move cell up because there is no upstream cell" {:cell cell})))
     (when-not (= 1 (count (sources cells cell-id)))
@@ -373,10 +386,14 @@
         child       (link-slot parent child 0)))))
 
 (defn linear-move-up! [cell-id]
-  (core/swap! global-cells linear-move-up cell-id))
+  (clean-swap! global-cells linear-move-up cell-id))
 
 (defn linear-move-down [cells cell-id]
-  (let [cell (lookup cells cell-id)]
+  (let [upstream   (fn [cells cell-id]
+                     (first (sources cells cell-id)))
+        downstream (fn [cells cell-id]
+                     (first (sinks cells cell-id)))
+        cell       (lookup cells cell-id)]
     (when-not (downstream cells cell-id)
       (throw (ex-info "Cannot move cell down because there is no downstream cell" {:cell cell})))
     (when-not (= 1 (count (sinks cells cell-id)))
@@ -399,7 +416,7 @@
         grandchild (link-slot cell-id grandchild 0)))))
 
 (defn linear-move-down! [cell-id]
-  (core/swap! global-cells linear-move-down cell-id))
+  (clean-swap! global-cells linear-move-down cell-id))
 
 (defn linear-insert [cells parent cell child]
   (when-not (= 1 (count (sinks cells parent)))
@@ -419,7 +436,7 @@
       (link-slot cell child 0)))
 
 (defn linear-insert! [parent cell child]
-  (core/swap! global-cells linear-insert parent cell child))
+  (clean-swap! global-cells linear-insert parent cell child))
 
 (defn- register-cell [cells cell-id v {:keys [formula? code label sources meta] :as options}]
   (let [id        (.-id cell-id)
@@ -465,7 +482,7 @@
    (cell nil x))
   ([label x]
    (let [id (new-cell-id)]
-     (core/swap! global-cells register-cell id x {:formula? false :label label})
+     (clean-swap! global-cells register-cell id x {:formula? false :label label})
      id)))
 (s/fdef cell
   :args (s/alt :unlabeled (s/cat :value any?)
@@ -508,7 +525,7 @@
   (let [options (if (not (cell-id? (last sources))) (last sources) {})
         sources (if (not (cell-id? (last sources))) (butlast sources) sources)]
     (let [id (new-cell-id)]
-      (core/swap! global-cells register-cell id fun (merge options {:formula? true
+      (clean-swap! global-cells register-cell id fun (merge options {:formula? true
                                                                     :sources  sources}))
       id)))
 (s/fdef formula
@@ -546,6 +563,7 @@
   (let [new-cell (calc-formula cells (lookup cells cell-id))]
     (-> cells
         (assoc-in [:cells cell-id] new-cell)
+        (update :touched conj cell-id)
         (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
                              (get-in cells [:sinks cell-id]))))))
 (s/fdef touch
@@ -554,7 +572,7 @@
   :ret ::cells-graph)
 
 (defn touch! [cell-id]
-  (core/swap! global-cells touch cell-id))
+  (clean-swap! global-cells touch cell-id))
 
 (defn mute [cells cell-id]
   (-> cells
@@ -562,7 +580,7 @@
       (touch cell-id)))
 
 (defn mute! [cell-id]
-  (core/swap! global-cells mute cell-id))
+  (clean-swap! global-cells mute cell-id))
 
 (defn unmute [cells cell-id]
   (-> cells
@@ -570,7 +588,7 @@
       (touch cell-id)))
 
 (defn unmute! [cell-id]
-  (core/swap! global-cells unmute cell-id))
+  (clean-swap! global-cells unmute cell-id))
 
 (defn- new-sources [old-sources fun]
   (let [arities (set (reflection/arities fun))]
@@ -601,7 +619,7 @@
   :ret ::cells-graph)
 
 (defn swap-function! [cell-id fun]
-  (core/swap! global-cells swap-function cell-id fun))
+  (clean-swap! global-cells swap-function cell-id fun))
 
 (defn swap [cells cell-id fun args]
   (if (formula? cells cell-id)
@@ -612,19 +630,20 @@
         cells
         (-> cells
             (assoc-in [:cells cell-id :value] new-value)
+            (update :touched conj cell-id)
             (push (cells-into-pm (pm/priority-map-keyfn #(.-id %))
                                  (get-in cells [:sinks cell-id]))))))))
 
 (defn swap! [cell-id fun & args]
   ;;(prn 'swap (.id cell-id) fun args)
-  (get-in (core/swap! global-cells (fn [cells]
+  (get-in (clean-swap! global-cells (fn [cells]
                                      (-> cells
                                          (swap cell-id fun args)
                                          (dissoc :watch-blacklist))))
           [:cells cell-id :value]))
 
 (defn hidden-swap! [cell-id blacklist fun & args]
-  (get-in (core/swap! global-cells (fn [cells]
+  (get-in (clean-swap! global-cells (fn [cells]
                                      (-> cells
                                          (swap cell-id fun args)
                                          (assoc :watch-blacklist blacklist))))
@@ -659,7 +678,7 @@
   (core/swap! watches update cell-id dissoc key))
 
 (defn set-label! [cell-id label]
-  (core/swap! global-cells assoc-in [:cells cell-id :label] label))
+  (clean-swap! global-cells assoc-in [:cells cell-id :label] label))
 
 (defn label [cell-id]
   (get-in @global-cells [:cells cell-id :label]))
