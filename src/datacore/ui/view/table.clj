@@ -209,7 +209,8 @@
               ;;there is a change in data only
               columns-stopgap (c/formula #(select-keys % [:columns :column-labels])
                                          view-cell
-                                         {:meta {:roles #{:system}}})
+                                         {:label :table-columns-stopgap
+                                          :meta {:roles #{:system}}})
               columns-cell    (c/formula
                                (fn [{:keys [columns column-labels]}]
                                  (prn '>>>table-columns-cell columns column-labels)
