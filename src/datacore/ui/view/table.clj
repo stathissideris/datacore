@@ -201,16 +201,24 @@
     (c/alter-meta! control-cell assoc :roles #{:control})
     @(fx/run-later!
       (fn []
-        (let [data-cell    (c/formula :data view-cell {:label :table-data
-                                                       :meta  {:roles #{:system}}})
-              columns-cell (c/formula
-                            (fn [{:keys [columns column-labels]}]
-                              (map (fn [c]
-                                     (column (if-let [l (get column-labels c)] l (str c))
-                                             (fn [row] (get row c))))
-                                   columns))
-                            view-cell
-                            {:meta {:roles #{:system}}})]
+        (let [data-cell       (c/formula (fn [x]
+                                           (prn '>>>table-data-cell)
+                                           (:data x)) view-cell {:label :table-data
+                                                                 :meta  {:roles #{:system}}})
+              ;;stopgap cell to prevent columns-cell for updating when
+              ;;there is a change in data only
+              columns-stopgap (c/formula #(select-keys % [:columns :column-labels])
+                                         view-cell
+                                         {:meta {:roles #{:system}}})
+              columns-cell    (c/formula
+                               (fn [{:keys [columns column-labels]}]
+                                 (prn '>>>table-columns-cell columns column-labels)
+                                 (map (fn [c]
+                                        (column (if-let [l (get column-labels c)] l (str c))
+                                                (fn [row] (get row c))))
+                                      columns))
+                               columns-stopgap
+                               {:meta {:roles #{:system}}})]
           (view/configure-view
            {:cell      view-cell
             :focused?  true
