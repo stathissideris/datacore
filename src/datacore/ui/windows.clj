@@ -62,7 +62,7 @@
 
 (defn replace-focused! [component]
   @(replace! (focus-owner) component)
-  (focus-when-ready! component))
+  @(fx/run-later! (view/focus! component)))
 
 (defn- get-root [component]
   (some->> (fx/parents component) (filter #(fx/has-style-class? % "root")) first))
