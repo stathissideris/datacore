@@ -22,13 +22,10 @@
   (println "Ignore (got-focus) for class:" (class this)))
 
 (defn- focus!-1 [component]
-  (fx/run-later!
-   (fn []
-     (.requestFocus (fx/stage-of component))
-     (.requestFocus component))))
+  (.requestFocus (fx/stage-of component))
+  (.requestFocus component))
 
 (defn focus! [component]
-  (def cc component)
   (when component
     (if-let [c (ui.util/main-component component)]
       (do

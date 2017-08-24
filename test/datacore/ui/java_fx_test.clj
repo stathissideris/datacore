@@ -99,3 +99,24 @@
                       [:style-class ["focusable"]]])
       (is (= "the-id" (.getId l)))
       (is (= ["focusable"] (seq (.getStyleClass l)))))))
+
+(deftest one-off-change-listener-test
+  (let [log    (atom [])
+        button (make :scene.control/button {:text "foo"})]
+    (-> button .textProperty (.addListener (one-off-change-listener (fn [_ _ _] (swap! log conj "called")))))
+    (is (= [] @log))
+
+    (.setText button "bar")
+    (is (= ["called"] @log))
+
+    (.setText button "baz")
+    (is (= ["called"] @log))
+
+    (.setText button "foobar")
+    (is (= ["called"] @log))
+
+    (.setText button "barbar")
+    (is (= ["called"] @log))
+
+    (.setText button "bazbar")
+    (is (= ["called"] @log))))

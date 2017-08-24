@@ -63,6 +63,13 @@
      (changed [_ observable old new]
        (fun source observable old new)))))
 
+(defn one-off-change-listener
+  ([fun]
+   (reify ChangeListener
+     (changed [this observable old new]
+       (fun observable old new)
+       (.removeListener observable this)))))
+
 (defn list-change-listener [fun]
   (reify ListChangeListener
     (onChanged [this change]

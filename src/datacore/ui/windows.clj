@@ -27,6 +27,25 @@
                          :split-pane    (fx/tree split-pane)})))
       (.set (.getItems split-pane) (int idx) new))))
 
+(defn- focus-when-ready!
+  "Replacing and re-adding components to a layout (as happens when
+  splitting) does not happen immediately and there is a time when the
+  component does not belong to a scene and cannot be focused. This
+  function uses an one-off change listener on the scene property of a
+  component to determine when the component is ready to request focus
+  that will succeed."
+  [component]
+  (let [p (promise)]
+    (-> component
+        .sceneProperty
+        (.addListener
+         (fx/one-off-change-listener
+          (fn [_ _ new]
+            (when new
+              @(fx/run-later! #(view/focus! component))
+              (deliver p ::done))))))
+    p))
+
 (defn- replace!
   ([reference-component new-component]
    (replace! reference-component new-component true))
@@ -85,8 +104,8 @@
           :orientation (if (= orientation :horizontal)
                          javafx.geometry.Orientation/HORIZONTAL
                          javafx.geometry.Orientation/VERTICAL)})]
-    (replace! focused split-pane false)
-    (timer/delayed 20 #(view/focus! focused))))
+    @(fx/run-later! #(replace! focused split-pane false))
+    (focus-when-ready! focused)))
 
 (defin split-below
   {:alias :windows/split-below}
