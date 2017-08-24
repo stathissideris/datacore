@@ -61,8 +61,8 @@
            (when hide-replaced? (.setVisible reference-component false))))))))
 
 (defn replace-focused! [component]
-  (replace! (focus-owner) component)
-  (timer/delayed 20 #(view/focus! component)))
+  @(replace! (focus-owner) component)
+  (focus-when-ready! component))
 
 (defn- get-root [component]
   (some->> (fx/parents component) (filter #(fx/has-style-class? % "root")) first))
@@ -121,7 +121,7 @@
 
 (defn- focus-to-direction [direction]
   (let [destination (view/focusable-in-direction (focus-owner) direction)]
-    (view/focus! destination)
+    @(fx/run-later! #(view/focus! destination))
     destination))
 
 (defin focus-left
