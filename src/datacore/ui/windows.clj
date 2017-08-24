@@ -61,8 +61,10 @@
            (when hide-replaced? (.setVisible reference-component false))))))))
 
 (defn replace-focused! [component]
-  @(replace! (focus-owner) component)
-  @(fx/run-later! (view/focus! component)))
+  (fx/run-later!
+   (fn []
+     (replace! (focus-owner) component)
+     (view/focus! component))))
 
 (defn- get-root [component]
   (some->> (fx/parents component) (filter #(fx/has-style-class? % "root")) first))

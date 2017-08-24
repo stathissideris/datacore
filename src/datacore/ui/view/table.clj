@@ -150,13 +150,10 @@
                               {:label :edn-view
                                :meta  {:roles #{:transform}}})
         view       (view/build-cell-view edn-cell)]
-    (fx/run-later!
-     (fn []
-       ;;(windows/split-right)
-       ;;(windows/focus-right)
-       (windows/replace-focused! view)
-       ;;(windows/focus-left)
-       ))))
+    @(fx/run-later! windows/split-right)
+    @(fx/run-later! windows/focus-right)
+    @(windows/replace-focused! view)
+    (fx/run-later! windows/focus-left)))
 
 (defn column [name cell-value-fn]
   (fx/make
