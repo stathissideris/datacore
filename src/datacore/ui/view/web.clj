@@ -27,7 +27,8 @@
                        [{:fx/type          :scene.web/web-view
                          :style-class      ["web-view" "main-component"]
                          :fx/stylesheet    "/css/default.css"
-                         :fx/event-filter  [MouseEvent/MOUSE_CLICKED (fn [e] (view/focus! (.getTarget e)))]
+                         :fx/event-filter  [MouseEvent/MOUSE_CLICKED (fn [e] (fx/run-later!
+                                                                              (view/focus! (.getTarget e))))]
                          :fx/link-listener (-> view-cell c/value :link-listener)}]})
            engine    (fx/get-field-in view [:children 0 :engine])
            _         (load engine (c/value view-cell))

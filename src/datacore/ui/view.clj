@@ -162,7 +162,7 @@
     :dc/indicate-focus? (or focused? true)
     :dc/cell            cell
     :dc/meta            {::type (if cell (::type (c/value cell)) (::type m))}
-    :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (focus! component))]})
+    :fx/event-filter    [MouseEvent/MOUSE_CLICKED (fn [_] (fx/run-later! #(focus! component)))]})
   component)
 
 ;;;;;;;;;;;;;;;;
