@@ -61,6 +61,11 @@
                          (when-not (empty? remaining-roles)
                            (fx/make :scene.control/label {:text (pr-str remaining-roles)}))])}))))
 
+(defn- boolean-cell [bool]
+  (if-not bool
+    ""
+    (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))
+
 (defn cells-table
   [cells-atom]
   (let [table            (fx/make-tree
@@ -94,11 +99,13 @@
       :columns          (map (fn [c]
                                (table/column (str c)
                                              (fn [row]
-                                               (if (= c :roles)
-                                                 (roles-cell (:roles row))
-                                                 (get row c)))))
+                                               (cond (= c :roles) (roles-cell (:roles row))
+                                                     (= c :formula?) (boolean-cell (:formula? row))
+                                                     (= c :enabled?) (boolean-cell (:enabled? row))
+                                                     :else (get row c)))))
                              [:id :roles :label :formula? :enabled? :value :error :sinks :sources :meta])})
     (-> table .getColumns (nth 5) (.setPrefWidth 200))
+    (-> table .getColumns (nth 9) (.setPrefWidth 200))
     (view/configure-view
      {:focused?   true
       ::view/type ::view/cells-table
