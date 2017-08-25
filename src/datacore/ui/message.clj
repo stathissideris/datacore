@@ -6,8 +6,13 @@
   {:type :message
    :msg  "Ready"})
 
-(c/defcell message-input initial-state)
-(c/deformula current-message identity message-input)
+(def message-input
+  (c/cell :message-input initial-state
+          {:meta {:roles #{:system}}}))
+(def current-message
+  (c/formula identity message-input
+             {:label :current-message
+              :meta {:roles #{:system}}}))
 (def timer (atom nil))
 
 (defn message [x]

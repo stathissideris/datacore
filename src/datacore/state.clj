@@ -3,15 +3,20 @@
             [datacore.util :as util]
             [datacore.ui.keys.maps :as keymaps]))
 
-(c/defcell focused-component nil)
-(c/deformula effective-keymap
-  (fn [keymaps focused]
-    (prn 'keymap (some->> focused util/meta :datacore.ui.view/type))
-    (keymaps/merge
-     keymaps/root-keymap
-     (some->> focused util/meta :datacore.ui.view/type (get (c/value keymaps/keymaps)))))
-  keymaps/keymaps
-  focused-component)
+(def focused-component
+  (c/cell :focused-component nil
+          {:meta {:roles #{:system}}}))
+
+(def effective-keymap
+ (c/formula
+   (fn [keymaps focused]
+     (prn 'keymap (some->> focused util/meta :datacore.ui.view/type))
+     (keymaps/merge
+      keymaps/root-keymap
+      (some->> focused util/meta :datacore.ui.view/type (get (c/value keymaps/keymaps)))))
+   keymaps/keymaps
+   focused-component
+   {:meta {:roles #{:system}}}))
 
 (comment
   (do

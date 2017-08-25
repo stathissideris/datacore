@@ -77,11 +77,13 @@
 
 (defn- message-line []
   {:fx/type   :scene.control/label
-   :text      (c/formula :msg message/current-message)
+   :text      (c/formula :msg message/current-message {:meta {:roles #{:system}}})
    :style     "-fx-padding: 0.6em 0.6em 0.6em 0.6em;"
    :text-fill (c/formula (comp {:message Color/BLACK
                                 :error   (Color/web "0xF57000")}
-                               :type) message/current-message)})
+                               :type)
+                         message/current-message
+                         {:meta {:roles #{:system}}})})
 
 (def window-style-map
   {:normal      StageStyle/DECORATED

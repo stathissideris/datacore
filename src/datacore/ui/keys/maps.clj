@@ -99,7 +99,10 @@
     #{:ctrl :v}           :web/scroll-down
     #{:meta :shortcut :v} :web/scroll-up}})
 
-(c/defcellonce keymaps nil)
+(defonce keymaps
+  (c/cell :keymaps nil
+          {:meta {:roles #{:system}}}))
+
 (c/reset! keymaps {:root                         root-keymap
                    :datacore.ui.view/prompt      prompt-keymap
                    :datacore.ui.view/table       table-keymap

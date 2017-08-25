@@ -484,12 +484,15 @@
   ([x]
    (cell nil x))
   ([label x]
+   (cell label x {}))
+  ([label x meta]
    (let [id (new-cell-id)]
-     (clean-swap! global-cells register-cell id x {:formula? false :label label})
+     (clean-swap! global-cells register-cell id x (merge meta {:formula? false :label label}))
      id)))
 (s/fdef cell
-  :args (s/alt :unlabeled (s/cat :value any?)
-               :labeled   (s/cat :label (s/nilable keyword?) :value any?))
+  :args (s/alt :unlabeled         (s/cat :value any?)
+               :labeled           (s/cat :label (s/nilable keyword?) :value any?)
+               :labeled-with-meta (s/cat :label (s/nilable keyword?) :value any? :meta map?))
   :ret  ::cell-id)
 
 (defmacro defcell

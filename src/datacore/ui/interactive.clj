@@ -6,7 +6,7 @@
             [clojure.string :as str]
             [me.raynes.fs :as fs]))
 
-(def functions (c/cell :functions {}))
+(def functions (c/cell :functions {} {:meta {:roles #{:system}}}))
 
 (defn register! [var {:keys [alias] :as options}]
   (c/swap! functions assoc alias (merge {:var var} options))

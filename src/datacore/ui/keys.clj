@@ -16,7 +16,9 @@
 (def initial-state {:chain []
                     :timer nil})
 
-(c/defcell key-input initial-state)
+(def key-input
+  (c/cell :key-input initial-state
+          {:meta {:roles #{:system}}}))
 ;;(c/add-watch! key-input :debug (fn [_ _ new] (prn 'KEYS new)))
 
 (defn press-str [press]
@@ -33,7 +35,9 @@
 (defn chain-str [chain]
   (str/join " " (map press-str chain)))
 
-(c/deformula keys-chain :chain key-input)
+(def keys-chain
+  (c/formula :chain key-input {:label :keys-chain
+                               :meta {:roles #{:system}}}))
 (c/add-watch! keys-chain :key-chain-message
               (fn [_ _ chain]
                 (when-not (empty? chain)
