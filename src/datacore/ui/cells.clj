@@ -66,6 +66,19 @@
     ""
     (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))
 
+(defn- links-cell [table links]
+  (if (empty? links)
+    ""
+    (fx/make :scene.layout/flow-pane
+             {:children
+              (for [link links]
+                (fx/make :scene.control/hyperlink
+                         {:text (str link)
+                          :on-mouse-clicked (fx/event-handler
+                                             (fn [e]
+                                               (fx/run-later!
+                                                #(fx/set-field! table :dc/cursor {:row (int link)}))))}))})))
+
 (defn cells-table
   [cells-atom]
   (let [table            (fx/make-tree
@@ -97,14 +110,18 @@
      table
      {:items            (observable-list table-cells-atom)
       :columns          (map (fn [c]
-                               (table/column (str c)
+                               (table/column (name c)
                                              (fn [row]
                                                (cond (= c :roles) (roles-cell (:roles row))
-                                                     (= c :formula?) (boolean-cell (:formula? row))
+                                                     (= c :input?) (boolean-cell (not (:formula? row)))
                                                      (= c :enabled?) (boolean-cell (:enabled? row))
+                                                     (= c :sinks) (links-cell table (:sinks row))
+                                                     (= c :sources) (links-cell table (:sources row))
                                                      :else (get row c)))))
-                             [:id :roles :label :formula? :enabled? :value :error :sinks :sources :meta])})
+                             [:id :roles :label :input? :enabled? :value :error :sinks :sources :meta])})
     (-> table .getColumns (nth 5) (.setPrefWidth 200))
+    (-> table .getColumns (nth 7) (.setPrefWidth 100))
+    (-> table .getColumns (nth 8) (.setPrefWidth 100))
     (-> table .getColumns (nth 9) (.setPrefWidth 200))
     (view/configure-view
      {:focused?   true
