@@ -72,7 +72,7 @@
     ""
     (fx/make :scene.layout/flow-pane
              {:children
-              (for [link links]
+              (for [link (sort links)]
                 (fx/make :scene.control/hyperlink
                          {:text (str link)
                           :text-fill (Color/web "0x0000A0")
