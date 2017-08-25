@@ -7,7 +7,10 @@
             [datacore.util :as util]
             [datacore.ui.util :refer [with-status-line]]
             [datacore.ui.view.table :as table]
-            [datacore.ui.observable :refer [observable-list]]))
+            [datacore.ui.observable :refer [observable-list]])
+  (:import [de.jensd.fx.glyphs.fontawesome FontAwesomeIcon FontAwesomeIconView]
+           [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
+           [javafx.scene.control Tooltip]))
 
 (defn cell-graph-elements [cells-atom]
   [{:fx/type :scene.shape/rectangle
@@ -35,6 +38,28 @@
         :content     {:fx/type  :scene/group
                       :children (cell-graph-elements cells-atom)}})
       "cells!")}))
+
+(defn- role-icon [role roles class icon]
+  (when (get roles role)
+    (let [icon    (fx/make class {:fx/args [icon]})
+          tooltip (Tooltip. (name role))]
+      (Tooltip/install icon tooltip)
+      icon)))
+
+(defn- roles-cell [roles]
+  (if (empty? roles)
+    (fx/make :scene.control/label {:text ""})
+    (let [remaining-roles (disj roles :view :system :control :source :transform)]
+      (fx/make :scene.layout/h-box
+               {:children
+                (remove nil?
+                        [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
+                         (role-icon :system roles FontAwesomeIconView FontAwesomeIcon/CIRCLE_THIN)
+                         (role-icon :control roles FontAwesomeIconView FontAwesomeIcon/USER_ALT)
+                         (role-icon :source roles MaterialIconView MaterialIcon/INPUT)
+                         (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)
+                         (when-not (empty? remaining-roles)
+                           (fx/make :scene.control/label {:text (pr-str remaining-roles)}))])}))))
 
 (defn cells-table
   [cells-atom]
@@ -68,7 +93,10 @@
      {:items            (observable-list table-cells-atom)
       :columns          (map (fn [c]
                                (table/column (str c)
-                                             (fn [row] (get row c))))
+                                             (fn [row]
+                                               (if (= c :roles)
+                                                 (roles-cell (:roles row))
+                                                 (get row c)))))
                              [:id :roles :label :formula? :enabled? :value :error :sinks :sources :meta])})
     (-> table .getColumns (nth 5) (.setPrefWidth 200))
     (view/configure-view
