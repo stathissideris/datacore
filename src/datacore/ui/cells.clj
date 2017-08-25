@@ -10,6 +10,7 @@
             [datacore.ui.observable :refer [observable-list]])
   (:import [de.jensd.fx.glyphs.fontawesome FontAwesomeIcon FontAwesomeIconView]
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
+           [javafx.scene.paint Color]
            [javafx.scene.control Tooltip]))
 
 (defn cell-graph-elements [cells-atom]
@@ -74,6 +75,7 @@
               (for [link links]
                 (fx/make :scene.control/hyperlink
                          {:text (str link)
+                          :text-fill (Color/web "0x0000A0")
                           :on-mouse-clicked (fx/event-handler
                                              (fn [e]
                                                (fx/run-later!
@@ -87,7 +89,8 @@
                            (fn [table]
                              ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
                              (fx/set-field! table :style-class ["table-view" "main-component"])
-                             (fx/set-field-in! table [:selection-model :cell-selection-enabled] true))})
+                             ;;(fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
+                             )})
         component        (with-status-line
                            table
                            "cells!")
@@ -119,10 +122,12 @@
                                                      (= c :sources) (links-cell table (:sources row))
                                                      :else (get row c)))))
                              [:id :roles :label :input? :enabled? :value :error :sinks :sources :meta])})
-    (-> table .getColumns (nth 5) (.setPrefWidth 200))
-    (-> table .getColumns (nth 7) (.setPrefWidth 100))
-    (-> table .getColumns (nth 8) (.setPrefWidth 100))
-    (-> table .getColumns (nth 9) (.setPrefWidth 200))
+    (let [column-widths [[5 200]
+                         [7 100]
+                         [8 100]
+                         [9 200]]]
+      (doseq [[idx width] column-widths]
+        (-> table .getColumns (nth idx) (.setPrefWidth width))))
     (view/configure-view
      {:focused?   true
       ::view/type ::view/cells-table
