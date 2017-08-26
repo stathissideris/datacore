@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.web.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.chart.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+
+<Pane id="root" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="965.0" prefWidth="910.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <HTMLEditor htmlText="&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body contenteditable=&quot;true&quot;&gt;&lt;/body&gt;&lt;/html&gt;" layoutX="37.0" layoutY="653.0" prefHeight="200.0" prefWidth="506.0" />
+      <Pane layoutX="50.0" layoutY="50.0" prefHeight="140.0" prefWidth="200.0" style="-fx-border-color: black; -fx-background-color: yellow; -fx-border-radius: 8; -fx-background-radius: 8;">
+         <children>
+            <VBox layoutX="6.0" layoutY="4.0" prefHeight="130.0" prefWidth="188.0">
+               <children>
+                  <Label text="CSV file" />
+                  <ImageView fitHeight="77.0" fitWidth="32.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../../../Downloads/tick.png" />
+                     </image>
+                  </ImageView>
+               </children>
+            </VBox>
+            <Circle fill="DODGERBLUE" layoutX="199.0" layoutY="69.0" radius="5.0" stroke="BLACK" strokeType="INSIDE" />
+         </children>
+      </Pane>
+      <Pane layoutX="310.0" layoutY="50.0" prefHeight="140.0" prefWidth="200.0" style="-fx-border-color: black; -fx-background-color: yellow;">
+         <children>
+            <VBox layoutX="6.0" layoutY="4.0" prefHeight="130.0" prefWidth="188.0">
+               <children>
+                  <Label text="CSV file" />
+                  <ImageView fitHeight="77.0" fitWidth="32.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../../../Downloads/tick.png" />
+                     </image>
+                  </ImageView>
+               </children>
+            </VBox>
+            <Circle fill="DODGERBLUE" layoutX="199.0" layoutY="69.0" radius="5.0" stroke="BLACK" strokeType="INSIDE" />
+         </children>
+      </Pane>
+      <StackPane layoutX="37.0" layoutY="218.0" mouseTransparent="true" prefHeight="407.0" prefWidth="545.0">
+         <children>
+            <TableView layoutX="37.0" layoutY="218.0" prefHeight="340.0" prefWidth="482.0">
+              <columns>
+                <TableColumn prefWidth="206.0" text="C1" />
+                <TableColumn prefWidth="337.0" text="C2" />
+              </columns>
+               <columnResizePolicy>
+                  <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+               </columnResizePolicy>
+            </TableView>
+            <VBox alignment="CENTER" mouseTransparent="true" opacity="0.6">
+               <children>
+                  <Label text="ERROR">
+                     <font>
+                        <Font name="Avenir Black" size="80.0" />
+                     </font>
+                     <VBox.margin>
+                        <Insets bottom="-15.0" />
+                     </VBox.margin>
+                  </Label>
+                  <Label layoutX="88.0" layoutY="111.0" text="(Shown values are stale)">
+                     <font>
+                        <Font name="Avenir Black" size="18.0" />
+                     </font>
+                  </Label>
+               </children>
+            </VBox>
+         </children>
+      </StackPane>
+   </children>
+</Pane>

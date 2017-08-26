@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+<GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" vgap="8.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8">
+  <columnConstraints>
+      <ColumnConstraints fillWidth="false" halignment="RIGHT" hgrow="NEVER" />
+      <ColumnConstraints hgrow="NEVER" />
+    <ColumnConstraints hgrow="NEVER" />
+    <ColumnConstraints hgrow="NEVER" />
+  </columnConstraints>
+  <rowConstraints>
+    <RowConstraints valignment="TOP" vgrow="NEVER" />
+    <RowConstraints vgrow="NEVER" />
+    <RowConstraints valignment="TOP" vgrow="NEVER" />
+  </rowConstraints>
+   <children>
+      <Label text="{">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text=":key1" GridPane.columnIndex="1">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+         <GridPane.margin>
+            <Insets right="8.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text=":key2" GridPane.columnIndex="1" GridPane.rowIndex="1">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+         <GridPane.margin>
+            <Insets right="8.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text=":key3" GridPane.columnIndex="1" GridPane.rowIndex="2">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+         <GridPane.margin>
+            <Insets right="8.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text="}" GridPane.columnIndex="3" GridPane.rowIndex="2" GridPane.valignment="BOTTOM">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text="&quot;value1&quot;" GridPane.columnIndex="2">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+         <GridPane.margin>
+            <Insets right="8.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text="&quot;value2longer&quot;" GridPane.columnIndex="2" GridPane.rowIndex="1">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+         <GridPane.margin>
+            <Insets right="8.0" />
+         </GridPane.margin>
+      </Label>
+      <TableView prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="2" GridPane.rowIndex="2">
+        <columns>
+          <TableColumn prefWidth="75.0" text="C1" />
+          <TableColumn prefWidth="75.0" text="C2" />
+        </columns>
+         <GridPane.margin>
+            <Insets right="8.0" />
+         </GridPane.margin>
+      </TableView>
+   </children>
+</GridPane>

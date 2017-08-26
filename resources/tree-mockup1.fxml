@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+<GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8">
+  <columnConstraints>
+      <ColumnConstraints fillWidth="false" halignment="RIGHT" hgrow="NEVER" />
+      <ColumnConstraints hgrow="NEVER" />
+    <ColumnConstraints hgrow="NEVER" />
+    <ColumnConstraints hgrow="NEVER" />
+  </columnConstraints>
+  <rowConstraints>
+    <RowConstraints valignment="TOP" vgrow="NEVER" />
+    <RowConstraints vgrow="NEVER" />
+    <RowConstraints valignment="BOTTOM" vgrow="NEVER" />
+  </rowConstraints>
+   <children>
+      <Label text="{">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text=":key1" GridPane.columnIndex="1">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+         <GridPane.margin>
+            <Insets right="16.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text=":key2" GridPane.columnIndex="1" GridPane.rowIndex="1">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text=":key3" GridPane.columnIndex="1" GridPane.rowIndex="2">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text="}" GridPane.columnIndex="3" GridPane.rowIndex="2">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text="&quot;value1&quot;" GridPane.columnIndex="2">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text="&quot;value2longer&quot;" GridPane.columnIndex="2" GridPane.rowIndex="1">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+      <Label text="&quot;value3&quot;" GridPane.columnIndex="2" GridPane.rowIndex="2">
+         <font>
+            <Font name="Monaco" size="13.0" />
+         </font>
+      </Label>
+   </children>
+</GridPane>

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+
+<StackPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" vgap="8.0">
+        <columnConstraints>
+            <ColumnConstraints fillWidth="false" halignment="RIGHT" hgrow="NEVER" />
+            <ColumnConstraints hgrow="NEVER" />
+          <ColumnConstraints hgrow="NEVER" />
+          <ColumnConstraints hgrow="NEVER" />
+            <ColumnConstraints hgrow="NEVER" />
+        </columnConstraints>
+        <rowConstraints>
+          <RowConstraints valignment="TOP" vgrow="NEVER" />
+          <RowConstraints vgrow="NEVER" />
+          <RowConstraints valignment="TOP" vgrow="NEVER" />
+            <RowConstraints valignment="TOP" vgrow="NEVER" />
+            <RowConstraints valignment="TOP" vgrow="NEVER" />
+            <RowConstraints valignment="TOP" vgrow="NEVER" />
+        </rowConstraints>
+         <children>
+            <Label text="{">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+            </Label>
+            <Label style="-fx-background-color: #0096c9; -fx-text-fill: #ffffff;" text=":key1" GridPane.columnIndex="1">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+               <GridPane.margin>
+                  <Insets right="8.0" />
+               </GridPane.margin>
+            </Label>
+            <Label text=":key2longer" GridPane.columnIndex="1" GridPane.rowIndex="1">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+               <GridPane.margin>
+                  <Insets right="8.0" />
+               </GridPane.margin>
+            </Label>
+            <Label text=":table" GridPane.columnIndex="1" GridPane.rowIndex="2">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+               <GridPane.margin>
+                  <Insets right="8.0" />
+               </GridPane.margin>
+            </Label>
+            <Label text="}" GridPane.columnIndex="3" GridPane.rowIndex="4" GridPane.valignment="BOTTOM">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+            </Label>
+            <Label text="&quot;value1&quot;" GridPane.columnIndex="2">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+               <GridPane.margin>
+                  <Insets right="8.0" />
+               </GridPane.margin>
+            </Label>
+            <Label text="&quot;value2longer&quot;" GridPane.columnIndex="2" GridPane.rowIndex="1">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+               <GridPane.margin>
+                  <Insets right="8.0" />
+               </GridPane.margin>
+            </Label>
+            <Label text=":key4" GridPane.columnIndex="1" GridPane.rowIndex="3">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+            </Label>
+            <Label text="&quot;value4&quot;" GridPane.columnIndex="2" GridPane.rowIndex="3">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+            </Label>
+            <Label text=":vector" GridPane.columnIndex="1" GridPane.rowIndex="4">
+               <font>
+                  <Font name="Monaco" size="13.0" />
+               </font>
+            </Label>
+            <GridPane hgap="4.0" GridPane.columnIndex="2" GridPane.rowIndex="4">
+              <columnConstraints>
+                <ColumnConstraints fillWidth="false" hgrow="NEVER" />
+                  <ColumnConstraints fillWidth="false" hgrow="NEVER" />
+                <ColumnConstraints fillWidth="false" hgrow="NEVER" />
+                  <ColumnConstraints fillWidth="false" hgrow="NEVER" />
+              </columnConstraints>
+              <rowConstraints>
+                <RowConstraints vgrow="SOMETIMES" />
+              </rowConstraints>
+               <children>
+                  <Label text="[" GridPane.valignment="TOP">
+                     <font>
+                        <Font name="Monaco" size="13.0" />
+                     </font>
+                  </Label>
+                  <Label text="]" GridPane.columnIndex="2" GridPane.valignment="BOTTOM">
+                     <font>
+                        <Font name="Monaco" size="13.0" />
+                     </font>
+                  </Label>
+                  <FlowPane prefWidth="200.0" GridPane.columnIndex="1">
+                     <children>
+                        <Label text="10">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="10">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="1000">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="200">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="10">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="99999">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="1000">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="4">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text=", ">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Label text="...">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
+                        <Button graphicTextGap="1.0" mnemonicParsing="false" text="&gt;">
+                           <font>
+                              <Font size="9.0" />
+                           </font>
+                           <FlowPane.margin>
+                              <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+                           </FlowPane.margin>
+                           <padding>
+                              <Insets bottom="2.0" left="4.0" right="4.0" top="2.0" />
+                           </padding>
+                        </Button>
+                     </children>
+                  </FlowPane>
+                  <Label opacity="0.45" text="300|p1" translateX="-2.0" GridPane.columnIndex="3" GridPane.valignment="BOTTOM">
+                     <font>
+                        <Font size="11.0" />
+                     </font>
+                     <GridPane.margin>
+                        <Insets />
+                     </GridPane.margin>
+                     <opaqueInsets>
+                        <Insets />
+                     </opaqueInsets>
+                  </Label>
+               </children>
+            </GridPane>
+            <ScrollPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="2" GridPane.rowIndex="2">
+               <content>
+                  <TableView prefHeight="200.0" prefWidth="200.0">
+                    <columns>
+                      <TableColumn prefWidth="75.0" text="C1" />
+                      <TableColumn prefWidth="79.0" text="C2" />
+                    </columns>
+                  </TableView>
+               </content>
+            </ScrollPane>
+         </children>
+      </GridPane>
+   </children>
+</StackPane>
