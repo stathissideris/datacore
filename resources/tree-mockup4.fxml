@@ -97,6 +97,8 @@
                   <ColumnConstraints fillWidth="false" hgrow="NEVER" />
                 <ColumnConstraints fillWidth="false" hgrow="NEVER" />
                   <ColumnConstraints fillWidth="false" hgrow="NEVER" />
+                  <ColumnConstraints fillWidth="false" hgrow="NEVER" />
+                  <ColumnConstraints fillWidth="false" hgrow="NEVER" />
               </columnConstraints>
               <rowConstraints>
                 <RowConstraints vgrow="SOMETIMES" />
@@ -107,12 +109,12 @@
                         <Font name="Monaco" size="13.0" />
                      </font>
                   </Label>
-                  <Label text="]" GridPane.columnIndex="2" GridPane.valignment="BOTTOM">
+                  <Label text="]" GridPane.columnIndex="3" GridPane.valignment="BOTTOM">
                      <font>
                         <Font name="Monaco" size="13.0" />
                      </font>
                   </Label>
-                  <FlowPane prefWidth="200.0" GridPane.columnIndex="1">
+                  <FlowPane prefWidth="189.0" GridPane.columnIndex="1">
                      <children>
                         <Label text="10">
                            <font>
@@ -194,35 +196,48 @@
                               <Font name="Monaco" size="13.0" />
                            </font>
                         </Label>
+                        <Label text="10">
+                           <font>
+                              <Font name="Monaco" size="13.0" />
+                           </font>
+                        </Label>
                         <Label text="...">
                            <font>
                               <Font name="Monaco" size="13.0" />
                            </font>
+                           <graphic>
+                              <Label text=", ">
+                                 <font>
+                                    <Font name="Monaco" size="13.0" />
+                                 </font>
+                              </Label>
+                           </graphic>
+                        </Label>
+                     </children>
+                  </FlowPane>
+                  <HBox alignment="BOTTOM_CENTER" opacity="0.45" GridPane.columnIndex="4" GridPane.halignment="LEFT" GridPane.hgrow="NEVER" GridPane.valignment="BOTTOM" GridPane.vgrow="NEVER">
+                     <children>
+                        <Label text="300|p1" translateX="-2.0" GridPane.columnIndex="3" GridPane.valignment="BOTTOM">
+                           <font>
+                              <Font size="11.0" />
+                           </font>
+                           <GridPane.margin>
+                              <Insets />
+                           </GridPane.margin>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
                         </Label>
                         <Button graphicTextGap="1.0" mnemonicParsing="false" text="&gt;">
                            <font>
                               <Font size="9.0" />
                            </font>
-                           <FlowPane.margin>
-                              <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
-                           </FlowPane.margin>
                            <padding>
                               <Insets bottom="2.0" left="4.0" right="4.0" top="2.0" />
                            </padding>
                         </Button>
                      </children>
-                  </FlowPane>
-                  <Label opacity="0.45" text="300|p1" translateX="-2.0" GridPane.columnIndex="3" GridPane.valignment="BOTTOM">
-                     <font>
-                        <Font size="11.0" />
-                     </font>
-                     <GridPane.margin>
-                        <Insets />
-                     </GridPane.margin>
-                     <opaqueInsets>
-                        <Insets />
-                     </opaqueInsets>
-                  </Label>
+                  </HBox>
                </children>
             </GridPane>
             <ScrollPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="2" GridPane.rowIndex="2">
