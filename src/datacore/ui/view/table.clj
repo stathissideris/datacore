@@ -143,9 +143,11 @@
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
   (let [table-cell (fx/get-field component :dc/cell)
-        edn-cell   (c/formula (fn [{:keys [data control]}]
-                                {::view/type ::view/edn
-                                 :data       (when data (some->> control :selected-cells first :row (nth data)))})
+        edn-cell   (c/formula (fn [{:keys [data control label last-modified]}]
+                                {::view/type    ::view/edn
+                                 :label         (str "Single row EDN view of " label)
+                                 :last-modified last-modified
+                                 :data          (when data (some->> control :selected-cells first :row (nth data)))})
                               table-cell
                               {:label :edn-view
                                :meta  {:roles #{:transform}}})
