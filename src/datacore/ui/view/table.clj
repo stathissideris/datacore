@@ -12,7 +12,7 @@
            [javafx.beans.property ReadOnlyObjectWrapper]
            [java.util Date]
            [javafx.scene.control
-            SelectionMode ControlUtils TableView TableColumnBase TableSelectionModel]))
+            SelectionMode ControlUtils TableView TableColumnBase TableSelectionModel TableCell]))
 
 (def scroll-fns [:table/scroll-up :table/scroll-down
                  :table/scroll-to-top :table/scroll-to-bottom
@@ -155,12 +155,23 @@
     @(windows/replace-focused! view)
     (fx/run-later! windows/focus-left)))
 
-(defn column [name cell-value-fn]
-  (fx/make
-   :scene.control/table-column
-   {:fx/args [name]
-    :fx/setup
-    #(.setCellValueFactory % (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x))))))}))
+(defn column
+  ([name cell-value-fn]
+   (column name cell-value-fn nil))
+  ([name cell-value-fn cell-fn]
+   (fx/make
+    :scene.control/table-column
+    (merge
+     {:fx/args [name]
+      :cell-value-factory (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x)))))}
+     (when cell-fn
+       {:cell-factory
+        (callback
+         (fn [table-column]
+           (proxy [TableCell] []
+             (updateItem [item empty]
+               (proxy-super updateItem item empty)
+               (cell-fn this item empty)))))})))))
 
 (defmethod fx/fget [TableView :dc/selected-cells]
   [table _]

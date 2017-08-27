@@ -63,7 +63,7 @@
 **** DONE add roles to all system cells
 **** TODO Table: use <s> to toggle showing system cells
 **** TODO Table: add "code" column
-**** TODO Table: refactor to use TableCellFactory instead of TableCellValueFactory
+**** DONE Table: refactor to use TableCellFactory instead of TableCellValueFactory
 **** TODO Table: why does it take so long to call open-view on a view?
 *** General
 **** PROG View registry and a way to switch between views

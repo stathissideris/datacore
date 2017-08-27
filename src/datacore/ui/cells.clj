@@ -64,12 +64,12 @@
 
 (defn- boolean-cell [bool]
   (if-not bool
-    ""
+    (fx/make :scene.control/label {:text ""})
     (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))
 
 (defn- links-cell [table links]
   (if (empty? links)
-    ""
+    (fx/make :scene.control/label {:text ""})
     (fx/make :scene.layout/flow-pane
              {:children
               (for [link (sort links)]
@@ -112,16 +112,30 @@
     (fx/set-fields!
      table
      {:items            (observable-list table-cells-atom)
-      :columns          (map (fn [c]
-                               (table/column (name c)
-                                             (fn [row]
-                                               (cond (= c :roles) (roles-cell (:roles row))
-                                                     (= c :input?) (boolean-cell (not (:formula? row)))
-                                                     (= c :enabled?) (boolean-cell (:enabled? row))
-                                                     (= c :sinks) (links-cell table (:sinks row))
-                                                     (= c :sources) (links-cell table (:sources row))
-                                                     :else (get row c)))))
-                             [:id :roles :label :input? :enabled? :value :error :sinks :sources :meta])})
+      :columns          [(table/column "id" :id)
+                         (table/column "roles" :roles
+                                       (fn [this roles empty?]
+                                         (when-not empty? (.setGraphic this (roles-cell roles)))))
+                         (table/column "label" :label)
+                         (table/column "input?" :formula?
+                                       (fn [this formula? empty?]
+                                         (when (not (or formula? empty?))
+                                           (.setGraphic this (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))))
+                         (table/column "enabled?" :enabled?
+                                       (fn [this enabled? empty?]
+                                         (when enabled?
+                                           (.setGraphic this (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))))
+                         (table/column "value" :value)
+                         (table/column "error" :error)
+                         (table/column "sinks" :sinks
+                                       (fn [this sinks empty?]
+                                         (when-not empty?
+                                           (.setGraphic this (links-cell table sinks)))))
+                         (table/column "sources" :sources
+                                       (fn [this sources empty?]
+                                         (when-not empty?
+                                           (.setGraphic this (links-cell table sources)))))
+                         (table/column "meta" :meta)]})
     (let [column-widths [[5 200]
                          [7 100]
                          [8 100]
