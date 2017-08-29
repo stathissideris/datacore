@@ -170,6 +170,9 @@
            (proxy [TableCell] []
              (updateItem [item empty]
                (proxy-super updateItem item empty)
+               (when empty
+                 (.setText this "")
+                 (.setGraphic this nil))
                (cell-fn this item empty)))))})))))
 
 (defmethod fx/fget [TableView :dc/selected-cells]
