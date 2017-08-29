@@ -173,6 +173,7 @@
                             :cell
                             c/meta
                             :component)]
-      (fx/run-later!
-       (when component
-         #(windows/replace-focused! component))))))
+      (when component
+        (if (some? (first (filter #(= % component) (fx/tree-seq fx/top-level))))
+          (fx/run-later! #(view/focus! component)) ;;TODO bring window to front?
+          (fx/run-later! #(windows/replace-focused! component)))))))
