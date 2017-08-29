@@ -17,6 +17,7 @@
   [view-cell]
   (view/configure-view
    {:cell      view-cell
+    :focused?  false
     :component
     (-> (fx/make-tree
          {:fx/type     :scene.control/text-area
