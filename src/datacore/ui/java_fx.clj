@@ -68,7 +68,8 @@
    (reify ChangeListener
      (changed [this observable old new]
        (fun observable old new)
-       (.removeListener observable this)))))
+       (when new ;;remove only of the value changes to something non-nil and not false
+         (.removeListener observable this))))))
 
 (defn list-change-listener [fun]
   (reify ListChangeListener

@@ -7,7 +7,9 @@
             [datacore.ui.view :as view]
             [datacore.ui.timer :as timer]
             [datacore.ui.java-fx :as fx]
-            [datacore.cells :as c]))
+            [datacore.cells :as c])
+  (:import [com.sun.javafx.tk Toolkit]))
+
 
 (defn- focus-owner []
   (ui-util/focus-indicator-parent
@@ -58,7 +60,22 @@
            (if (fx/has-style-class? parent "root")
              (fx/set-field! parent :center new-component)
              (replace-in-split-pane! (fx/parent parent) reference-component new-component))
-           (when hide-replaced? (.setVisible reference-component false))))))))
+           (when hide-replaced? (.setVisible reference-component false))))
+       (let [p (promise)]
+         (-> new-component
+             .sceneProperty
+             (.addListener
+              (fx/one-off-change-listener
+               (fn [_ _ new]
+                 (when new
+                   (deliver p ::done))))))
+         p)))))
+
+(defn replace-focused! [component]
+  (fx/run-later!
+   (fn []
+     (replace! (focus-owner) component)
+     (view/focus! component))))
 
 (defn replace-focused! [component]
   (fx/run-later!
@@ -97,17 +114,51 @@
 
 ;;split
 
+(defn- do-on-new-scene [component fun]
+  (-> component
+      .sceneProperty
+      (.addListener
+       (fx/change-listener
+        (fn [_ old new]
+          (prn old '-> new component)))))
+  (-> component
+      .sceneProperty
+      (.addListener
+       (fx/one-off-change-listener
+        (fn [_ _ new]
+          (when new (fun)))))))
+
 (defn- split [orientation]
-  (let [focused    (focus-owner)
+  (let [p            (promise)
+        done         (atom #{})
+        focused      (focus-owner)
+        nothing-view (fx/make-tree (view/nothing))
         split-pane
         (fx/make-tree
          {:fx/type     :scene.control/split-pane
-          :items       [focused (view/nothing)]
+          :items       [focused nothing-view]
           :orientation (if (= orientation :horizontal)
                          javafx.geometry.Orientation/HORIZONTAL
                          javafx.geometry.Orientation/VERTICAL)})]
-    @(fx/run-later! #(replace! focused split-pane false))
-    (focus-when-ready! focused)))
+    (add-watch done :split-watch
+               (fn [_ _ _ new]
+                 (when (= new #{focused split-pane nothing-view})
+                   (deliver p ::done)
+                   (remove-watch done :split-watch)
+                   (prn 'DONE!))))
+    (do-on-new-scene
+     focused
+     #(do (view/focus! focused)
+          (swap! done conj focused)))
+    (do-on-new-scene
+     split-pane
+     #(swap! done conj split-pane))
+    (do-on-new-scene
+     nothing-view
+     #(swap! done conj nothing-view))
+    @(replace! focused split-pane false)
+    @(fx/run-later! #(-> (Toolkit/getToolkit) (.firePulse))) ;;make sure the layout is really done and all components are in place
+    p))
 
 (defin split-below
   {:alias :windows/split-below}
@@ -118,6 +169,13 @@
   {:alias :windows/split-right}
   []
   (split :horizontal))
+
+(defn- replace-other! [component direction]
+  (replace! (view/focusable-in-direction (focus-owner) direction) component))
+
+(defn new-split-view [new-view direction]
+  @(split (if (= :right direction) :horizontal :vertical))
+  (replace-other! new-view direction))
 
 ;;focus
 
