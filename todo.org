@@ -48,6 +48,7 @@
 **** DONE Linked table/row-edn-view does not update when changing original CSV
      Not a bug, it's due to table losing selection when data are updated
 **** TODO "Jumping" input column checkmarks
+**** TODO Table: why does it take so long to call open-view on a view?
 **** TODO It's not reliable to call windows functions in sequence like this:
 
      #+BEGIN_SRC clojure
@@ -71,10 +72,9 @@
 **** PROG Cells: graph vizualisation
 **** DONE Cells: Add icons for roles in cells table
 **** DONE add roles to all system cells
-**** TODO Table: use <s> to toggle showing system cells
+**** PROG Table: use <s> to toggle showing system cells
 **** TODO Table: add "code" column
 **** DONE Table: refactor to use TableCellFactory instead of TableCellValueFactory
-**** TODO Table: why does it take so long to call open-view on a view?
 *** General
 **** PROG View registry and a way to switch between views
 **** DONE Make view cells output stuff such as selection etc

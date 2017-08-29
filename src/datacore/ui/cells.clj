@@ -96,14 +96,19 @@
                            "cells!")
         table-cells-atom (atom [])
         watcher-name     (gensym :table-view)]
+    (util/add-meta! table {:show-system? false
+                           :refresh-fn   (fn [] (swap! table-cells-atom identity))}) ;;trigger watch
     (add-watch cells-atom watcher-name
                (fn [_ _ old new]
-                 (reset! table-cells-atom
-                         (map #(update % :value
-                                       (fn [x] (if (instance? javafx.scene.Node x)
-                                                 "JavaFX component"
-                                                 (-> x str (util/truncate-string 100)))))
-                              (c/all-cells)))))
+                 (let [show-system? (-> table util/meta :show-system?)]
+                   (->> (c/all-cells)
+                        (filter #(or show-system?
+                                     (-> % :meta :roles :system not)))
+                        (map #(update % :value
+                                      (fn [x] (if (instance? javafx.scene.Node x)
+                                                "JavaFX component"
+                                                (-> x str (util/truncate-string 100))))))
+                        (reset! table-cells-atom)))))
     (fx/set-field!
      component
      :fx/prop-listener [:visible (fn [source observable old visible] ;;this only works because datacore.ui.windows/replace! sets the visibility to false
@@ -177,3 +182,10 @@
         (if (some? (first (filter #(= % component) (fx/tree-seq fx/top-level))))
           (fx/run-later! #(view/focus! component)) ;;TODO bring window to front?
           (fx/run-later! #(windows/replace-focused! component)))))))
+
+(defin toggle-system
+  {:alias :cells/toggle-system
+   :params [[:component ::in/main-component]]}
+  [{:keys [component]}]
+  (util/alter-meta! component update :show-system? not)
+  ((-> component util/meta :refresh-fn)))
