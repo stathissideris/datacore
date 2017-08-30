@@ -7,7 +7,8 @@
             [datacore.util :as util]
             [datacore.ui.util :refer [with-status-line]]
             [datacore.ui.view.table :as table]
-            [datacore.ui.observable :refer [observable-list]])
+            [datacore.ui.observable :refer [observable-list]]
+            [clojure.string :as str])
   (:import [de.jensd.fx.glyphs.fontawesome FontAwesomeIcon FontAwesomeIconView]
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
            [javafx.scene.paint Color]
@@ -44,24 +45,24 @@
 (defn- role-icon [role roles class icon]
   (when (get roles role)
     (let [icon    (fx/make class {:fx/args [icon]})
-          tooltip (Tooltip. (name role))]
+          tooltip (Tooltip. (str/upper-case (name role)))] ;;javafx has this very weird bug that results
+                                                           ;;in lowercase "transform" and "source" being blank in the tooltip
       (Tooltip/install icon tooltip)
       icon)))
 
 (defn- roles-cell [roles]
-  (if (empty? roles)
-    (fx/make :scene.control/label {:text ""})
-    (let [remaining-roles (disj roles :view :system :control :source :transform)]
-      (fx/make :scene.layout/h-box
-               {:children
-                (remove nil?
-                        [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
-                         (role-icon :system roles FontAwesomeIconView FontAwesomeIcon/CIRCLE_THIN)
-                         (role-icon :control roles FontAwesomeIconView FontAwesomeIcon/USER_ALT)
-                         (role-icon :source roles MaterialIconView MaterialIcon/INPUT)
-                         (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)
-                         (when-not (empty? remaining-roles)
-                           (fx/make :scene.control/label {:text (pr-str remaining-roles)}))])}))))
+  (let [remaining-roles (disj roles :view :system :control :source :transform)]
+    (fx/make :scene.layout/h-box
+             {:alignment Pos/TOP_CENTER
+              :children
+              (remove nil?
+                      [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
+                       (role-icon :system roles FontAwesomeIconView FontAwesomeIcon/CIRCLE_THIN)
+                       (role-icon :control roles FontAwesomeIconView FontAwesomeIcon/USER_ALT)
+                       (role-icon :source roles MaterialIconView MaterialIcon/INPUT)
+                       (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)
+                       (when-not (empty? remaining-roles)
+                         (fx/make :scene.control/label {:text (pr-str remaining-roles)}))])})))
 
 (defn- boolean-cell [bool]
   (if-not bool
@@ -120,11 +121,14 @@
      {:items            (observable-list table-cells-atom)
       :columns          [(table/column "id" :id)
                          (table/column "roles" :roles
-                                       ;; (fn [this roles empty?]
-                                       ;;   (when-not empty?
-                                       ;;     (.setAlignment this Pos/CENTER)
-                                       ;;     (.setGraphic this (roles-cell roles))))
-                                       )
+                                       (fx/callback
+                                        (fn [_]
+                                          (doto (table/cell
+                                                 {:update-item
+                                                  (fn [cell roles empty?]
+                                                    (when (and (not empty?) (not (clojure.core/empty? roles)))
+                                                      (.setGraphic cell (roles-cell roles))))})
+                                            (.setAlignment Pos/TOP_CENTER)))))
                          (table/column "label" :label)
                          (table/column "input?" :formula?
                                        (fx/callback
@@ -134,14 +138,15 @@
                                             (doto (table/cell
                                                    {:update-item
                                                     (fn [cell formula? empty?]
-                                                      (prn 'update-item)
+                                                      ;;(prn 'update-item)
                                                       (when (not (or formula? empty?))
                                                         (.setGraphic cell checkmark)))
-                                                    :update-selected
-                                                    (fn [cell selected?]
-                                                      (prn 'selected? selected?)
-                                                      (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))})
-                                              (.setAlignment Pos/CENTER))))))
+                                                    ;; :update-selected
+                                                    ;; (fn [cell selected?]
+                                                    ;;   ;;(prn 'selected? selected?)
+                                                    ;;   (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))
+                                                    })
+                                              (.setAlignment Pos/TOP_CENTER))))))
                          (table/column "enabled?" :enabled?
                                        (fx/callback
                                         (fn [_]
@@ -151,22 +156,29 @@
                                                     (fn [cell enabled? empty?]
                                                       (when enabled?
                                                         (.setGraphic cell checkmark)))
-                                                    :update-selected
-                                                    (fn [cell selected?]
-                                                      (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))})
-                                              (.setAlignment Pos/CENTER))))))
+                                                    ;; :update-selected
+                                                    ;; (fn [cell selected?]
+                                                    ;;   (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))
+                                                    })
+                                              (.setAlignment Pos/TOP_CENTER))))))
                          (table/column "value" :value)
                          (table/column "error" :error)
                          (table/column "sinks" :sinks
-                                       ;; (fn [this sinks empty?]
-                                       ;;   (when-not empty?
-                                       ;;     (.setGraphic this (links-cell table sinks))))
-                                       )
+                                       (fx/callback
+                                        (fn [_]
+                                          (table/cell
+                                           {:update-item
+                                            (fn [cell links empty?]
+                                              (when-not empty?
+                                                (.setGraphic cell (links-cell table links))))}))))
                          (table/column "sources" :sources
-                                       ;; (fn [this sources empty?]
-                                       ;;   (when-not empty?
-                                       ;;     (.setGraphic this (links-cell table sources))))
-                                       )
+                                       (fx/callback
+                                        (fn [_]
+                                          (table/cell
+                                           {:update-item
+                                            (fn [cell links empty?]
+                                              (when-not empty?
+                                                (.setGraphic cell (links-cell table links))))}))))
                          (table/column "meta" :meta)]})
     (let [column-widths [[5 200]
                          [7 100]
