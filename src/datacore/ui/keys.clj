@@ -77,7 +77,8 @@
 
 (defn- clear-chain! []
   (timer/cancel (:timer (c/value key-input)))
-  (c/reset! key-input initial-state)
+  (when-not (= (c/value key-input) initial-state) ;;TODO race condition?
+    (c/reset! key-input initial-state))
   nil)
 
 ;;(def debug prn)
