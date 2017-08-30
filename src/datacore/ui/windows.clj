@@ -118,12 +118,6 @@
   (-> component
       .sceneProperty
       (.addListener
-       (fx/change-listener
-        (fn [_ old new]
-          (prn old '-> new component)))))
-  (-> component
-      .sceneProperty
-      (.addListener
        (fx/one-off-change-listener
         (fn [_ _ new]
           (when new (fun)))))))
