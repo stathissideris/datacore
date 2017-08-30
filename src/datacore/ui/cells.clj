@@ -54,6 +54,7 @@
   (let [remaining-roles (disj roles :view :system :control :source :transform)]
     (fx/make :scene.layout/h-box
              {:alignment Pos/TOP_CENTER
+              :spacing 2
               :children
               (remove nil?
                       [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
