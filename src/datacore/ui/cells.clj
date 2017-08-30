@@ -141,12 +141,7 @@
                                       {:update-item
                                        (fn [cell formula? empty?]
                                          (when (not (or formula? empty?))
-                                           (.setGraphic cell checkmark)))
-                                       ;; :update-selected
-                                       ;; (fn [cell selected?]
-                                       ;;   ;;(prn 'selected? selected?)
-                                       ;;   (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))
-                                       })
+                                           (.setGraphic cell checkmark)))})
                                  (.setAlignment Pos/TOP_CENTER))))))
                          (table/column
                           "enabled?" :enabled?
@@ -157,11 +152,7 @@
                                       {:update-item
                                        (fn [cell enabled? empty?]
                                          (when enabled?
-                                           (.setGraphic cell checkmark)))
-                                       ;; :update-selected
-                                       ;; (fn [cell selected?]
-                                       ;;   (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))
-                                       })
+                                           (.setGraphic cell checkmark)))})
                                  (.setAlignment Pos/TOP_CENTER))))))
                          (table/column "value" :value)
                          (table/column "error" :error)
