@@ -70,6 +70,11 @@
     (fx/make :scene.control/label {:text ""})
     (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))
 
+(defn- index-of-cell [items cell-id]
+  (->> (map-indexed vector items)
+       (filter (comp #(= cell-id (:id %)) second))
+       ffirst))
+
 (defn- links-cell [table links]
   (if (empty? links)
     (fx/make :scene.control/label {:text ""})
@@ -81,8 +86,9 @@
                           :text-fill (Color/web "0x0000A0")
                           :on-mouse-clicked (fx/event-handler
                                              (fn [e]
-                                               (fx/run-later!
-                                                #(fx/set-field! table :dc/cursor {:row (int link)}))))}))})))
+                                               (when-let [row (index-of-cell (.getItems table) link)] ;;might be filtered
+                                                 (fx/run-later!
+                                                  #(fx/set-field! table :dc/cursor {:row (int row)})))))}))})))
 
 (defn cells-table
   [cells-atom]
@@ -204,10 +210,11 @@
 
 (defin open-view
   {:alias  :cells/open-view
-   :params [[:cursor ::in/table-cursor]]}
-  [{:keys [cursor]}]
-  (when cursor
-    (let [component (some-> (c/all-cells)
+   :params [[:cursor ::in/table-cursor]
+            [:table ::in/main-component]]}
+  [{:keys [cursor table]}]
+  (when (and cursor table)
+    (let [component (some-> (into [] (.getItems table))
                             (nth (:row cursor))
                             :cell
                             c/meta
