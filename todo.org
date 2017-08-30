@@ -48,7 +48,8 @@
 **** DONE Linked table/row-edn-view does not update when changing original CSV
      Not a bug, it's due to table losing selection when data are updated
 **** DONE "Jumping" input column checkmarks
-**** PROG Table: why does it take so long to call open-view on a view?
+**** TODO quick window/swapS result in components disappearing
+**** PROG Table: why does it take so long to call open-view on a view? because of the timer of message!
 **** TODO It's not reliable to call windows functions in sequence like this:
 
      #+BEGIN_SRC clojure
@@ -75,6 +76,11 @@
 **** DONE Table: use <s> to toggle showing system cells
 **** TODO Table: add "code" column
 **** DONE Table: refactor to use TableCellFactory instead of TableCellValueFactory
+**** TODO Named ports for cells
+**** TODO View/edit pipeline as code
+*** Tree View
+**** TODO Tree view
+**** TODO FXML/HTML skin for tree view
 *** General
 **** PROG View registry and a way to switch between views
 **** DONE Make view cells output stuff such as selection etc
@@ -87,6 +93,11 @@
 **** TODO User code loading
 **** TODO Maven integration and hotloading
 **** TODO Consider using a non-editable HTMLEditor instead of WebView (Why???)
+**** TODO Use bindings instead of listeners for javafx
+**** TODO Image view with watch file
+**** TODO Integrate nuka
+**** TODO graphviz for cells?
+**** TODO universal help by pressing <h>
 *** Help
 **** TODO Help: topics
 **** TODO Help: table of contents
