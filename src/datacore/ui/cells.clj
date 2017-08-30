@@ -11,7 +11,8 @@
   (:import [de.jensd.fx.glyphs.fontawesome FontAwesomeIcon FontAwesomeIconView]
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
            [javafx.scene.paint Color]
-           [javafx.scene.control Tooltip]))
+           [javafx.scene.control Tooltip]
+           [javafx.geometry Pos]))
 
 (defn cell-graph-elements [cells-atom]
   [{:fx/type :scene.shape/rectangle
@@ -119,27 +120,53 @@
      {:items            (observable-list table-cells-atom)
       :columns          [(table/column "id" :id)
                          (table/column "roles" :roles
-                                       (fn [this roles empty?]
-                                         (when-not empty? (.setGraphic this (roles-cell roles)))))
+                                       ;; (fn [this roles empty?]
+                                       ;;   (when-not empty?
+                                       ;;     (.setAlignment this Pos/CENTER)
+                                       ;;     (.setGraphic this (roles-cell roles))))
+                                       )
                          (table/column "label" :label)
                          (table/column "input?" :formula?
-                                       (fn [this formula? empty?]
-                                         (when (not (or formula? empty?))
-                                           (.setGraphic this (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))))
+                                       (fx/callback
+                                        (fn [_]
+                                          (prn 'make-cell)
+                                          (let [checkmark (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})]
+                                            (doto (table/cell
+                                                   {:update-item
+                                                    (fn [cell formula? empty?]
+                                                      (prn 'update-item)
+                                                      (when (not (or formula? empty?))
+                                                        (.setGraphic cell checkmark)))
+                                                    :update-selected
+                                                    (fn [cell selected?]
+                                                      (prn 'selected? selected?)
+                                                      (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))})
+                                              (.setAlignment Pos/CENTER))))))
                          (table/column "enabled?" :enabled?
-                                       (fn [this enabled? empty?]
-                                         (when enabled?
-                                           (.setGraphic this (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})))))
+                                       (fx/callback
+                                        (fn [_]
+                                          (let [checkmark (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})]
+                                            (doto (table/cell
+                                                   {:update-item
+                                                    (fn [cell enabled? empty?]
+                                                      (when enabled?
+                                                        (.setGraphic cell checkmark)))
+                                                    :update-selected
+                                                    (fn [cell selected?]
+                                                      (.setFill checkmark (if selected? Color/WHITE Color/BLACK)))})
+                                              (.setAlignment Pos/CENTER))))))
                          (table/column "value" :value)
                          (table/column "error" :error)
                          (table/column "sinks" :sinks
-                                       (fn [this sinks empty?]
-                                         (when-not empty?
-                                           (.setGraphic this (links-cell table sinks)))))
+                                       ;; (fn [this sinks empty?]
+                                       ;;   (when-not empty?
+                                       ;;     (.setGraphic this (links-cell table sinks))))
+                                       )
                          (table/column "sources" :sources
-                                       (fn [this sources empty?]
-                                         (when-not empty?
-                                           (.setGraphic this (links-cell table sources)))))
+                                       ;; (fn [this sources empty?]
+                                       ;;   (when-not empty?
+                                       ;;     (.setGraphic this (links-cell table sources))))
+                                       )
                          (table/column "meta" :meta)]})
     (let [column-widths [[5 200]
                          [7 100]

@@ -157,23 +157,26 @@
 (defn column
   ([name cell-value-fn]
    (column name cell-value-fn nil))
-  ([name cell-value-fn cell-fn]
+  ([name cell-value-fn cell-factory-callback]
    (fx/make
     :scene.control/table-column
     (merge
      {:fx/args [name]
       :cell-value-factory (callback (fn [x] (ReadOnlyObjectWrapper. (cell-value-fn (.getValue x)))))}
-     (when cell-fn
-       {:cell-factory
-        (callback
-         (fn [table-column]
-           (proxy [TableCell] []
-             (updateItem [item empty]
-               (proxy-super updateItem item empty)
-               (when empty
-                 (.setText this "")
-                 (.setGraphic this nil))
-               (cell-fn this item empty)))))})))))
+     (when cell-factory-callback
+       {:cell-factory cell-factory-callback})))))
+
+(defn cell [{:keys [update-item update-selected]}]
+  (proxy [TableCell] []
+    (updateItem [item empty]
+      (proxy-super updateItem item empty)
+      (when empty
+        (.setText this "")
+        (.setGraphic this nil))
+      (when update-item (update-item this item empty)))
+    (updateSelected [selected]
+      (proxy-super updateSelected selected)
+      (when update-selected (update-selected this selected)))))
 
 (defmethod fx/fget [TableView :dc/selected-cells]
   [table _]
