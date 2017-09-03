@@ -90,7 +90,8 @@
    (clojure.core/merge
     (:mapping table-keymap)
     {:enter :cells/open-view
-     :s     :cells/toggle-system})})
+     :s     :cells/toggle-system
+     :m     :cells/toggle-mute})})
 
 (def web-keymap
   {:name :datacore.ui.view/web

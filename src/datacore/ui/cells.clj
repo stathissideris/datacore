@@ -225,6 +225,19 @@
           (fx/run-later! #(view/focus! component)) ;;TODO bring window to front?
           (fx/run-later! #(windows/replace-focused! component)))))))
 
+(defin toggle-mute
+  {:alias :cells/toggle-mute
+   :params [[:cursor ::in/table-cursor]
+            [:table ::in/main-component]]}
+  [{:keys [cursor table]}]
+  (when (and cursor table)
+    (let [cell (some-> (into [] (.getItems table))
+                       (nth (:row cursor))
+                       :cell)]
+      (when cell (c/toggle-mute! cell))
+      (fx/run-later!
+       #(fx/set-field! table :dc/cursor {:row (:row cursor)})))))
+
 (defin toggle-system
   {:alias :cells/toggle-system
    :params [[:component ::in/main-component]]}

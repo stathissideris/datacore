@@ -603,6 +603,14 @@
 (defn unmute! [cell-id]
   (clean-swap! global-cells unmute cell-id))
 
+(defn toggle-mute [cells cell-id]
+  (-> cells
+      (update-formula cell-id update :enabled? not)
+      (touch cell-id)))
+
+(defn toggle-mute! [cell-id]
+  (clean-swap! global-cells toggle-mute cell-id))
+
 (defn- new-sources [old-sources fun]
   (let [arities (set (reflection/arities fun))]
     (if (contains? arities :rest)
