@@ -132,7 +132,7 @@
       (when (= ObservableList (.getReturnType getter-method)) ;;support for setting observable list fields
         (let [getter (getter clazz field-kw)]
           (fn [object value]
-            (.setAll (getter object) value)
+            (.setAll (getter object) (remove nil? value))
             object))))))
 
 (defn get-field [object field-kw]

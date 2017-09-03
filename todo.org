@@ -62,11 +62,15 @@
 *** Prompt
 **** TODO Prompt: show focus in main window even if prompt has focus
 **** TODO Prompt: multiple choice
+**** PROG Prompt: string
+**** TODO Prompt: clojure code
 **** TODO Prompt: fix layout when we have no autocomplete
 **** TODO Prompt: go to previous parameter
 **** PROG File prompt
 **** TODO Maybe display cell errors in UI panels?
 **** PROG Prompt: better colours for selected option in list
+*** Errors
+**** TODO What happens when you run a function that cannot resolve one of its parameters?
 *** Tables
 **** TODO Table selection modes
 *** Cells

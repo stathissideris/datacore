@@ -33,6 +33,12 @@
 (defmethod resolve-param-help ::focus-parent
   [_] "The focused component containing the current view.")
 
+(defmethod resolve-param ::cell
+  [_]
+  (-> state/focused-component c/value (fx/get-field :dc/cell)))
+(defmethod resolve-param-help ::cell
+  [_] "The the cell being viewed.")
+
 (defmethod resolve-param ::cell-data
   [_]
   (-> state/focused-component c/value (fx/get-field :dc/cell) c/value))
@@ -111,7 +117,7 @@
            (take 50)))))
 
 (defn validate-file [item]
-  (if (fs/directory? (:value item))
+  (if (fs/directory? (-> item :selected-item :value))
     "Please select a file, not a directory"
     true))
 

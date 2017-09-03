@@ -7,6 +7,7 @@
             [datacore.ui.interactive :as in :refer [defin]]
             [datacore.util :as util]
             [clojure.string :as str]
+            [clojure.spec :as s]
             [me.raynes.fs :as fs])
   (:import [javafx.scene.control ListCell]))
 
@@ -25,10 +26,35 @@
              (-> tf .getChildren (.setAll (map fx/text (:text item))))
              (.setGraphic this tf))))))))
 
+(s/def ::title string?)
+(s/def ::prompt-text string?)
+(s/def ::input-strategy #{:free :constrained-autocomplete :free-autocomplete})
+(s/def ::initial-input string?)
+
+(s/def ::text string?)
+(s/def ::raw string?)
+(s/def ::value any?)
+(s/def ::choice-item (s/keys :req-un [::text ::raw ::value]))
+(s/def ::autocomplete-fn (s/fspec :args (s/cat :input string?)
+                                  :ret (s/coll-of ::choice-item)))
+(s/def ::input-text string?)
+(s/def ::selected-item ::choice-item)
+(s/def ::prompt-result (s/keys :req-un [::input-text ::selected-item ::input-strategy]))
+(s/def ::valid?-fn (s/fspec :args (s/cat :input ::prompt-result)
+                            :ret (s/or :valid #{true} :error-message string?)))
+(s/def ::accept-fn (s/fspec :args (s/cat :input ::prompt-result)))
+(s/def ::cancel-fn (s/fspec :args (s/cat)))
+
+(s/fdef make-popup
+        :args (s/cat :options
+                     (s/keys :req-un [::title ::prompt-text]
+                             :opt-un [::input-strategy ::initial-input
+                                      ::autocomplete-fn ::accept-fn ::valid?-fn ::cancel-fn])))
 (defn make-popup [{:keys [title
                           prompt-text
-                          autocomplete-fn
+                          input-strategy
                           initial-input
+                          autocomplete-fn
                           accept-fn
                           valid?-fn
                           cancel-fn]}]
@@ -105,12 +131,12 @@
             #(do
                (fx/set-field! list :items items)
                (-> list .getSelectionModel .selectFirst))))))
-      (reset! state {:accept-fn accept-fn
-                     :cancel-fn cancel-fn
-                     :valid?-fn valid?-fn})
+      (reset! state {:accept-fn      accept-fn
+                     :cancel-fn      cancel-fn
+                     :valid?-fn      valid?-fn
+                     :input-strategy input-strategy})
       (in/call :prompt/end)
       window)))
-
 ;;;;;;;;;;;;;;;;;;;; interactive ;;;;;;;;;;;;;;;;;;;;
 
 (def ^:private scroll-to* (-> javafx.scene.control.ListView (.getMethod "scrollTo" (into-array [Integer/TYPE]))))
@@ -230,28 +256,33 @@
       (.setText input-box (:raw selected))
       (in/call :prompt/end))))
 
+(defn- get-autocomplete-selection [component]
+  (when-let [list (fx/find-by-id component "autocomplete-list")]
+    (let [selection (.getSelectionModel list)
+          length    (some-> list .getItems .size)]
+      (or (.getSelectedItem selection)
+          (when (= 1 length) (some-> list .getItems first))))))
+
+(defn- get-free-text [component]
+  (when-let [input-box (fx/find-by-id component "input")]
+    (.getText input-box)))
+
 (defin accept
   {:alias :prompt/accept
    :params [[:component ::in/focus-parent]]}
   [{:keys [component]}]
-  (let [input-box  (fx/find-by-id component "input")
-        input      (.getText input-box)
-        list       (fx/find-by-id component "autocomplete-list")
-        selection  (.getSelectionModel list)
-        length     (some-> list .getItems .size)
-        selected   (or (.getSelectedItem selection)
-                       (when (= 1 length) (some-> list .getItems first)))
-        value      (:value selected)
-        accept-fn  (:accept-fn @state)
-        valid?-fn  (:valid?-fn @state)
-        validation (if valid?-fn (valid?-fn selected) true)
-        stage      (fx/stage-of component)]
+  (let [prompt-result {:input-text     (get-free-text component)
+                       :selected-item  (get-autocomplete-selection component)
+                       :input-strategy (or (:input-strategy @state) :constrained-autocomplete)}
+        accept-fn     (:accept-fn @state)
+        valid?-fn     (:valid?-fn @state)
+        validation    (if valid?-fn (valid?-fn prompt-result) true)
+        stage         (fx/stage-of component)]
     (if (true? validation)
       (do
         @(fx/run-later! #(when stage (.close stage)))
         (reset! state nil)
-        (when accept-fn (accept-fn {:input-text    input
-                                    :selected-item value})))
+        (when accept-fn (accept-fn prompt-result)))
       (let [txt (fx/find-by-id component "info-text")]
         (fx/run-later!
          #(doto (fx/get-field txt :children)
@@ -267,12 +298,26 @@
             :prompt-text     prompt
             :autocomplete-fn in/function-autocomplete
             :initial-input   "w" ;;TODO if you make this an empty string the JVM crashes!!!!
-            :accept-fn       (fn [selected]
-                               (deliver out (:selected-item selected)))})
+            :accept-fn       (fn [result]
+                               (deliver out (-> result :selected-item :value)))})
           fx/show!))
     @out))
 (defmethod in/resolve-param-help ::in/function
   [_] "You will be prompted to choose a function.")
+
+(defmethod in/resolve-param ::in/string
+  [{:keys [title prompt initial-input]}]
+  (let [out (promise)]
+    (fx/run-later!
+     #(-> (make-popup
+           {:title           title
+            :prompt-text     prompt
+            :accept-fn       (fn [result]
+                               (deliver out (:input-text result)))})
+          fx/show!))
+    @out))
+(defmethod in/resolve-param-help ::in/function
+  [_] "You will be prompted to enter some text.")
 
 (defmethod in/resolve-param ::in/file
   [{:keys [title prompt initial-input]}]
@@ -283,10 +328,11 @@
             :prompt-text     prompt
             :autocomplete-fn in/file-autocomplete
             :initial-input   (str (fs/home) ;;TODO if you make this an empty string the JVM crashes!!!!
+                                  "/devel/datacore/test-resources"
                                   java.io.File/separator)
             :valid?-fn       in/validate-file
-            :accept-fn       (fn [selected]
-                               (deliver out (:selected-item selected)))})
+            :accept-fn       (fn [result]
+                               (deliver out (-> result :selected-item :value)))})
           fx/show!))
     @out))
 (defmethod in/resolve-param-help ::in/function
