@@ -241,10 +241,10 @@
   [{:keys [cell code]}]
   (let [code           `(fn [{:keys [~'data] :as ~'input}]
                           (assoc ~'input :data ~(edn/read-string code)))
-        transform-cell (c/formula (eval code) ::c/unlinked)
+        transform-cell (c/formula (eval code) ::c/unlinked
+                                  {:label :transform-cell
+                                   :meta {:roles #{:transform}}})
         upstream       (first (c/sources cell))]
-    (prn 'cell cell)
-    (prn 'upstream upstream)
     (c/linear-insert! upstream transform-cell cell)))
 
 ;;(filter (fn [e] (= "Documentary" (:title-type e))) data)
