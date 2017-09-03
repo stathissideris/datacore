@@ -32,6 +32,16 @@
 *** DONE Re-introduce custom CSS and reactive CSS
 ** To do
 *** Bugs
+**** PROG Table: why does it take so long to call open-view on a view? because of the timer of message!
+**** TODO It's not reliable to call windows functions in sequence like this:
+
+     #+BEGIN_SRC clojure
+       @(fx/run-later! windows/split-right)
+       @(fx/run-later! windows/focus-right)
+       @(windows/replace-focused! view)
+       (fx/run-later! windows/focus-left)
+     #+END_SRC
+**** TODO quick window/swapS result in components disappearing
 **** DONE Bug: CSV view+Cells view makes focus switching slow
 **** DONE Bug: No selection when table first focuses
 **** DONE Bug fix confusing build-view, build-cell-view multimethod mess
@@ -48,27 +58,18 @@
 **** DONE Linked table/row-edn-view does not update when changing original CSV
      Not a bug, it's due to table losing selection when data are updated
 **** DONE "Jumping" input column checkmarks
-**** TODO quick window/swapS result in components disappearing
-**** PROG Table: why does it take so long to call open-view on a view? because of the timer of message!
-**** TODO It's not reliable to call windows functions in sequence like this:
-
-     #+BEGIN_SRC clojure
-       @(fx/run-later! windows/split-right)
-       @(fx/run-later! windows/focus-right)
-       @(windows/replace-focused! view)
-       (fx/run-later! windows/focus-left)
-     #+END_SRC
-
 *** Prompt
 **** TODO Prompt: show focus in main window even if prompt has focus
 **** TODO Prompt: multiple choice
-**** PROG Prompt: string
-**** TODO Prompt: clojure code
-**** TODO Prompt: fix layout when we have no autocomplete
+**** DONE Prompt: string
+**** DONE Prompt: clojure code
+**** TODO try to eval clojure code for better validation on input
 **** TODO Prompt: go to previous parameter
 **** PROG File prompt
 **** TODO Maybe display cell errors in UI panels?
 **** PROG Prompt: better colours for selected option in list
+**** TODO Prompt: fix layout when we have no autocomplete
+**** TODO do not start with highlighted text
 *** Errors
 **** TODO What happens when you run a function that cannot resolve one of its parameters?
 *** Tables
@@ -78,10 +79,11 @@
 **** DONE Cells: Add icons for roles in cells table
 **** DONE add roles to all system cells
 **** DONE Table: use <s> to toggle showing system cells
-**** TODO Table: add "code" column
+**** DONE Table: add "code" column
 **** DONE Table: refactor to use TableCellFactory instead of TableCellValueFactory
 **** TODO Named ports for cells
 **** TODO View/edit pipeline as code
+**** TODO prefer simplified code for cells table
 *** Tree View
 **** TODO Tree view
 **** TODO FXML/HTML skin for tree view
@@ -96,6 +98,7 @@
 **** TODO User CSS
 **** TODO User code loading
 **** TODO Maven integration and hotloading
+**** TODO what requires are available to each cell?
 **** TODO Consider using a non-editable HTMLEditor instead of WebView (Why???)
 **** TODO Use bindings instead of listeners for javafx
 **** TODO Image view with watch file

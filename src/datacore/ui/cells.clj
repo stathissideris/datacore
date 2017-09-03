@@ -9,7 +9,8 @@
             [datacore.ui.view.table :as table]
             [datacore.ui.observable :refer [observable-list]]
             [clojure.string :as str]
-            [clojure.edn :as edn])
+            [clojure.edn :as edn]
+            [clojure.walk :as walk])
   (:import [de.jensd.fx.glyphs.fontawesome FontAwesomeIcon FontAwesomeIconView]
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
            [javafx.scene.paint Color]
@@ -91,6 +92,15 @@
                                                  (fx/run-later!
                                                   #(fx/set-field! table :dc/cursor {:row (int row)})))))}))})))
 
+(defn- format-code [code]
+  (->> code
+       (walk/postwalk
+        (fn [x]
+          (if (and (symbol? x) (= "clojure.core" (namespace x)))
+            (symbol (name x))
+            x)))
+       pr-str))
+
 (defn cells-table
   [cells-atom]
   (let [table            (fx/make-tree
@@ -161,6 +171,10 @@
                                          (when enabled?
                                            (.setGraphic cell checkmark)))})
                                  (.setAlignment Pos/TOP_CENTER))))))
+                         (table/column "code" (fn [c]
+                                                (if (:code c)
+                                                  (format-code (:code c))
+                                                  "")))
                          (table/column "value" :value)
                          (table/column "error" :error)
                          (table/column
@@ -183,9 +197,10 @@
                                    (.setGraphic cell (links-cell table links))))}))))
                          (table/column "meta" :meta)]})
     (let [column-widths [[5 200]
-                         [7 100]
+                         [6 200]
                          [8 100]
-                         [9 200]]]
+                         [9 100]
+                         [10 200]]]
       (doseq [[idx width] column-widths]
         (-> table .getColumns (nth idx) (.setPrefWidth width))))
     (view/configure-view
@@ -256,7 +271,8 @@
                           (assoc ~'input :data ~(edn/read-string code)))
         transform-cell (c/formula (eval code) ::c/unlinked
                                   {:label :transform-cell
-                                   :meta {:roles #{:transform}}})
+                                   :meta {:roles #{:transform}
+                                          :code  code}})
         upstream       (first (c/sources cell))]
     (c/linear-insert! upstream transform-cell cell)))
 
