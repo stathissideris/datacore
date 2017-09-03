@@ -4,6 +4,7 @@
             [datacore.cells :as c]
             [datacore.state :as state]
             [clojure.string :as str]
+            [clojure.edn :as edn]
             [me.raynes.fs :as fs]))
 
 (def functions (c/cell :functions {} {:meta {:roles #{:system}}}))
@@ -151,3 +152,9 @@
 
           (fs/exists? input)
           [(file-item (-> input fs/file .getCanonicalFile str) input)])))
+
+(defn validate-clojure-code [input]
+  (try (edn/read-string (:input-text input))
+       true
+       (catch Exception e
+         (.getMessage e))))

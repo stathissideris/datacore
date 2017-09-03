@@ -274,15 +274,15 @@
   (let [prompt-result {:input-text     (get-free-text component)
                        :selected-item  (get-autocomplete-selection component)
                        :input-strategy (or (:input-strategy @state) :constrained-autocomplete)}
-        accept-fn     (:accept-fn @state)
-        valid?-fn     (:valid?-fn @state)
-        validation    (if valid?-fn (valid?-fn prompt-result) true)
+        accept        (:accept-fn @state)
+        valid?        (:valid?-fn @state)
+        validation    (if valid? (valid? prompt-result) true)
         stage         (fx/stage-of component)]
     (if (true? validation)
       (do
         @(fx/run-later! #(when stage (.close stage)))
         (reset! state nil)
-        (when accept-fn (accept-fn prompt-result)))
+        (when accept (accept prompt-result)))
       (let [txt (fx/find-by-id component "info-text")]
         (fx/run-later!
          #(doto (fx/get-field txt :children)
@@ -310,14 +310,29 @@
   (let [out (promise)]
     (fx/run-later!
      #(-> (make-popup
-           {:title           title
-            :prompt-text     prompt
-            :accept-fn       (fn [result]
-                               (deliver out (:input-text result)))})
+           {:title       title
+            :prompt-text prompt
+            :accept-fn   (fn [result]
+                           (deliver out (:input-text result)))})
           fx/show!))
     @out))
 (defmethod in/resolve-param-help ::in/function
   [_] "You will be prompted to enter some text.")
+
+(defmethod in/resolve-param ::in/clojure-code
+  [{:keys [title prompt initial-input]}]
+  (let [out (promise)]
+    (fx/run-later!
+     #(-> (make-popup
+           {:title       title
+            :prompt-text prompt
+            :valid?-fn   in/validate-clojure-code
+            :accept-fn   (fn [result]
+                           (deliver out (:input-text result)))})
+          fx/show!))
+    @out))
+(defmethod in/resolve-param-help ::in/function
+  [_] "You will be prompted to enter some Clojure code.")
 
 (defmethod in/resolve-param ::in/file
   [{:keys [title prompt initial-input]}]

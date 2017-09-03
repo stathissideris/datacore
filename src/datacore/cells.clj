@@ -18,11 +18,12 @@
 
 (defrecord CellID [id])
 
-(defn cell-id? [cell-id] (instance? datacore.cells.CellID cell-id))
+(defn cell-id? [cell-id] (or (= ::unlinked cell-id)
+                             (instance? datacore.cells.CellID cell-id)))
 
 (defn make-cells []
-  {:cells           {}   ;;map of cell IDs to cell values
    :sinks           {}   ;;map of cell IDs to sets of sinks
+  {:cells           {}   ;;map of cell IDs to cell values
    :sources         {}   ;;map of cell IDs to sets of sources
    :meta            {}   ;;map of cell IDs to maps of metadata
    :touched         #{}
@@ -76,8 +77,8 @@
 (s/def ::label (s/nilable keyword?))
 (s/def ::code any?)
 (s/def ::fun ifn?)
-(s/def ::cell-sources-list (s/coll-of (s/or :cell ::cell-id
-                                            :unlinked #{::unlinked})))
+(s/def ::sources-list (s/coll-of (s/or :cell ::cell-id
+                                       :unlinked #{::unlinked})))
 (s/fdef make-cells
   :ret ::cells-graph)
 
@@ -252,11 +253,17 @@
 (defn- set-error! [cell-id e]
   (clean-swap! global-cells set-error cell-id e))
 
-(defn- sources [cells cell-id]
-  (get-in cells [:sources cell-id]))
+(defn sources
+  ([cell-id]
+   (sources @global-cells cell-id))
+  ([cells cell-id]
+   (get-in cells [:cells cell-id :sources-list])))
 
-(defn- sinks [cells cell-id]
-  (get-in cells [:sinks cell-id]))
+(defn sinks
+  ([cell-id]
+   (sinks @global-cells cell-id))
+  ([cells cell-id]
+   (get-in cells [:sinks cell-id])))
 
 (defn- all-downstream [cells cell-id]
   (into #{} (tree-seq (partial sinks cells)
@@ -322,12 +329,19 @@
   (clean-swap! global-cells unlink-slot sink-id slot-idx))
 
 (defn link-slot [cells source-id sink-id slot-idx]
-  (-> cells
-      (unlink-slot sink-id slot-idx false)
-      (add-link source-id sink-id)
-      (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
-      ;;TODO should puul here
-      (touch sink-id)))
+  (if (> slot-idx (->> sink-id (sources cells) count dec))
+    (throw (ex-info (format "Cannot link into slot %d of cell %d - it only has %d slots"
+                            slot-idx (.-id sink-id) (-> sink-id sources count))
+                    {:cells     cells
+                     :source-id source-id
+                     :sink-id   sink-id
+                     :slot-idx  slot-idx}))
+    (-> cells
+        (unlink-slot sink-id slot-idx false)
+        (add-link source-id sink-id)
+        (assoc-in [:cells sink-id :sources-list slot-idx] source-id)
+        ;;TODO should pull here
+        (touch sink-id))))
 (s/fdef link-slot
   :args (s/& (s/cat :cells ::cells-graph, :source ::cell-id, :sink ::cell-id :slot nat-int?)
              (fn [{:keys [cells sink]}] (formula? cells sink)))
@@ -418,18 +432,11 @@
 (defn linear-move-down! [cell-id]
   (clean-swap! global-cells linear-move-down cell-id))
 
-(defn linear-insert [cells parent cell child]
-  (when-not (= 1 (count (sinks cells parent)))
-    (throw (ex-info "Linear insert parent has to have one sink only"
-                    {:parent (lookup cells parent)
-                     :cell   (lookup cells cell)
-                     :child  (lookup cells child)})))
-  (when-not (= 1 (count (sources cells child)))
-    (throw (ex-info "Linear insert child has to have one source only"
-                    {:parent (lookup cells parent)
-                     :cell   (lookup cells cell)
-                     :child  (lookup cells child)})))
-
+(defn linear-insert
+  "Inserts a new cell between parent and child by breaking their link
+  and connecting the parent to the first slot of the cell and the cell
+  to the first slot of the child."
+  [cells parent cell child]
   (-> cells
       (unlink parent child false)
       (link-slot parent cell 0)

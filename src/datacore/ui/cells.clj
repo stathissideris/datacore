@@ -8,7 +8,8 @@
             [datacore.ui.util :refer [with-status-line]]
             [datacore.ui.view.table :as table]
             [datacore.ui.observable :refer [observable-list]]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.edn :as edn])
   (:import [de.jensd.fx.glyphs.fontawesome FontAwesomeIcon FontAwesomeIconView]
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
            [javafx.scene.paint Color]
@@ -80,7 +81,7 @@
     (fx/make :scene.control/label {:text ""})
     (fx/make :scene.layout/flow-pane
              {:children
-              (for [link (sort links)]
+              (for [link links]
                 (fx/make :scene.control/hyperlink
                          {:text (str link)
                           :text-fill (Color/web "0x0000A0")
@@ -170,7 +171,7 @@
                               {:update-item
                                (fn [cell links empty?]
                                  (when-not empty?
-                                   (.setGraphic cell (links-cell table links))))}))))
+                                   (.setGraphic cell (links-cell table (sort links)))))}))))
                          (table/column
                           "sources" :sources
                           (fx/callback
@@ -230,3 +231,20 @@
   [{:keys [component]}]
   (util/alter-meta! component update :show-system? not)
   ((-> component util/meta :refresh-fn)))
+
+(defin add-transform-cell
+  {:alias :cells/add-transform-cell
+   :params [[:cell ::in/cell]
+            [:code {:type   ::in/clojure-code
+                    :title  "Transform cell code"
+                    :prompt "Enter a Clojure expression"}]]}
+  [{:keys [cell code]}]
+  (let [code           `(fn [{:keys [~'data] :as ~'input}]
+                          (assoc ~'input :data ~(edn/read-string code)))
+        transform-cell (c/formula (eval code) ::c/unlinked)
+        upstream       (first (c/sources cell))]
+    (prn 'cell cell)
+    (prn 'upstream upstream)
+    (c/linear-insert! upstream transform-cell cell)))
+
+;;(filter (fn [e] (= "Documentary" (:title-type e))) data)
