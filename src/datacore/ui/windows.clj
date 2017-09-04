@@ -93,6 +93,7 @@
         parent  (fx/parent focused)]
     (when-not (fx/has-style-class? parent "root")
       (let [root (get-root focused)]
+        ;;TODO (.setVisible false) on all the things that will disappear
         (fx/run-later! #(fx/set-field! root :center focused))))))
 
 (defin delete
@@ -103,6 +104,7 @@
     (when-not (fx/has-style-class? parent "root")
       (let [split-pane (fx/parent parent)
             other      (some->> (.getItems split-pane) (remove #(= % focused)) first)]
+        (.setVisible focused false)
         (replace! split-pane other)))))
 
 (defin balance
