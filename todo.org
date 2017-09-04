@@ -33,6 +33,7 @@
 ** To do
 *** Bugs
 **** DONE Table: why does it take so long to call open-view on a view? because of the timer of message!
+**** TODO quick window/swapS result in components disappearing
 **** TODO It's not reliable to call windows functions in sequence like this:
 
      #+BEGIN_SRC clojure
@@ -41,7 +42,6 @@
        @(windows/replace-focused! view)
        (fx/run-later! windows/focus-left)
      #+END_SRC
-**** TODO quick window/swapS result in components disappearing
 **** DONE Bug: CSV view+Cells view makes focus switching slow
 **** DONE Bug: No selection when table first focuses
 **** DONE Bug fix confusing build-view, build-cell-view multimethod mess
@@ -60,7 +60,8 @@
 **** DONE "Jumping" input column checkmarks
 *** Prompt
 **** TODO Prompt: show focus in main window even if prompt has focus
-**** TODO Prompt: multiple choice
+**** TODO multiple choice (and being able to check one or many options)
+**** TODO multiple choice or custom
 **** DONE Prompt: string
 **** DONE Prompt: clojure code
 **** TODO try to eval clojure code for better validation on input
@@ -70,8 +71,14 @@
 **** PROG Prompt: better colours for selected option in list
 **** TODO Prompt: fix layout when we have no autocomplete
 **** TODO do not start with highlighted text
+*** CSV
+**** TODO option for CSV, TSV, autodetect
+**** TODO customize delimiter
+**** TODO customize quote character
 *** Errors
 **** TODO What happens when you run a function that cannot resolve one of its parameters?
+**** TODO What happens when there is an exception in a cell?
+**** TODO Stack trace viewer
 *** Tables
 **** TODO Table selection modes
 *** Cells
@@ -84,6 +91,7 @@
 **** TODO Named ports for cells
 **** TODO View/edit pipeline as code
 **** TODO prefer simplified code for cells table
+**** TODO Bug: muting source cells causes crash
 *** Tree View
 **** TODO Tree view
 **** TODO FXML/HTML skin for tree view
