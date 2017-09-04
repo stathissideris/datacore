@@ -103,35 +103,37 @@
 
 (defn cells-table
   [cells-atom]
-  (let [table            (fx/make-tree
-                          {:fx/type  :scene.control/table-view
-                           :fx/setup
-                           (fn [table]
-                             ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
-                             (fx/set-field! table :style-class ["table-view" "main-component"])
-                             ;;(fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
-                             )})
-        component        (with-status-line
-                           table
-                           "cells!")
-        table-cells-atom (atom [])
-        watcher-name     (gensym :table-view)]
+  (let [table                 (fx/make-tree
+                               {:fx/type  :scene.control/table-view
+                                :fx/setup
+                                (fn [table]
+                                  ;;(fx/set-field-in! table [:selection-model :selection-mode] SelectionMode/MULTIPLE)
+                                  (fx/set-field! table :style-class ["table-view" "main-component"])
+                                  ;;(fx/set-field-in! table [:selection-model :cell-selection-enabled] true)
+                                  )})
+        component             (with-status-line
+                                table
+                                "cells!")
+        table-cells-atom      (atom [])
+        watcher-name          (gensym :table-view)
+        update-table-cells-fn (fn []
+                                (let [show-system? (-> table util/meta :show-system?)]
+                                  (->> (c/all-cells)
+                                       (filter #(or show-system?
+                                                    (-> % :meta :roles :system not)))
+                                       (map #(update % :value
+                                                     (fn [x] (if (instance? javafx.scene.Node x)
+                                                               "JavaFX component"
+                                                               (-> x str (util/truncate-string 100))))))
+                                       (reset! table-cells-atom))))]
     (util/add-meta! table {:show-system? false
-                           :refresh-fn   (fn [] (swap! table-cells-atom identity))}) ;;trigger watch
-    (add-watch cells-atom watcher-name
-               (fn [_ _ old new]
-                 (let [show-system? (-> table util/meta :show-system?)]
-                   (->> (c/all-cells)
-                        (filter #(or show-system?
-                                     (-> % :meta :roles :system not)))
-                        (map #(update % :value
-                                      (fn [x] (if (instance? javafx.scene.Node x)
-                                                "JavaFX component"
-                                                (-> x str (util/truncate-string 100))))))
-                        (reset! table-cells-atom)))))
+                           :refresh-fn   update-table-cells-fn})
+    (add-watch cells-atom watcher-name (fn [_ _ old new] (update-table-cells-fn)))
+
     (fx/set-field!
      component
      :fx/prop-listener [:visible (fn [source observable old visible] ;;this only works because datacore.ui.windows/replace! sets the visibility to false
+                                   (prn '--watcher-removed watcher-name)
                                    (if-not visible
                                      (remove-watch cells-atom watcher-name)))])
     (fx/set-fields!

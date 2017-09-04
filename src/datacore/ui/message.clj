@@ -2,7 +2,7 @@
   (:require [datacore.cells :as c]
             [datacore.ui.timer :as timer]))
 
-(def message-timeout 3) ;;TODO normally 3000, but causes slowness for cells table
+(def message-timeout 3000)
 
 (def initial-state
   {:type :message

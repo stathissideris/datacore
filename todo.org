@@ -32,7 +32,7 @@
 *** DONE Re-introduce custom CSS and reactive CSS
 ** To do
 *** Bugs
-**** PROG Table: why does it take so long to call open-view on a view? because of the timer of message!
+**** DONE Table: why does it take so long to call open-view on a view? because of the timer of message!
 **** TODO It's not reliable to call windows functions in sequence like this:
 
      #+BEGIN_SRC clojure

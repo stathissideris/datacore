@@ -52,19 +52,21 @@
     [name param]))
 
 (defn call [match]
-  (if-let [{:keys [var params]} (get (c/value functions) match)]
-    (do
-      (if params
-        (prn 'CALLED var params)
-        (prn 'CALLED var))
-      (let [fun (deref var)]
-        (if (not-empty params)
-          (let [params          (map expand-param params)
-                resolved-params (reduce (fn [m [k v]] (assoc m k (resolve-param v))) {} params)]
-            (prn 'PARAMS var resolved-params)
-            (fun resolved-params))
-          (fun))))
-    ::no-function))
+  (future
+    (if-let [{:keys [var params]} (get (c/value functions) match)]
+      (do
+        (prn 'CALL-IS-ON-FX-THREAD (fx/on-fx-thread?))
+        (if params
+          (prn 'CALLED var params)
+          (prn 'CALLED var))
+        (let [fun (deref var)]
+          (if (not-empty params)
+            (let [params          (map expand-param params)
+                  resolved-params (reduce (fn [m [k v]] (assoc m k (resolve-param v))) {} params)]
+              (prn 'PARAMS var resolved-params)
+              (fun resolved-params))
+            (fun))))
+      ::no-function)))
 
 (defin execute-function
   {:alias  :interactive/execute-function

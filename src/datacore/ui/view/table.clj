@@ -215,7 +215,7 @@
     @(fx/run-later!
       (fn []
         (let [data-cell       (c/formula (fn [x]
-                                           (prn '>>>table-data-cell)
+                                           ;;(prn '>>>table-data-cell)
                                            (:data x)) view-cell {:label :table-data
                                                                  :meta  {:roles #{:system}}})
               ;;stopgap cell to prevent columns-cell for updating when
@@ -226,7 +226,7 @@
                                           :meta {:roles #{:system}}})
               columns-cell    (c/formula
                                (fn [{:keys [columns column-labels]}]
-                                 (prn '>>>table-columns-cell columns column-labels)
+                                 ;;(prn '>>>table-columns-cell columns column-labels)
                                  (map (fn [c]
                                         (column (if-let [l (get column-labels c)] l (str c))
                                                 (fn [row] (get row c))))
