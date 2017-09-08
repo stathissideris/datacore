@@ -11,7 +11,8 @@
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
            [javafx.scene.paint Color]
            [javafx.scene.control Tooltip]
-           [javafx.geometry Pos]))
+           [javafx.geometry Pos]
+           [com.sun.javafx.tk Toolkit]))
 
 (defn- has-role? [cell-id role]
   (-> cell-id c/meta :roles (get role) some?))
@@ -47,18 +48,21 @@
           :text        (name (c/label cell))}])}]}))
 
 (defn- add-connectors [component]
-  (let [cells (set (fx/lookup component ".cell-box"))]
+  (let [boxes (set (fx/lookup component ".cell-box"))]
     (-> component
         .getChildren
         (.addAll
-         (for [cell cells]
-           (let [{:keys [min-x min-y width height]} (fx/bounds-in-parent cell)]
-             (fx/make-tree
-              {:fx/type :scene.shape/rectangle
-               :x       min-x
-               :y       min-y
-               :width   width
-               :height  height})))))
+         (for [cell-box boxes]
+           (do
+             (let [{:keys [min-x min-y width height]} (fx/bounds-in-parent cell-box)]
+               (fx/make-tree
+                {:fx/type :scene.shape/rectangle
+                 :x       min-x
+                 :y       min-y
+                 :width   width
+                 :height  height
+                 :fill    nil
+                 :stroke  Color/BLACK}))))))
     component))
 
 (defn- source-chain [start-cell]
@@ -68,7 +72,8 @@
          (for [[idx cell] (map-indexed vector cell-chain)]
            (cell-box cell [0 (* 65 idx)]))}
         fx/make-tree
-        add-connectors
+        fx/add-to-fake-scene
+        ;;add-connectors
         )))
 
 (defn- cells-graph-elements [cells]
@@ -90,6 +95,8 @@
               :style-class ["scroll-pane" "main-component"]
               :content     {:fx/type     :scene/group
                             :style-class ["graph-group"]
+                            ;;:scale-x     (float 2) ;;TODO scrollpane does not account for scale
+                            ;;:scale-y     (float 2)
                             :children    (cells-graph-elements @cells-atom)}})
             "cells!")})]
     (add-watch cells-atom watcher-name

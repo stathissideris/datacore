@@ -780,6 +780,29 @@
       ;;TODO linux
       )))
 
+(defn add-to-fake-scene
+  "Sometimes you need to add a component in a fake scene in order to
+  measure it before placing it in the actual scene where it needs to
+  be. This function does that, then calls .applyCss and .layout on the
+  passed component to force layout and returns the component for
+  further processing.
+
+  See:
+
+  https://stackoverflow.com/questions/26152642/get-the-height-of-a-node-in-javafx-generate-a-layout-pass
+
+  and
+
+  https://stackoverflow.com/questions/13015698/how-to-calculate-the-pixel-width-of-a-string-in-javafx"
+  [component]
+  (make-tree
+   {:fx/type :scene/scene
+    :fx/args [component]})
+  (.applyCss component)
+  (.layout component)
+  component)
+
+
 (comment
   (make
    :scene.control/button
