@@ -23,8 +23,11 @@
          (if empty
            (.setGraphic this nil)
            (do
-             (-> tf .getChildren (.setAll (map fx/text (:text item))))
-             (.setGraphic this tf))))))))
+             (let [texts (map fx/text (:text item))]
+               (doseq [text texts]
+                 (-> text .getStyleClass (.add "prompt-text")))
+               (-> tf .getChildren (.setAll texts))
+               (.setGraphic this tf)))))))))
 
 (s/def ::title string?)
 (s/def ::prompt-text string?)

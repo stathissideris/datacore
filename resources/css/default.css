@@ -9,9 +9,15 @@
 
 /* prompt */
 
-.prompt .list-cell:filled:selected:focused, .list-cell:filled:selected {
-    -fx-background-color: #0096c9;
-    -fx-text-fill: white;
+.prompt .list-cell:selected {
+  -fx-background-color: #0096c9;
+  -fx-background-radius: 6px;
+}
+
+.prompt .list-cell:selected .prompt-text {
+  -fx-fill: #ffffff; /* this is not -fx-text-fill because Text has CSS properties of Shapre */
+}
+
 }
 
 /* EDN view */
