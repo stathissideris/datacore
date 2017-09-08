@@ -28,9 +28,25 @@
   (->> (iterate (partial next-in-chain cells) start-cell)
        (take-while (complement nil?))))
 
+(defn- role-icon [role roles class icon]
+  (when (get roles role)
+    (let [icon    (fx/make class {:fx/args [icon]})
+          tooltip (Tooltip. (str/upper-case (name role)))] ;;javafx has this very weird bug that results
+                                                           ;;in lowercase "transform" and "source" being blank in the tooltip
+      (Tooltip/install icon tooltip)
+      icon)))
+
+(defn- role-icons [roles]
+  [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
+   (role-icon :system roles FontAwesomeIconView FontAwesomeIcon/CIRCLE_THIN)
+   (role-icon :control roles FontAwesomeIconView FontAwesomeIcon/USER_ALT)
+   (role-icon :source roles MaterialIconView MaterialIcon/INPUT)
+   (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)])
+
 (defn- cell-box [cells cell [x y]]
   (prn 'label (-> cells :cells (get cell) :label name))
-  (let [height 45]
+  (let [height 45
+        roles  (-> cells :meta (get cell) :roles)]
    {:fx/type :scene/group
     :children
     [{:fx/type :scene.shape/rectangle
@@ -46,8 +62,10 @@
       :pref-width  150
       :pref-height height
       :children
-      [{:fx/type :scene.control/label
-        :text    (-> cells :cells (get cell) :label name)}]}]}))
+      (concat
+       (role-icons roles)
+       [{:fx/type :scene.control/label
+         :text    (-> cells :cells (get cell) :label name)}])}]}))
 
 (defn- source-chain [cells start-cell]
   (for [[idx cell] (map-indexed vector (cell-chain cells start-cell))]
@@ -62,7 +80,6 @@
         ]
     (apply concat (for [source sources] (source-chain cells source)))))
 
-(require '[clojure.pprint :as pp])
 (defn cells-graph
   [cells]
   (view/configure-view
@@ -76,28 +93,15 @@
                       :children (cells-graph-elements @cells)}})
       "cells!")}))
 
-(defn- role-icon [role roles class icon]
-  (when (get roles role)
-    (let [icon    (fx/make class {:fx/args [icon]})
-          tooltip (Tooltip. (str/upper-case (name role)))] ;;javafx has this very weird bug that results
-                                                           ;;in lowercase "transform" and "source" being blank in the tooltip
-      (Tooltip/install icon tooltip)
-      icon)))
-
 (defn- roles-cell [roles]
   (let [remaining-roles (disj roles :view :system :control :source :transform)]
     (fx/make :scene.layout/h-box
              {:alignment Pos/TOP_CENTER
               :spacing 2
               :children
-              (remove nil?
-                      [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
-                       (role-icon :system roles FontAwesomeIconView FontAwesomeIcon/CIRCLE_THIN)
-                       (role-icon :control roles FontAwesomeIconView FontAwesomeIcon/USER_ALT)
-                       (role-icon :source roles MaterialIconView MaterialIcon/INPUT)
-                       (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)
-                       (when-not (empty? remaining-roles)
-                         (fx/make :scene.control/label {:text (pr-str remaining-roles)}))])})))
+              (conj (role-icons roles)
+                    (when-not (empty? remaining-roles)
+                      (fx/make :scene.control/label {:text (pr-str remaining-roles)})))})))
 
 (defn- boolean-cell [bool]
   (if-not bool
