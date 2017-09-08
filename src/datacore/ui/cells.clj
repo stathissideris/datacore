@@ -44,23 +44,17 @@
    (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)])
 
 (defn- cell-box [cells cell [x y]]
-  (prn 'label (-> cells :cells (get cell) :label name))
   (let [height 45
         roles  (-> cells :meta (get cell) :roles)]
    {:fx/type :scene/group
     :children
-    [{:fx/type :scene.shape/rectangle
-      :x       x
-      :y       y
-      :width   150
-      :height  height
-      :fill    (fx/color "lightgrey")}
-     {:fx/type     :scene.layout/h-box
+    [{:fx/type     :scene.layout/h-box
       :alignment   Pos/CENTER
       :translate-x x
       :translate-y y
       :pref-width  150
       :pref-height height
+      :style       "-fx-background-color: lightgrey;"
       :children
       (concat
        (role-icons roles)
