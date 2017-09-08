@@ -17,75 +17,20 @@
            [javafx.scene.control Tooltip]
            [javafx.geometry Pos]))
 
-(defn- has-role? [cells cell-id role]
-  (let [roles (get-in cells [:meta cell-id])]
-    (some? (get roles role))))
-
-(defn- next-in-chain [cells cell-id]
-  (first (c/sinks cells cell-id)))
-
-(defn- cell-chain [cells start-cell]
-  (->> (iterate (partial next-in-chain cells) start-cell)
-       (take-while (complement nil?))))
-
 (defn- role-icon [role roles class icon]
   (when (get roles role)
-    (let [icon    (fx/make class {:fx/args [icon]})
+    (let [icon    (fx/make class {:fx/args [icon] :style-class "role-icon"})
           tooltip (Tooltip. (str/upper-case (name role)))] ;;javafx has this very weird bug that results
                                                            ;;in lowercase "transform" and "source" being blank in the tooltip
       (Tooltip/install icon tooltip)
       icon)))
 
-(defn- role-icons [roles]
+(defn role-icons [roles]
   [(role-icon :view roles FontAwesomeIconView FontAwesomeIcon/EYE)
    (role-icon :system roles FontAwesomeIconView FontAwesomeIcon/CIRCLE_THIN)
    (role-icon :control roles FontAwesomeIconView FontAwesomeIcon/USER_ALT)
    (role-icon :source roles MaterialIconView MaterialIcon/INPUT)
    (role-icon :transform roles MaterialIconView MaterialIcon/TRANSFORM)])
-
-(defn- cell-box [cells cell [x y]]
-  (let [height 45
-        roles  (-> cells :meta (get cell) :roles)]
-   {:fx/type :scene/group
-    :children
-    [{:fx/type     :scene.layout/h-box
-      :alignment   Pos/CENTER
-      :translate-x x
-      :translate-y y
-      :pref-width  150
-      :pref-height height
-      :style       "-fx-background-color: lightgrey;"
-      :children
-      (concat
-       (role-icons roles)
-       [{:fx/type :scene.control/label
-         :text    (-> cells :cells (get cell) :label name)}])}]}))
-
-(defn- source-chain [cells start-cell]
-  (for [[idx cell] (map-indexed vector (cell-chain cells start-cell))]
-    (cell-box cells cell [0 (* 75 idx)])))
-
-(defn- cells-graph-elements [cells]
-  (def cc cells)
-  (let [sources (->> cells :meta (filter (fn [[id meta]] (get (:roles meta) :source))) (map first))
-        ;; (->> cells :cells
-        ;;      (filter (fn [[id meta]] (has-role? cells id :source)))
-        ;;      (map first))
-        ]
-    (apply concat (for [source sources] (source-chain cells source)))))
-
-(defn cells-graph
-  [cells]
-  (view/configure-view
-   {:focused? true
-    :component
-    (with-status-line
-      (fx/make-tree
-       {:fx/type     :scene.control/scroll-pane
-        :style-class ["scroll-pane" "main-component"]
-        :content     {:fx/type  :scene/group
-                      :children (cells-graph-elements @cells)}})
-      "cells!")}))
 
 (defn- roles-cell [roles]
   (let [remaining-roles (disj roles :view :system :control :source :transform)]
@@ -241,13 +186,6 @@
       :component  component})))
 
 ;; interactive
-
-(defin show-graph
-  {:alias :cells/show-graph}
-  []
-  (let [component (cells-graph @#'c/global-cells)]
-    (fx/run-later!
-     #(windows/replace-focused! component))))
 
 (defin show-table
   {:alias :cells/show-table}

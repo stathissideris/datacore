@@ -18,6 +18,34 @@
   -fx-fill: #ffffff; /* this is not -fx-text-fill because Text has CSS properties of Shapre */
 }
 
+/* cells graph */
+
+.cell-box {
+  -fx-background-color: #ffefca;
+  -fx-background-radius: 6px;
+  -fx-border-color: #4b849c;
+  -fx-border-width: 0.7px;
+  -fx-border-radius: 5px;
+  -fx-padding: 0 1em 0 1em;
+  -fx-effect: dropshadow(gaussian, grey, 5, 0.1, 2, 2);
+}
+
+.cell-box.muted {
+  -fx-background-color: #ffefe2;
+  -fx-background-radius: 6px;
+  -fx-border-color: #c7dde4;
+  -fx-border-width: 0.7px;
+  -fx-border-radius: 5px;
+  -fx-padding: 0 1em 0 1em;
+  -fx-effect: dropshadow(gaussian, lightgrey, 5, 0.1, 2, 2);
+}
+
+.cell-box.muted .label {
+  -fx-text-fill: grey;
+}
+
+.cell-box.muted .role-icon {
+  -fx-fill: grey;
 }
 
 /* EDN view */

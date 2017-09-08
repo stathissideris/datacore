@@ -27,7 +27,7 @@
   (when-not (fs/exists? filename)
     (throw (ex-info "File does not exist" {:filename filename})))
   (let [csv-cell (c/cell
-                  :csv-file
+                  (keyword (fs/base-name filename))
                   (merge
                    (data-map options)
                    {:label         (fs/base-name filename)

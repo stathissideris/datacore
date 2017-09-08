@@ -612,6 +612,12 @@
 (defn toggle-mute! [cell-id]
   (clean-swap! global-cells toggle-mute cell-id))
 
+(defn muted?
+  ([cell-id]
+   (muted? @global-cells cell-id))
+  ([cells cell-id]
+   (some-> cells :cells (get cell-id) :enabled? not)))
+
 (defn- new-sources [old-sources fun]
   (let [arities (set (reflection/arities fun))]
     (if (contains? arities :rest)
