@@ -17,22 +17,54 @@
            [javafx.scene.control Tooltip]
            [javafx.geometry Pos]))
 
-(defn cell-graph-elements [cells-atom]
-  [{:fx/type :scene.shape/rectangle
-    :x       50
-    :y       50
-    :width   300
-    :height  200
-    :fill    (fx/color "red")}
-   {:fx/type :scene.shape/rectangle
-    :x       150
-    :y       150
-    :width   300
-    :height  200
-    :fill    (fx/color "blue")}])
+(defn- has-role? [cells cell-id role]
+  (let [roles (get-in cells [:meta cell-id])]
+    (some? (get roles role))))
 
+(defn- next-in-chain [cells cell-id]
+  (first (c/sinks cells cell-id)))
+
+(defn- cell-chain [cells start-cell]
+  (->> (iterate (partial next-in-chain cells) start-cell)
+       (take-while (complement nil?))))
+
+(defn- cell-box [cells cell [x y]]
+  (prn 'label (-> cells :cells (get cell) :label name))
+  (let [height 45]
+   {:fx/type :scene/group
+    :children
+    [{:fx/type :scene.shape/rectangle
+      :x       x
+      :y       y
+      :width   150
+      :height  height
+      :fill    (fx/color "lightgrey")}
+     {:fx/type     :scene.layout/h-box
+      :alignment   Pos/CENTER
+      :translate-x x
+      :translate-y y
+      :pref-width  150
+      :pref-height height
+      :children
+      [{:fx/type :scene.control/label
+        :text    (-> cells :cells (get cell) :label name)}]}]}))
+
+(defn- source-chain [cells start-cell]
+  (for [[idx cell] (map-indexed vector (cell-chain cells start-cell))]
+    (cell-box cells cell [0 (* 75 idx)])))
+
+(defn- cells-graph-elements [cells]
+  (def cc cells)
+  (let [sources (->> cells :meta (filter (fn [[id meta]] (get (:roles meta) :source))) (map first))
+        ;; (->> cells :cells
+        ;;      (filter (fn [[id meta]] (has-role? cells id :source)))
+        ;;      (map first))
+        ]
+    (apply concat (for [source sources] (source-chain cells source)))))
+
+(require '[clojure.pprint :as pp])
 (defn cells-graph
-  [cells-atom]
+  [cells]
   (view/configure-view
    {:focused? true
     :component
@@ -41,7 +73,7 @@
        {:fx/type     :scene.control/scroll-pane
         :style-class ["scroll-pane" "main-component"]
         :content     {:fx/type  :scene/group
-                      :children (cell-graph-elements cells-atom)}})
+                      :children (cells-graph-elements @cells)}})
       "cells!")}))
 
 (defn- role-icon [role roles class icon]
