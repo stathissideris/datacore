@@ -1,6 +1,7 @@
 (ns datacore.ui.observable
   (:require [datacore.util :as util]
             [datacore.cells :as c]
+            [datacore.ui.java-fx :as fx]
             [dev :as dev])
   (:import [javafx.collections FXCollections ObservableList ListChangeListener ListChangeListener$Change]))
 
@@ -57,7 +58,11 @@
       (getFrom [] (apply + (map count (take @idx diff))))
       (getTo [] (+ (apply + (map count (take @idx diff)))
                    (count (current))))
-
+      (getAddedSubList [] (let [from (.getFrom this)
+                                to   (.getTo this)]
+                           (->> the-list
+                                (drop from)
+                                (take (- from to)))))
       (getRemoved [] (if-not (.wasRemoved this) [] (map second (current)))))))
 
 (defn naive-list-change [the-list old new]
@@ -116,7 +121,9 @@
       (let [id (str "observable-list-cell-listener" (swap! cell-observable-list-id inc))]
         (swap! cell-observable-registry {listener id})
         (c/add-watch! x id (fn [ref old new]
-                             (.onChanged listener (simple-list-change this old new))))))
+                             (let [change (simple-list-change this old new)]
+                               (fx/run-later!
+                                #(.onChanged listener change)))))))
     (removeListener [^ListChangeListener listener]
       (when-let [id (get @cell-observable-registry listener)]
         (c/remove-watch! x id)))))

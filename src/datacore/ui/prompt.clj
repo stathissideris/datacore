@@ -34,7 +34,7 @@
 (s/def ::input-strategy #{:free :constrained-autocomplete :free-autocomplete})
 (s/def ::initial-input string?)
 
-(s/def ::text string?)
+(s/def ::text (s/or :raw-string string? :formatted-text vector?))
 (s/def ::raw string?)
 (s/def ::value any?)
 (s/def ::choice-item (s/keys :req-un [::text ::raw ::value]))
@@ -48,11 +48,11 @@
 (s/def ::accept-fn (s/fspec :args (s/cat :input ::prompt-result)))
 (s/def ::cancel-fn (s/fspec :args (s/cat)))
 
-(s/fdef make-popup
+#_(s/fdef make-popup
         :args (s/cat :options
                      (s/keys :req-un [::title ::prompt-text]
                              :opt-un [::input-strategy ::initial-input
-                                      ::autocomplete-fn ::accept-fn ::valid?-fn ::cancel-fn])))
+                                      ::autocomplete-fn ::accept-fn ::cancel-fn ::valid?-fn])))
 (defn make-popup [{:keys [title
                           prompt-text
                           input-strategy
