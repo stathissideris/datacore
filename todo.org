@@ -68,7 +68,7 @@
 **** TODO Prompt: go to previous parameter
 **** PROG File prompt
 **** TODO Maybe display cell errors in UI panels?
-**** PROG Prompt: better colours for selected option in list
+**** DONE Prompt: better colours for selected option in list
 **** TODO Prompt: fix layout when we have no autocomplete
 **** TODO do not start with highlighted text
 *** CSV

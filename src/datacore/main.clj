@@ -17,7 +17,7 @@
 
 (defn init []
   ;;(set! *warn-on-reflection* true)
-  (fx/set-app-icon "/images/rick.jpg")
+  ;;(fx/set-app-icon "/images/rick.jpg") ;;TODO calling this seems to trigger this https://stackoverflow.com/questions/14977546/javafx-nullpointerexception-on-startup
   (fx/init)
 
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))
