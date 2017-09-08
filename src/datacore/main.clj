@@ -17,6 +17,7 @@
 
 (defn init []
   ;;(set! *warn-on-reflection* true)
+  (fx/set-app-icon "/images/rick.jpg")
   (fx/init)
 
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))

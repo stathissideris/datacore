@@ -23,7 +23,8 @@
            [javafx.scene.text Font FontWeight FontPosture TextAlignment TextFlow]
            [javafx.scene.web WebView]
            [java.net URI]
-           [org.w3c.dom.events EventListener]))
+           [org.w3c.dom.events EventListener]
+           [javax.swing ImageIcon]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -97,6 +98,9 @@
 
 (defn bounds-in-scene [component]
   (parse-bbox (.localToScene component (.getBoundsInLocal component))))
+
+(defn bounds-in-parent [component]
+  (parse-bbox (.getBoundsInParent component)))
 
 ;;;;; reflection ;;;;;
 
@@ -601,6 +605,9 @@
 (defn focus-owner [stage]
   (some-> stage .getScene .focusOwnerProperty .get))
 
+(defn lookup [component selector]
+  (into [] (-> component (.lookupAll selector) .toArray)))
+
 ;;;;;;;;;;;;;;;;;;;; text ;;;;;;;;;;;;;;;;;;;;
 
 (defprotocol Text
@@ -753,6 +760,25 @@
         ;;TODO linux: use Runtime.getRuntime().exec() to find which browser is installed
         ;;and use the same method to invoke the browser with the passed URL
         ))))
+
+;;TODO this is interesting as well:
+;; (-> (com.apple.eawt.Application/getApplication)
+;;     (.setDockIconBadge "2"))
+
+(defn set-app-icon [resource-path]
+  (let [os (System/getProperty "os.name")]
+    (cond
+      (str/starts-with? os "Mac OS")
+      (eval
+       `(let [icon-url# (.getResource Class ~resource-path)
+              image#    (.getImage (ImageIcon. icon-url#))]
+          (-> (com.apple.eawt.Application/getApplication)
+              (.setDockIconImage image#))))
+      (str/starts-with? os "Windows")
+      ;;TODO
+      :else
+      ;;TODO linux
+      )))
 
 (comment
   (make

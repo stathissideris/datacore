@@ -22,7 +22,7 @@
   :resource-paths ["resources"]
   :main datacore.main
   :profiles {:dev {:source-paths   ["dev"]
-                   :resource-paths ["lib/scenicView.jar"]
+                   :resource-paths ["resources" "lib/scenicView.jar"]
                    :dependencies   [[org.clojure/tools.namespace "0.2.11"]
                                     [org.clojure/test.check "0.9.0"]]
                    :jvm-opts       ["-agentlib:jdwp=transport=dt_socket,server=y,address=8700,suspend=n"
