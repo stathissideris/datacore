@@ -334,6 +334,7 @@
            {:title           title
             :prompt-text     prompt
             :input-component {:fx/type     :scene.control/text-area
+                              :id          "input"
                               :wrap-text   true
                               :style-class ["code"]}
             :valid?-fn       in/validate-clojure-code
