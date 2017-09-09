@@ -209,3 +209,23 @@
   [{:keys [component]}]
   (util/alter-meta! component update :show-system? not)
   ((-> component util/meta :refresh-fn)))
+
+(defin change-code
+  {:alias :cells/change-code
+   :params [[:cursor ::in/table-cursor]
+            [:table ::in/main-component]]}
+  [{:keys [cursor table raw-code]}]
+  (if-let [cell (some-> (into [] (.getItems table))
+                        (nth (:row cursor))
+                        :cell)]
+    (let [old-code (-> cell c/meta :raw-code)
+          new-code (in/resolve-param {:type          ::in/clojure-code
+                                      :title         "Cell code"
+                                      :prompt        "Enter a Clojure expression"
+                                      :initial-input old-code})
+          code     `(fn [{:keys [~'data] :as ~'input}]
+                      (assoc ~'input :data ~(read-string new-code)))]
+      (c/alter-meta! cell assoc
+                     :code code
+                     :raw-code new-code)
+      (c/swap-function! cell (eval code)))))
