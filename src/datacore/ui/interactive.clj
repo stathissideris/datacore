@@ -155,7 +155,7 @@
           [(file-item (-> input fs/file .getCanonicalFile str) input)])))
 
 (defn validate-clojure-code [input]
-  (try (edn/read-string (:input-text input))
+  (try (read-string (:input-text input))
        true
        (catch Exception e
          (.getMessage e))))

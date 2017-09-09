@@ -30,19 +30,18 @@
 (defin add-transform-cell
   {:alias :cells/add-transform-cell
    :params [[:cell ::in/cell]
-            [:code {:type   ::in/clojure-code
-                    :title  "Transform cell code"
-                    :prompt "Enter a Clojure expression"}]]}
-  [{:keys [cell code]}]
-  (let [simple-code    (edn/read-string code)
-        code           `(fn [{:keys [~'data] :as ~'input}]
-                          (assoc ~'input :data ~simple-code))
+            [:raw-code {:type   ::in/clojure-code
+                        :title  "Transform cell code"
+                        :prompt "Enter a Clojure expression"}]]}
+  [{:keys [cell raw-code]}]
+  (let [code           `(fn [{:keys [~'data] :as ~'input}]
+                          (assoc ~'input :data ~(read-string raw-code)))
         transform-cell (c/formula (eval code) ::c/unlinked
                                   {:label :transform-cell
-                                   :meta {:roles       #{:transform}
-                                          :code        code
-                                          :simple-code simple-code}})
+                                   :meta {:roles    #{:transform}
+                                          :code     code
+                                          :raw-code raw-code}})
         upstream       (first (c/sources cell))]
     (c/linear-insert! upstream transform-cell cell)))
 
-;;(filter (fn [e] (= "Documentary" (:title-type e))) data)
+;;(filter #(= (:title-type %) "Documentary") data)

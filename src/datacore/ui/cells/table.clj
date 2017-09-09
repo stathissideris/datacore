@@ -49,15 +49,6 @@
                                                  (fx/run-later!
                                                   #(fx/set-field! table :dc/cursor {:row (int row)})))))}))})))
 
-(defn- format-code [code]
-  (->> code
-       (walk/postwalk
-        (fn [x]
-          (if (and (symbol? x) (= "clojure.core" (namespace x)))
-            (symbol (name x))
-            x)))
-       pr-str))
-
 (defn cells-table
   [cells-atom]
   (let [table                 (fx/make-tree
@@ -131,7 +122,7 @@
                                            (.setGraphic cell checkmark)))})
                                  (.setAlignment Pos/TOP_CENTER))))))
                          (table/column
-                          "code" #(if (:code %) (format-code (:code %)) "")
+                          "code" :raw-code
                           (fx/callback
                            (fn [_]
                              (table/cell
