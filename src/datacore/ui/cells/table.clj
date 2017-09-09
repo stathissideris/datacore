@@ -210,8 +210,8 @@
   (util/alter-meta! component update :show-system? not)
   ((-> component util/meta :refresh-fn)))
 
-(defin change-code
-  {:alias :cells/change-code
+(defin edit-code
+  {:alias :cells/edit-code
    :params [[:cursor ::in/table-cursor]
             [:table ::in/main-component]]}
   [{:keys [cursor table raw-code]}]

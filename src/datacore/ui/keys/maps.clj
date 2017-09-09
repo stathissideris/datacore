@@ -91,7 +91,8 @@
     (:mapping table-keymap)
     {:enter :cells/open-view
      :s     :cells/toggle-system
-     :m     :cells/toggle-mute})})
+     :m     :cells/toggle-mute
+     :e     :cells/edit-code})})
 
 (def web-keymap
   {:name :datacore.ui.view/web
