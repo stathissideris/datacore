@@ -9,7 +9,8 @@
             [datacore.ui.observable :refer [observable-list]]
             [datacore.ui.view.table :as table]
             [datacore.ui.interactive :refer [defin] :as in]
-            [datacore.ui.windows :as windows])
+            [datacore.ui.windows :as windows]
+            [clojure.string :as str])
   (:import [javafx.geometry Pos]
            [de.jensd.fx.glyphs.materialicons MaterialIcon MaterialIconView]
            [javafx.scene.paint Color]))
@@ -229,3 +230,17 @@
                      :code code
                      :raw-code new-code)
       (c/swap-function! cell (eval code)))))
+
+(defin rename
+  {:alias :cells/rename
+   :params [[:cursor ::in/table-cursor]
+            [:table ::in/main-component]]}
+  [{:keys [cursor table raw-code]}]
+  (if-let [cell      (some-> (into [] (.getItems table))
+                             (nth (:row cursor))
+                             :cell)]
+    (let [new-label (in/resolve-param {:type          ::in/string
+                                       :title         "Cell label"
+                                       :prompt        "Edit the cell label"
+                                       :initial-input (name (c/label cell))})]
+      (c/set-label! cell (keyword (str/replace new-label " " "-"))))))

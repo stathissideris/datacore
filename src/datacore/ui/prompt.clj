@@ -352,10 +352,11 @@
   (let [out (promise)]
     (fx/run-later!
      #(-> (make-popup
-           {:title       title
-            :prompt-text prompt
-            :accept-fn   (fn [result]
-                           (deliver out (:input-text result)))})
+           {:title         title
+            :prompt-text   prompt
+            :initial-input initial-input
+            :accept-fn     (fn [result]
+                             (deliver out (:input-text result)))})
           fx/show!))
     @out))
 (defmethod in/resolve-param-help ::in/function
