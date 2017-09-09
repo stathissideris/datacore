@@ -201,6 +201,40 @@
                          (.requestFocus)
                          (.end)))))))
 
+(defn- insert-pair [component closing]
+  (when component
+    (fx/run-later! #(doto component
+                      (fx/insert-text! closing)
+                      (fx/caret-left)))))
+
+(defin insert-round-parens
+  {:alias :prompt/insert-round-parens
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (when component
+    (insert-pair (fx/find-by-id component "input") ")")))
+
+(defin insert-square-parens
+  {:alias :prompt/insert-square-parens
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (when component
+    (insert-pair (fx/find-by-id component "input") "]")))
+
+(defin insert-curly-parens
+  {:alias :prompt/insert-curly-parens
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (when component
+    (insert-pair (fx/find-by-id component "input") "}")))
+
+(defin insert-double-quote
+  {:alias :prompt/insert-double-quote
+   :params [[:component ::in/focus-parent]]}
+  [{:keys [component]}]
+  (when component
+    (insert-pair (fx/find-by-id component "input") "\"")))
+
 (defin backward-char
   {:alias :prompt/backward-char
    :params [[:component ::in/focus-parent]]}

@@ -54,7 +54,7 @@
                 KeyEvent/KEY_RELEASED :key-released)
    :code      (if (= KeyEvent/KEY_TYPED (.getEventType fx-event))
                 (-> fx-event .getCharacter keyword)
-                (-> fx-event .getCode .getName str/lower-case keyword))
+                (-> fx-event .getCode .getName str/lower-case (str/replace " " "-") keyword))
    :alt       (.isAltDown fx-event)
    :ctrl      (.isControlDown fx-event)
    :meta      (.isMetaDown fx-event)

@@ -228,6 +228,10 @@
                                      :value  value})))))))))))
   object)
 
+(defn update-field! [object field fun & args]
+  (let [old-value (get-field object field)]
+    (set-field! object field (apply fun old-value args))))
+
 (defn- reload-stylesheet! [component path]
   (doto component
     (-> .getStylesheets (.remove path))
@@ -763,6 +767,32 @@
         ;;TODO linux: use Runtime.getRuntime().exec() to find which browser is installed
         ;;and use the same method to invoke the browser with the passed URL
         ))))
+
+;;;;;;;;;;;;;;;;;;;; text-areas ;;;;;;;;;;;;;;;;;;;;
+
+(defn insert-text! [text-field text]
+  (let [pos      (get-field text-field :caret-position)
+        old-text (get-field text-field :text)]
+    (set-field! text-field
+                :text (str (subs old-text 0 pos)
+                           text
+                           (subs old-text pos)))
+    (.positionCaret text-field (+ pos (count text)))))
+
+(defn caret-left
+  ([text-field]
+   (caret-left text-field 1))
+  ([text-field steps]
+   (prn 'CaretPosition (.getCaretPosition text-field) '-> (max 0 (- (.getCaretPosition text-field) steps)))
+   (.positionCaret text-field (max 0 (- (.getCaretPosition text-field) steps)))))
+
+(defn caret-right
+  ([text-field]
+   (caret-right text-field 1))
+  ([text-field steps]
+   (.positionCaret text-field (+ (.getCaretPosition text-field) steps))))
+
+;;;;;;;;;;;;;;;;;;;; application ;;;;;;;;;;;;;;;;;;;;
 
 ;;TODO this is interesting as well:
 ;; (-> (com.apple.eawt.Application/getApplication)
