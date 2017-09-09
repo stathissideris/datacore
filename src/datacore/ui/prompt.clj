@@ -154,22 +154,23 @@
 
 (defn- move-suggestion
   [component direction]
-  (let [input-box      (fx/find-by-id component "input")
-        list           (fx/find-by-id component "autocomplete-list")
-        length         (some-> list .getItems .size)
-        selection      (.getSelectionModel list)
-        selected       (.getSelectedIndex selection)
-        new-selected   (+ selected (if (= :next direction) 1 -1))
-        new-selected   (cond (= -1 new-selected) (dec length)
-                             (= length new-selected) 0
-                             :else new-selected)
-        [first-visible
-         last-visible] (fx/get-field list :fx/visible-range)]
-    (.clearAndSelect selection new-selected)
-    (when (or (< new-selected first-visible)
-              (>= new-selected last-visible))
-      (scroll-to list new-selected))
-    (.requestFocus input-box)))
+  (when component ;;maybe there is no autocomplete
+    (let [input-box      (fx/find-by-id component "input")
+          list           (fx/find-by-id component "autocomplete-list")
+          length         (some-> list .getItems .size)
+          selection      (.getSelectionModel list)
+          selected       (.getSelectedIndex selection)
+          new-selected   (+ selected (if (= :next direction) 1 -1))
+          new-selected   (cond (= -1 new-selected) (dec length)
+                               (= length new-selected) 0
+                               :else new-selected)
+          [first-visible
+           last-visible] (fx/get-field list :fx/visible-range)]
+      (.clearAndSelect selection new-selected)
+      (when (or (< new-selected first-visible)
+                (>= new-selected last-visible))
+        (scroll-to list new-selected))
+      (.requestFocus input-box))))
 
 (defin next-suggestion
   {:alias :prompt/next-suggestion

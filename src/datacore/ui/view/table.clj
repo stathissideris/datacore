@@ -254,10 +254,11 @@
                         (.addListener
                          (fx/list-change-listener
                           (fn [selected-cells]
-                            (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
-                                            (for [cell selected-cells]
-                                              {:row    (.getRow cell)
-                                               :column (.getColumn cell)})))))))})
+                            (future
+                              (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
+                                              (for [cell selected-cells]
+                                                {:row    (.getRow cell)
+                                                 :column (.getColumn cell)}))))))))})
                 (with-status-line
                   (c/formula #(str (:label %) " - "
                                    (-> % :data count) " rows - "
