@@ -31,6 +31,7 @@
 
 (s/def ::title string?)
 (s/def ::prompt-text string?)
+(s/def ::input-component any?) ;;TODO check fo some JavaFX class
 (s/def ::input-strategy #{:free :constrained-autocomplete :free-autocomplete})
 (s/def ::initial-input string?)
 
@@ -51,10 +52,11 @@
 #_(s/fdef make-popup
         :args (s/cat :options
                      (s/keys :req-un [::title ::prompt-text]
-                             :opt-un [::input-strategy ::initial-input
+                             :opt-un [::input-strategy ::initial-input ::input-component
                                       ::autocomplete-fn ::accept-fn ::cancel-fn ::valid?-fn])))
 (defn make-popup [{:keys [title
                           prompt-text
+                          input-component ;;if you pass this, there is no autocomplete. Can be a component or an fx map
                           input-strategy
                           initial-input
                           autocomplete-fn
@@ -73,10 +75,10 @@
             :style       (str "-fx-padding: 40px;"
                               "-fx-background-color: rgba(0,0,0,0);")
             :children
-            [{:fx/type :scene.layout/v-box
-              :style (str "-fx-padding: 0px;"
-                          "-fx-background-color: rgba(0,0,0,0);"
-                          "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10)")
+            [{:fx/type    :scene.layout/v-box
+              :style      (str "-fx-padding: 0px;"
+                               "-fx-background-color: rgba(0,0,0,0);"
+                               "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10)")
               :pref-width 400 ;;if not set, :wrap-text does not work on label below
               :children
               [{:fx/type     :scene.text/text-flow
@@ -91,20 +93,22 @@
                                   "-fx-border-radius: 6 6 0 0;"
                                   "-fx-border-color: #d5d5d5;"
                                   "-fx-wrap-text: true;")}
-               {:fx/type          :scene.control/text-field
-                :id               "input"
-                :style            (str "-fx-font-size: 2.5em;"
-                                       "-fx-border-width: 5px;"
-                                       "-fx-background-color: #f4f2f3;"
-                                       "-fx-border-color: #d5d5d5;"
-                                       "-fx-border-style: solid;"
-                                       "-fx-border-width: 1px;")
-                :text             initial-input
-                :fx/prop-listener [:text
-                                   (fn [_ _ _ text]
-                                     (when autocomplete-fn
-                                       (util/future
-                                         (reset! autocomplete-list (autocomplete-fn text)))))]}
+               (or
+                input-component
+                {:fx/type          :scene.control/text-field
+                 :id               "input"
+                 :style            (str "-fx-font-size: 2.5em;"
+                                        "-fx-border-width: 5px;"
+                                        "-fx-background-color: #f4f2f3;"
+                                        "-fx-border-color: #d5d5d5;"
+                                        "-fx-border-style: solid;"
+                                        "-fx-border-width: 1px;")
+                 :text             initial-input
+                 :fx/prop-listener [:text
+                                    (fn [_ _ _ text]
+                                      (when autocomplete-fn
+                                        (util/future
+                                          (reset! autocomplete-list (autocomplete-fn text)))))]})
                (when autocomplete-fn
                  {:fx/type      :scene.control/list-view
                   :id           "autocomplete-list"
@@ -125,7 +129,7 @@
                              {:raw-root       prompt
                               :window-style   :transparent
                               :always-on-top? true})]
-      (add-watch
+      (add-watch ;;TODO this watch is never removed
        autocomplete-list :autocomplete
        (fn [_ _ _ new]
          (let [list  (fx/find-by-id prompt "autocomplete-list")
@@ -327,11 +331,14 @@
   (let [out (promise)]
     (fx/run-later!
      #(-> (make-popup
-           {:title       title
-            :prompt-text prompt
-            :valid?-fn   in/validate-clojure-code
-            :accept-fn   (fn [result]
-                           (deliver out (:input-text result)))})
+           {:title           title
+            :prompt-text     prompt
+            :input-component {:fx/type     :scene.control/text-area
+                              :wrap-text   true
+                              :style-class ["code"]}
+            :valid?-fn       in/validate-clojure-code
+            :accept-fn       (fn [result]
+                               (deliver out (:input-text result)))})
           fx/show!))
     @out))
 (defmethod in/resolve-param-help ::in/function

@@ -18,6 +18,11 @@
   -fx-fill: #ffffff; /* this is not -fx-text-fill because Text has CSS properties of Shapre */
 }
 
+.code {
+  -fx-font-family: "Monaco", monospace;
+  -fx-text-fill: grey;
+}
+
 /* cells graph */
 
 .cell-box {
