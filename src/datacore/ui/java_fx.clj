@@ -36,6 +36,9 @@
 (defn on-fx-thread? []
   (Platform/isFxApplicationThread))
 
+(defn thread-probe [label]
+  (when (on-fx-thread?) (prn '!!!ON-FX-THREAD label)))
+
 (defn run-later! [fun]
   (let [p (promise)]
     (if (on-fx-thread?)

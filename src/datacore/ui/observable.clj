@@ -99,7 +99,8 @@
       (let [id (str "observable-list-atom-listener" (swap! atom-observable-list-id inc))]
         (swap! atom-observable-registry {listener id})
         (add-watch x id (fn [k ref old new]
-                          (.onChanged listener (simple-list-change this old new))))))
+                          (locking listener
+                            (.onChanged listener (simple-list-change this old new)))))))
     (removeListener [^ListChangeListener listener]
       (when-let [id (get @atom-observable-registry listener)]
         (remove-watch x id)))))
@@ -121,9 +122,8 @@
       (let [id (str "observable-list-cell-listener" (swap! cell-observable-list-id inc))]
         (swap! cell-observable-registry {listener id})
         (c/add-watch! x id (fn [ref old new]
-                             (let [change (simple-list-change this old new)]
-                               (fx/run-later!
-                                #(.onChanged listener change)))))))
+                             (locking listener
+                               (.onChanged listener (simple-list-change this old new)))))))
     (removeListener [^ListChangeListener listener]
       (when-let [id (get @cell-observable-registry listener)]
         (c/remove-watch! x id)))))

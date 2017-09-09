@@ -7,6 +7,7 @@
             [datacore.ui.observable :refer [observable-list]]
             [datacore.ui.view.edn :as view.edn]
             [datacore.ui.windows :as windows]
+            [datacore.async :as async]
             [clojure.pprint :refer [pprint]])
   (:import [javafx.util Callback]
            [javafx.beans.property ReadOnlyObjectWrapper]
@@ -30,9 +31,11 @@
 (defmethod fx/fset [TableView :dc/cursor]
   [table _ {:keys [row column]}]
   (let [model (some-> table .getSelectionModel)]
-    (doto model
-      (.clearSelection)
-      (.select row (or column (-> table .getColumns first))))))
+    (try
+      (doto model
+        (.clearSelection)
+        (.select row (or column (-> table .getColumns first))))
+      (catch Exception _))))
 
 (defin scroll-to-top
   {:alias :table/scroll-to-top
@@ -254,11 +257,11 @@
                         (.addListener
                          (fx/list-change-listener
                           (fn [selected-cells]
-                            (future
-                              (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
-                                              (for [cell selected-cells]
-                                                {:row    (.getRow cell)
-                                                 :column (.getColumn cell)}))))))))})
+                            (async/sliding-future
+                             #(c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
+                                              (for [table-cell selected-cells]
+                                                {:row    (.getRow table-cell)
+                                                 :column (.getColumn table-cell)}))))))))})
                 (with-status-line
                   (c/formula #(str (:label %) " - "
                                    (-> % :data count) " rows - "

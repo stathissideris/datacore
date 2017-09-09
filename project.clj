@@ -10,6 +10,7 @@
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [me.raynes/fs "1.4.6"]
+                 [org.clojure/core.async "0.3.443"]
                  [hawk "0.2.11"]
                  [hiccup "1.0.5"]
 

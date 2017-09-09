@@ -1,5 +1,6 @@
 (ns datacore.main
   (:require [datacore.cells :as c]
+            [datacore.async :as async]
             [datacore.state :as state]
             [datacore.util :as util]
             [datacore.ui.view :as view]
@@ -18,6 +19,7 @@
 (defn init []
   ;;(set! *warn-on-reflection* true)
   ;;(fx/set-app-icon "/images/rick.jpg") ;;TODO calling this seems to trigger this https://stackoverflow.com/questions/14977546/javafx-nullpointerexception-on-startup
+  (async/start-sliding-future!)
   (fx/init)
 
   (Thread/setDefaultUncaughtExceptionHandler (global-exception-handler))
