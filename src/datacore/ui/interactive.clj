@@ -54,7 +54,7 @@
 (defn call [match]
   (if-let [{:keys [var params]} (get (c/value functions) match)]
     (do
-      (prn 'CALL-IS-ON-FX-THREAD (fx/on-fx-thread?))
+      (when (fx/on-fx-thread?) (prn 'CALL-IS-ON-FX-THREAD var))
       (if params
         (prn 'CALLED var params)
         (prn 'CALLED var))

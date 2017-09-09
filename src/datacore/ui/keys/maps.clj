@@ -92,7 +92,8 @@
     {:enter :cells/open-view
      :s     :cells/toggle-system
      :m     :cells/toggle-mute
-     :e     :cells/edit-code})})
+     :e     :cells/edit-code
+     :q     :windows/delete})})
 
 (def web-keymap
   {:name :datacore.ui.view/web
