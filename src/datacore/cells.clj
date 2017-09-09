@@ -93,7 +93,7 @@
      {:id       (:id c)
       :cell     cell-id
       :roles    (:roles meta)
-      :code     (:code meta)
+      :code     (or (:simple-code meta) (:code meta))
       :label    (:label c)
       :formula? (:formula? c)
       :enabled? (if (:formula? c)

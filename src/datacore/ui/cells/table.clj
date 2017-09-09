@@ -130,10 +130,17 @@
                                          (when enabled?
                                            (.setGraphic cell checkmark)))})
                                  (.setAlignment Pos/TOP_CENTER))))))
-                         (table/column "code" (fn [c]
-                                                (if (:code c)
-                                                  (format-code (:code c))
-                                                  "")))
+                         (table/column
+                          "code" #(if (:code %) (format-code (:code %)) "")
+                          (fx/callback
+                           (fn [_]
+                             (table/cell
+                              {:update-item
+                               (fn [cell code empty?]
+                                 (when-not empty?
+                                   (.setText cell code)
+                                   (.setStyle cell (str "-fx-font-family: \"Monaco\", monospace;"
+                                                        "-fx-font-size: 0.9em;"))))}))))
                          (table/column "value" :value)
                          (table/column "error" :error)
                          (table/column

@@ -34,12 +34,14 @@
                     :title  "Transform cell code"
                     :prompt "Enter a Clojure expression"}]]}
   [{:keys [cell code]}]
-  (let [code           `(fn [{:keys [~'data] :as ~'input}]
-                          (assoc ~'input :data ~(edn/read-string code)))
+  (let [simple-code    (edn/read-string code)
+        code           `(fn [{:keys [~'data] :as ~'input}]
+                          (assoc ~'input :data ~simple-code))
         transform-cell (c/formula (eval code) ::c/unlinked
                                   {:label :transform-cell
-                                   :meta {:roles #{:transform}
-                                          :code  code}})
+                                   :meta {:roles       #{:transform}
+                                          :code        code
+                                          :simple-code simple-code}})
         upstream       (first (c/sources cell))]
     (c/linear-insert! upstream transform-cell cell)))
 
