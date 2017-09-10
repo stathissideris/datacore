@@ -30,8 +30,9 @@
         (with-status-line
           (c/formula #(str (:label %)
                            " - EDN - "
-                           (-> % :data count) " entries - "
-                           (Date. (:last-modified %)))
+                           (-> % :data count) " entries"
+                           (when-let [lm (:last-modified %)]
+                             (str " - " (Date. lm))))
                      view-cell
                      {:label :edn-status-line
                       :meta  {:roles #{:system}}})))}))

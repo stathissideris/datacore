@@ -255,7 +255,7 @@
                             :cell)]
     (let [edn-cell (c/formula (fn [value]
                                 {::view/type ::view/edn
-                                 :label      (str "EDN view of cell" (name (c/label cell))) ;;TODO does not show up, fix
+                                 :label      (str "EDN view of cell '" (name (c/label cell)) "'")
                                  :data       value})
                               cell
                               {:label :edn-view})

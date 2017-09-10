@@ -204,7 +204,7 @@
               (run-later! #(set-field! object field (c/value value)))
               (when-not (c/label value)
                 (c/set-label! value (keyword (str (.getName (class object)) "-" (name field)))))
-              (c/add-watch!
+              (c/add-watch! ;;TODO is this watch ever removed?
                value
                [object field]
                (fn [_ _ v]
