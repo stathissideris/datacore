@@ -87,73 +87,73 @@
                                      (remove-watch cells-atom watcher-name)))])
     (fx/set-fields!
      table
-     {:items            (observable-list table-cells-atom)
-      :columns          [(table/column "id" :id)
-                         (table/column
-                          "roles" :roles
-                          (fx/callback
-                           (fn [_]
-                             (doto (table/cell
-                                    {:update-item
-                                     (fn [cell roles empty?]
-                                       (when (and (not empty?) (not (clojure.core/empty? roles)))
-                                         (.setGraphic cell (roles-cell roles))))})
-                               (.setAlignment Pos/TOP_CENTER)))))
-                         (table/column "label" :label)
-                         (table/column
-                          "input?" :formula?
-                          (fx/callback
-                           (fn [_]
-                             (let [checkmark (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})]
-                               (doto (table/cell
-                                      {:update-item
-                                       (fn [cell formula? empty?]
-                                         (when (not (or formula? empty?))
-                                           (.setGraphic cell checkmark)))})
-                                 (.setAlignment Pos/TOP_CENTER))))))
-                         (table/column
-                          "enabled?" :enabled?
-                          (fx/callback
-                           (fn [_]
-                             (let [checkmark (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})]
-                               (doto (table/cell
-                                      {:update-item
-                                       (fn [cell enabled? empty?]
-                                         (when enabled?
-                                           (.setGraphic cell checkmark)))})
-                                 (.setAlignment Pos/TOP_CENTER))))))
-                         (table/column
-                          "code" :raw-code
-                          (fx/callback
-                           (fn [_]
-                             (table/cell
-                              {:update-item
-                               (fn [cell code empty?]
-                                 (when-not empty?
-                                   (.setText cell code)
-                                   (.setStyle cell (str "-fx-font-family: \"Monaco\", monospace;"
-                                                        "-fx-font-size: 0.9em;"))))}))))
-                         (table/column "value" :value)
-                         (table/column "error" :error)
-                         (table/column
-                          "sinks" :sinks
-                          (fx/callback
-                           (fn [_]
-                             (table/cell
-                              {:update-item
-                               (fn [cell links empty?]
-                                 (when-not empty?
-                                   (.setGraphic cell (links-cell table (sort links)))))}))))
-                         (table/column
-                          "sources" :sources
-                          (fx/callback
-                           (fn [_]
-                             (table/cell
-                              {:update-item
-                               (fn [cell links empty?]
-                                 (when-not empty?
-                                   (.setGraphic cell (links-cell table links))))}))))
-                         (table/column "meta" :meta)]})
+     {:items   (observable-list table-cells-atom)
+      :columns [(table/column "id" :id)
+                (table/column
+                 "roles" :roles
+                 (fx/callback
+                  (fn [_]
+                    (doto (table/cell
+                           {:update-item
+                            (fn [cell roles empty?]
+                              (when (and (not empty?) (not (clojure.core/empty? roles)))
+                                (.setGraphic cell (roles-cell roles))))})
+                      (.setAlignment Pos/TOP_CENTER)))))
+                (table/column "label" :label)
+                (table/column
+                 "input?" :formula?
+                 (fx/callback
+                  (fn [_]
+                    (let [checkmark (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})]
+                      (doto (table/cell
+                             {:update-item
+                              (fn [cell formula? empty?]
+                                (when (not (or formula? empty?))
+                                  (.setGraphic cell checkmark)))})
+                        (.setAlignment Pos/TOP_CENTER))))))
+                (table/column
+                 "enabled?" :enabled?
+                 (fx/callback
+                  (fn [_]
+                    (let [checkmark (fx/make MaterialIconView {:fx/args [MaterialIcon/CHECK]})]
+                      (doto (table/cell
+                             {:update-item
+                              (fn [cell enabled? empty?]
+                                (when enabled?
+                                  (.setGraphic cell checkmark)))})
+                        (.setAlignment Pos/TOP_CENTER))))))
+                (table/column
+                 "code" :raw-code
+                 (fx/callback
+                  (fn [_]
+                    (table/cell
+                     {:update-item
+                      (fn [cell code empty?]
+                        (when-not empty?
+                          (.setText cell code)
+                          (.setStyle cell (str "-fx-font-family: \"Monaco\", monospace;"
+                                               "-fx-font-size: 0.9em;"))))}))))
+                (table/column "value" :value)
+                (table/column "error" :error)
+                (table/column
+                 "sinks" :sinks
+                 (fx/callback
+                  (fn [_]
+                    (table/cell
+                     {:update-item
+                      (fn [cell links empty?]
+                        (when-not empty?
+                          (.setGraphic cell (links-cell table (sort links)))))}))))
+                (table/column
+                 "sources" :sources
+                 (fx/callback
+                  (fn [_]
+                    (table/cell
+                     {:update-item
+                      (fn [cell links empty?]
+                        (when-not empty?
+                          (.setGraphic cell (links-cell table links))))}))))
+                (table/column "meta" :meta)]})
     (let [column-widths [[5 200]
                          [6 200]
                          [8 100]
