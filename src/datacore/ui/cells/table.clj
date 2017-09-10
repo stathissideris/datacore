@@ -244,3 +244,20 @@
                                        :prompt        "Edit the cell label"
                                        :initial-input (name (c/label cell))})]
       (c/set-label! cell (keyword (str/replace new-label " " "-"))))))
+
+(defin edn-view
+  {:alias :cells/edn-view
+   :params [[:cursor ::in/table-cursor]
+            [:table ::in/main-component]]}
+  [{:keys [cursor table raw-code]}]
+  (if-let [cell     (some-> (into [] (.getItems table))
+                            (nth (:row cursor))
+                            :cell)]
+    (let [edn-cell (c/formula (fn [value]
+                                {::view/type ::view/edn
+                                 :label      (str "EDN view of cell" (name (c/label cell))) ;;TODO does not show up, fix
+                                 :data       value})
+                              cell
+                              {:label :edn-view})
+          view     (view/build-cell-view edn-cell)]
+      (windows/new-split-view view :right))))
