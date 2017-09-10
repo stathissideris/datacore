@@ -236,38 +236,40 @@
                                       columns))
                                columns-stopgap
                                {:meta {:roles #{:system}}})]
-          (view/configure-view
-           {:cell      view-cell
-            :focused?  true
-            :component
-            (-> (fx/make-tree
-                 {:fx/type                  :scene.control/table-view
-                  :style-class              ["table-view" "main-component"]
-                  :items                    (observable-list data-cell)
-                  :columns                  columns-cell
-                  [:selection-model
-                   :selection-mode]         SelectionMode/MULTIPLE
-                  [:selection-model
-                   :cell-selection-enabled] true
-                  :fx/setup
-                  (fn [table]
-                    (-> table
-                        .getSelectionModel
-                        .getSelectedCells
-                        (.addListener
-                         (fx/list-change-listener
-                          (fn [selected-cells]
-                            (async/sliding-future
-                             #(c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
-                                              (for [table-cell selected-cells]
-                                                {:row    (.getRow table-cell)
-                                                 :column (.getColumn table-cell)}))))))))})
-                (with-status-line
-                  (c/formula #(str (:label %) " - "
-                                   (-> % :data count) " rows - "
-                                   (-> % :columns count) " columns - "
-                                   (Date. (:last-modified %))
-                                   " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
-                             view-cell
-                             {:label :table-status-line
-                              :meta  {:roles #{:system}}})))}))))))
+          (let [control-listener
+                (async/throttled
+                 100
+                 (fn [selected-cells]
+                   (c/hidden-swap! control-cell #{view-cell data-cell columns-cell} assoc :selected-cells
+                                   (for [table-cell selected-cells]
+                                     {:row    (.getRow table-cell)
+                                      :column (.getColumn table-cell)}))))]
+            (view/configure-view
+             {:cell      view-cell
+              :focused?  true
+              :component
+              (-> (fx/make-tree
+                   {:fx/type                  :scene.control/table-view
+                    :style-class              ["table-view" "main-component"]
+                    :items                    (observable-list data-cell)
+                    :columns                  columns-cell
+                    [:selection-model
+                     :selection-mode]         SelectionMode/MULTIPLE
+                    [:selection-model
+                     :cell-selection-enabled] true
+                    :fx/setup
+                    (fn [table]
+                      (-> table
+                          .getSelectionModel
+                          .getSelectedCells
+                          (.addListener
+                           (fx/list-change-listener control-listener))))})
+                  (with-status-line
+                    (c/formula #(str (:label %) " - "
+                                     (-> % :data count) " rows - "
+                                     (-> % :columns count) " columns - "
+                                     (Date. (:last-modified %))
+                                     " | select: " (or (some-> % :selection-mode name (str "s")) "cells"))
+                               view-cell
+                               {:label :table-status-line
+                                :meta  {:roles #{:system}}})))})))))))
