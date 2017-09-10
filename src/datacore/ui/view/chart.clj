@@ -5,6 +5,7 @@
             [datacore.ui.windows :as windows]
             [datacore.ui.observable :refer [observable-list]]
             [datacore.ui.interactive :as in :refer [defin]]
+            [datacore.ui.util :refer [with-status-line]]
             [datacore.cells :as c])
   (:import [javafx.scene.chart XYChart]))
 
@@ -26,20 +27,22 @@
    {:cell      view-cell
     :focused?  false
     :component
-    (fx/make-tree
-     {:fx/type :scene.chart/bar-chart
-      :fx/args [{:fx/type :scene.chart/category-axis
-                 :label   "Values"}
-                {:fx/type :scene.chart/number-axis
-                 :label   "Frequencies"}]
-      :data
-      (observable-list
-       (c/formula
-        (fn [data]
-          [(xy-data-series "Count" data)])
-        view-cell
-        {:label :chart-cell
-         :meta  {:roles #{:system}}}))})}))
+    (-> (fx/make-tree
+         {:fx/type     :scene.chart/bar-chart
+          :fx/args     [{:fx/type :scene.chart/category-axis
+                         :label   "Values"}
+                        {:fx/type :scene.chart/number-axis
+                         :label   "Frequencies"}]
+          :style-class ["chart" "bar-chart" "main-component"]
+          :data
+          (observable-list
+           (c/formula
+            (fn [data]
+              [(xy-data-series "Count" data)])
+            view-cell
+            {:label :chart-cell
+             :meta  {:roles #{:system}}}))})
+        (with-status-line "chart!"))}))
 
 ;;(def cc (c/cell nil))
 ;;(datacore.ui.util/inspect cc)
