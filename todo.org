@@ -59,18 +59,17 @@
      Not a bug, it's due to table losing selection when data are updated
 **** DONE "Jumping" input column checkmarks
 *** Prompt
-**** TODO Prompt: show focus in main window even if prompt has focus
+**** TODO try to eval clojure code for better validation on input
 **** TODO multiple choice (and being able to check one or many options)
 **** TODO multiple choice or custom
-**** DONE Prompt: string
-**** DONE Prompt: clojure code
-**** TODO try to eval clojure code for better validation on input
 **** TODO Prompt: go to previous parameter
-**** PROG File prompt
-**** TODO Maybe display cell errors in UI panels?
-**** DONE Prompt: better colours for selected option in list
 **** TODO Prompt: fix layout when we have no autocomplete
 **** TODO do not start with highlighted text
+**** TODO Prompt: show focus in main window even if prompt has focus
+**** DONE Prompt: string
+**** DONE Prompt: clojure code
+**** DONE File prompt
+**** DONE Prompt: better colours for selected option in list
 *** CSV
 **** TODO option for CSV, TSV, autodetect
 **** TODO customize delimiter
@@ -78,6 +77,7 @@
 *** Errors
 **** TODO What happens when you run a function that cannot resolve one of its parameters?
 **** TODO What happens when there is an exception in a cell?
+**** TODO Maybe display cell errors in UI panels?
 **** TODO Stack trace viewer
 *** Tables
 **** TODO Table selection modes

@@ -41,7 +41,8 @@
                                                             content "Local content"
                                                             :else "Nothing to show"))))
                                            view-cell
-                                           {:label :web-view-status-line}))
+                                           {:label :web-view-status-line
+                                            :meta {:roles #{:system}}}))
                          (fx/set-field! :style-class ["focus-indicator"]))]
        (c/alter-meta! view-cell assoc :roles #{:view})
        (c/alter-meta! view-cell assoc :component component)

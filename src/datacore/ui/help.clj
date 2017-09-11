@@ -108,9 +108,12 @@
                                          (fx/open-in-browser href)))))))
                       in/functions
                       keymaps/keymaps
-                      {:label :help-content})
-        _            (c/alter-meta! help-content assoc :roles #{:source})
-        view-cell    (web/view help-content)
+                      {:label :help-content
+                       :meta {:roles #{:system :source}}})
+        view-cell    (c/formula
+                      (fn [input] (merge input {::view/type ::view/web}))
+                      help-content
+                      {:label :help-view})
         component    (view/configure-view
                       {:cell      view-cell
                        :component (view/build-cell-view view-cell)
