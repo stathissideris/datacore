@@ -23,26 +23,34 @@
          {:fx/type javafx.scene.chart.XYChart$Data :fx/args [x y]})))})))
 
 (defn frequency-chart [view-cell]
-  (view/configure-view
-   {:cell      view-cell
-    :focused?  false
-    :component
-    (-> (fx/make-tree
-         {:fx/type     :scene.chart/bar-chart
-          :fx/args     [{:fx/type :scene.chart/category-axis
-                         :label   "Values"}
-                        {:fx/type :scene.chart/number-axis
-                         :label   "Frequencies"}]
-          :style-class ["chart" "bar-chart" "main-component"]
-          :data
-          (observable-list
-           (c/formula
-            (fn [data]
-              [(xy-data-series "Count" data)])
-            view-cell
-            {:label :chart-cell
-             :meta  {:roles #{:system}}}))})
-        (with-status-line "chart!"))}))
+  (let [chart        (fx/make-tree
+                      {:fx/type     :scene.chart/bar-chart
+                       :fx/args     [{:fx/type :scene.chart/category-axis
+                                      :label   "Values"}
+                                     {:fx/type :scene.chart/number-axis
+                                      :label   "Frequencies"}]
+                       :style-class ["chart" "bar-chart" "main-component"]
+                       :animated    false
+                       :data        (observable-list [(xy-data-series "Count" (c/value view-cell))])})
+        view         (view/configure-view
+                      {:cell      view-cell
+                       :focused?  false
+                       :component (with-status-line chart "chart!")})
+        watcher-name (gensym :chart-view)]
+
+    (c/add-watch! view-cell watcher-name
+                  (fn [_ _ new]
+                    (fx/run-later!
+                     #(fx/set-field! chart :data (observable-list [(xy-data-series "Count" new)])))))
+
+    (fx/set-field!
+     view
+     :fx/prop-listener [:visible (fn [source observable old visible] ;;this only works because datacore.ui.windows/replace! sets the visibility to false
+                                   (prn '--watcher-removed watcher-name)
+                                   (if-not visible
+                                     (c/remove-watch! view-cell watcher-name)))])
+
+    view))
 
 ;;(def cc (c/cell nil))
 ;;(datacore.ui.util/inspect cc)
@@ -58,14 +66,15 @@
                     :title  "Frequencies chart cell code"
                     :prompt "Enter a Clojure expression"}]]}
   [{:keys [upstream-cell code]}]
-  (let [code       `(fn [{:keys [~'data] :as ~'input}]
-                      ~(edn/read-string code))
-        chart-cell (c/formula (eval code)
-                              upstream-cell
-                              {:label :chart-view
-                               :meta  {:roles #{:transform :view}
-                                       :code  code}})
-        view       (frequency-chart chart-cell)]
+  (let [actual-code `(fn [{:keys [~'data] :as ~'input}]
+                       (->> ~'data (map ~(edn/read-string code)) frequencies (sort-by first)))
+        chart-cell  (c/formula (eval actual-code)
+                               upstream-cell
+                               {:label :chart-view
+                                :meta  {:roles #{:transform :view}
+                                        :code  actual-code
+                                        :raw-code code}})
+        view        (frequency-chart chart-cell)]
     (windows/new-split-view view :right)))
 
 ;;(->> data (map :year) frequencies (sort-by first))

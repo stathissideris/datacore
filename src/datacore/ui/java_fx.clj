@@ -225,7 +225,8 @@
                                     {:object object
                                      :class  (class object)
                                      :field  field
-                                     :value  value})))))))))))
+                                     :value  value}
+                                    e)))))))))))
   object)
 
 (defn update-field! [object field fun & args]
@@ -783,7 +784,6 @@
   ([text-field]
    (caret-left text-field 1))
   ([text-field steps]
-   (prn 'CaretPosition (.getCaretPosition text-field) '-> (max 0 (- (.getCaretPosition text-field) steps)))
    (.positionCaret text-field (max 0 (- (.getCaretPosition text-field) steps)))))
 
 (defn caret-right
