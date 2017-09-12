@@ -36,18 +36,23 @@
                       {:cell      view-cell
                        :focused?  false
                        :component (with-status-line chart "chart!")})
-        watcher-name (gensym :chart-view)]
-
-    (c/add-watch! view-cell watcher-name
-                  (fn [_ _ new]
-                    (fx/run-later!
-                     #(fx/set-field! chart :data (observable-list [(xy-data-series "Count" new)])))))
-
+        watcher-name (gensym :chart-view)
+        update-data! (fn [input]
+                      (fx/run-later!
+                       #(fx/set-field! chart :data (observable-list [(xy-data-series "Count" input)]))))
+        add-watch!   (fn []
+                       (c/add-watch! view-cell watcher-name
+                                     (fn [_ _ new]
+                                       (update-data! new))))]
+    (add-watch!)
     (fx/set-field!
      view
      :fx/prop-listener [:visible (fn [source observable old visible] ;;this only works because datacore.ui.windows/replace! sets the visibility to false
                                    (prn '--watcher-removed watcher-name)
-                                   (if-not visible
+                                   (if visible
+                                     (do
+                                       (update-data! (c/value view-cell))
+                                       (add-watch!))
                                      (c/remove-watch! view-cell watcher-name)))])
 
     view))
@@ -63,8 +68,8 @@
   {:alias :chart/frequencies
    :params [[:upstream-cell ::in/cell]
             [:code {:type   ::in/clojure-code
-                    :title  "Frequencies chart cell code"
-                    :prompt "Enter a Clojure expression"}]]}
+                    :title  "Derive frequencies chart"
+                    :prompt "Enter a Clojure expression to run frequencies on"}]]}
   [{:keys [upstream-cell code]}]
   (let [actual-code `(fn [{:keys [~'data] :as ~'input}]
                        (->> ~'data (map ~(edn/read-string code)) frequencies (sort-by first)))
