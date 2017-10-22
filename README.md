@@ -18,6 +18,67 @@ Datacore:
  * Is text driven where is makes sense, but can also be extended to
    include simple UIs by wrapping JavaFX.
 
+## Usage
+
+This is an extremely young project, and the the UX still leaves a lot
+to be desired, but if you'd like to get a glimpse of where it's going,
+here are some instructions on how to run it and thy a few things:
+
+* Checkout master
+
+```
+git clone git@github.com:stathissideris/datacore.git
+```
+
+* Jack-in the project (or start a REPL in some other way) and then do:
+
+```clojure
+> (dev/refresh)
+> (datacore.main/init)
+```
+
+* Look for the window that was opened (in OSX at least it doesn't come
+  to the front of other windows by default).
+* Press `C-x 3` and `C-x 2` to try window splitting. `C-x 1`, `C-x 0`
+  also work. `<F1> <right>` makes the focus jump to the window on the
+  right (all directions work). Focus is indicated by a blue
+  border. You can also change focus with the mouse. `<F2> <right>`
+  swaps the current window with the window on the right.
+* Press `C-x C-f` to get a prompt for loading a CSV file (for now it
+  defaults to test-resources for ease of testing).
+* File select prompt keys:
+  * just type for autocomplete
+  * `<up>`/`<down>` to select a different option from list
+  * `<esc>` or `C-g` to cancel
+  * `<tab>` to go into selected directory
+  * `<enter>` to select a file
+* Select watchlist.csv
+* Press `M-x table/row-edn-view <enter>` to get a view that shows the
+  currently selected row as EDN.
+* Press `C-h f table/scroll-down <enter>` to see keys for table
+  navigation (all related functions at the bottom).
+* Press `C-x C-b` to see all the current cells (excluding system cells)
+  and use arrow keys and <enter> to bring back the watchlist table
+  view (indicated by eye icon and `:table-view` name).
+* Press `M-x cells/chart-frequencies <enter>` to get a prompt on the
+  Clojure expression on which to base the histogram. Just type `:year`
+  and press `<enter>`.
+* Make sure that the table has focus and press `<M-x>
+  cells/add-transform-cell <enter>` and in the prompt enter this
+  expression:
+
+  ```clojure
+  (filter #(= "Documentary" (:title-type %)) data)
+  ```
+
+* Notice that both the table view and the histogram get updated.
+* Open the cells table view again with `C-x C-b` (ideally arrange the
+  windows so that you can also see the table and histogram), press
+  `<down>` until the newly added `:transform-cell` is highlighted, and
+  press `<m>` repeatedly to mute/unmute the filtering. The table and
+  histogram should update accordinly.
+* You can press `<e>` to edit the code of the transform cell.
+
 ## Design
 
 Current thinking is that all state in the application (both for data

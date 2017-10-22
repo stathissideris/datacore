@@ -10,7 +10,6 @@
             [datacore.reflection :as reflection]))
 
 ;; TODO
-;; mutation for meta map
 ;; pluggable caching strategy
 ;; pluggabe execution strategy
 
@@ -22,8 +21,8 @@
                              (instance? datacore.cells.CellID cell-id)))
 
 (defn make-cells []
-   :sinks           {}   ;;map of cell IDs to sets of sinks
-  {:cells           {}   ;;map of cell IDs to cell values
+  {:sinks           {}   ;;map of cell IDs to sets of sinks
+   :cells           {}   ;;map of cell IDs to cell values
    :sources         {}   ;;map of cell IDs to sets of sources
    :meta            {}   ;;map of cell IDs to maps of metadata
    :touched         #{}
