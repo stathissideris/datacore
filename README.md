@@ -138,7 +138,7 @@ Differences to Javelin:
  * https://www.ag-grid.com
  * https://median.tech
  * [Google Sheets explore functionality](https://www.blog.google/products/g-suite/visualize-data-instantly-machine-learning-google-sheets/) - [HN thread](https://news.ycombinator.com/item?id=14469645)
-
+ * [Mike Bostock's 0bservable](https://www.youtube.com/watch?v=aT4JvF7sglg) (AKA d3.express) - [article](https://medium.com/@mbostock/a-better-way-to-code-2b1d2876a3a0)
 ## License
 
 Copyright © 2017 Stathis Sideris
