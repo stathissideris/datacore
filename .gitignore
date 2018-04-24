@@ -12,3 +12,4 @@ pom.xml.asc
 .idea/*
 /datacore.iml
 resources/public/js/out/*
+/figwheel_server.log
