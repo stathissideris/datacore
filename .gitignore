@@ -11,3 +11,4 @@ pom.xml.asc
 .hg/
 .idea/*
 /datacore.iml
+resources/public/js/out/*

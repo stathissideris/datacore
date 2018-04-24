@@ -1,0 +1,14 @@
+body {
+  color: #c27dd9;
+  background-color: #072b34;
+  font-family: "Monaco", "Consolas", Monospace;
+  font-size: 10pt;
+}
+
+::selection {
+  background: #a0a0a0;
+}
+
+::-moz-selection {
+  background: #a0a0a0;
+}
