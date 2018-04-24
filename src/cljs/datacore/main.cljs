@@ -16,6 +16,12 @@
 
 (rum/defc ui < rum/reactive []
   [:div
+   (keyboard-info)
+   [:div#overlay {:style {:display (if (= {:code "x", :key "x", :meta true}
+                                          (some-> state/state rum/react :keyboard))
+                                     "block" "none")}}
+    [:div.modal
+     [:p "prompt"]]]
    [:div
     [:div.pane.upper
      [:p "start"]
@@ -24,8 +30,7 @@
     [:div.pane.lower
      [:p "start"]
      (map (fn [x] [:p (str x)]) (range 50))
-     [:p "end"]]]
-   (keyboard-info)])
+     [:p "end"]]]])
 
 (set! (.-onkeydown js/window) keys/handle-key)
 

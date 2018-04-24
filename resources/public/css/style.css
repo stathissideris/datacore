@@ -40,6 +40,31 @@ body {
   overflow: auto;
 }
 
+#overlay {
+  position: fixed; /* Sit on top of the page content */
+  display: none; /* Hidden by default */
+  width: 100%; /* Full width (cover the whole page) */
+  height: 100%; /* Full height (cover the whole page) */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.4); /* Black background with opacity */
+  z-index: 2;
+  cursor: pointer;
+}
+
+.modal {
+  background:#e1e1e1;
+  margin: 0 auto;
+  width: 160px;
+  position: relative;
+  z-index: 41;
+  top: 25%;
+  padding: 30px;
+  font-size: 14pt;
+}
+
 /* https://gist.github.com/devinrhode2/2573411 */
 
 ::-webkit-scrollbar {
