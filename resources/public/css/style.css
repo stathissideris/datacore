@@ -2,7 +2,10 @@ body {
   color: #c27dd9;
   background-color: #072b34;
   font-family: "Monaco", "Consolas", Monospace;
-  font-size: 10pt;
+  font-size: 8pt;
+  padding: 0px;
+  margin: 0px;
+  overflow: hidden;
 }
 
 ::selection {
@@ -11,4 +14,56 @@ body {
 
 ::-moz-selection {
   background: #a0a0a0;
+}
+
+.pane {
+  border-style: solid;
+  border-width: 0.1px;
+  border-color: 353535;
+}
+
+.upper {
+  position: relative;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: auto;
+}
+
+.lower {
+  position: relative;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: auto;
+}
+
+/* https://gist.github.com/devinrhode2/2573411 */
+
+::-webkit-scrollbar {
+  width: 15px;
+  background-color: rgba(0,0,0,0);
+  -webkit-border-radius: 100px;
+}
+/* hover effect for both scrollbar area, and scrollbar 'thumb' */
+::-webkit-scrollbar:hover {
+  background-color: rgba(128, 128, 128, 0.09);
+}
+
+/* The scrollbar 'thumb' ...that marque oval shape in a scrollbar */
+::-webkit-scrollbar-thumb:vertical {
+  background: rgba(0,0,0,0.5);
+  background-clip: padding-box;
+  border: 4px solid rgba(0, 0, 0, 0);
+  min-height: 30px;
+  -webkit-border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:vertical:active {
+  background: rgba(0,0,0,0.61);
+  background-clip: padding-box;
+  border: 4px solid rgba(0, 0, 0, 0);
+  min-height: 30px;
+  -webkit-border-radius: 100px;
 }

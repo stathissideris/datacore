@@ -16,7 +16,15 @@
 
 (rum/defc ui < rum/reactive []
   [:div
-   (counter)
+   [:div
+    [:div.pane.upper
+     [:p "start"]
+     (map (fn [x] [:p (str x)]) (range 50))
+     [:p "end"]]
+    [:div.pane.lower
+     [:p "start"]
+     (map (fn [x] [:p (str x)]) (range 50))
+     [:p "end"]]]
    (keyboard-info)])
 
 (set! (.-onkeydown js/window) keys/handle-key)
