@@ -22,14 +22,14 @@
                                      "block" "none")}}
     [:div.modal
      [:p "prompt"]]]
-   [:div
-    [:div.pane.upper
+   [:div.h-split
+    [:div.pane
      [:p "start"]
-     (map (fn [x] [:p (str x)]) (range 50))
+     (map (fn [x] [:p (str "A-" x)]) (range 50))
      [:p "end"]]
-    [:div.pane.lower
+    [:div.pane
      [:p "start"]
-     (map (fn [x] [:p (str x)]) (range 50))
+     (map (fn [x] [:p (str "B-" x)]) (range 50))
      [:p "end"]]]])
 
 (set! (.-onkeydown js/window) keys/handle-key)

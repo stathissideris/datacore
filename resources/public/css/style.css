@@ -5,7 +5,7 @@ body {
   font-size: 8pt;
   padding: 0px;
   margin: 0px;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 ::selection {
@@ -16,28 +16,22 @@ body {
   background: #a0a0a0;
 }
 
+.h-split {
+  display: grid;
+  grid-template-columns: auto auto;
+}
+
+.v-split {
+  display: grid;
+  grid-template-rows: repeat(2, 50vmin);
+}
+
 .pane {
   border-style: solid;
   border-width: 0.1px;
   border-color: 353535;
-}
-
-.upper {
-  position: relative;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
   overflow: auto;
-}
-
-.lower {
-  position: relative;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  overflow: auto;
+  flex-direction: row;
 }
 
 #overlay {
