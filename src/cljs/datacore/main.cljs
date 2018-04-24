@@ -24,13 +24,13 @@
      [:p "prompt"]]]
    [:div.h-split
     [:div.pane
-     [:p "start"]
+     [:p "-start-"]
      (map (fn [x] [:p (str "A-" x)]) (range 50))
-     [:p "end"]]
+     [:p "-end-"]]
     [:div.pane
-     [:p "start"]
+     [:p "-start-"]
      (map (fn [x] [:p (str "B-" x)]) (range 50))
-     [:p "end"]]]])
+     [:p "-end-"]]]])
 
 (set! (.-onkeydown js/window) keys/handle-key)
 
