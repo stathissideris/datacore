@@ -6,6 +6,10 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.238"]
 
+                 [mount "0.1.12"]
+                 [com.taoensso/sente "1.12.0"]
+                 [http-kit "2.3.0"]
+
                  [rum "0.11.2"]
                  [com.taoensso/sente "1.12.0"]
                  [camel-snake-kebab "0.4.0"]
