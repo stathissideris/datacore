@@ -3,6 +3,7 @@
             [taoensso.timbre :as log]
             [mount.core :refer [defstate] :as mount]
             [ring.util.response :refer [content-type]]
+            [ring.middleware.resource :refer [wrap-resource]]
             [ring.middleware.gzip :refer [wrap-gzip]]
             [ring.middleware.cljsjs :refer [wrap-cljsjs]]
             [org.httpkit.server :as http-kit]
@@ -26,6 +27,7 @@
 
 (def app
   (-> routes
+      (wrap-resource "public")
       wrap-cljsjs
       wrap-gzip))
 
