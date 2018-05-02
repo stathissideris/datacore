@@ -6,18 +6,32 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.238"]
 
+                 ;;state
                  [mount "0.1.12"]
-                 [com.taoensso/sente "1.12.0"]
-                 [http-kit "2.3.0"]
 
-                 [rum "0.11.2"]
-                 [com.taoensso/sente "1.12.0"]
+                 ;;utils
                  [camel-snake-kebab "0.4.0"]
+                 [expound "0.5.0"]
 
+                 ;;server
+                 [ring/ring-core "1.6.3"]
+                 [bk/ring-gzip "0.3.0"]
+                 [ring-cljsjs "0.1.0"]
+                 [compojure "1.6.1"]
+                 [http-kit "2.3.0"]
+                 [com.taoensso/sente "1.12.0"]
+
+                 ;;client
+                 [rum "0.11.2"]
+
+                 ;;viz
                  [cljsjs/vega-embed "3.1.1-0"]
                  [cljsjs/vega "3.0.1-0"]
                  [cljsjs/vega-lite "2.0.0-0"]
                  [cljsjs/vega-tooltip "0.6.1-0"]]
+
+  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11"]]
+                   :source-paths ["dev"]}}
 
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
 
