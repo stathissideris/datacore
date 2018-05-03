@@ -20,9 +20,12 @@
 
 (go-loop []
   (let [{:as msg :keys [event]} (<! (:ch-recv @sente))]
-    (println (pr-str event))
+    ;;(println (pr-str event))
     (when (= :chsk/recv (first event))
-      (swap! state/state assoc-in [:sente :latest] (second event)))
+      (let [payload (second event)]
+        (swap! state/state assoc-in [:sente :latest] payload)
+        (when (= :mouse/move (first payload))
+          (swap! state/state assoc :mouse (second payload)))))
     (recur)))
 
 (defn- dom-node [state]
@@ -50,16 +53,16 @@
   [:div#footer "key-code: " (pr-str keyboard)])
 
 (defc ui < rum/reactive []
-  (let [{:keys [sente mouse keyboard]} (rum/react state/state)]
+  (let [{:keys [sente mouse keyboard] :as state} (rum/react state/state)]
    [:div#top
     [:div "sente connected: " (some-> sente :open? pr-str)]
     [:div "sente latest payload: " (some-> sente :latest pr-str)]
     [:div "mouse: " (pr-str mouse)]
     (let [{:keys [x y]} mouse]
-      [:div {:style {:top      (str y "px")
-                     :left     (str x "px")
+      [:div {:style {:top      (str (- y 10) "px")
+                     :left     (str (- x 5) "px")
                      :position "absolute"}}
-       "<pointer>"])
+       [:img {:style {:width "40px" :height "auto"} :src "img/mouse-pointer.png"}]])
     ;;[:div "state: " (some-> state/state rum/react pr-str)]
     (counter)
     (vega {:$schema     "https//vega.github.io/schema/vega-lite/v2.0.json"
@@ -102,7 +105,7 @@
 (set! (.-onkeydown js/window) keys/handle-key)
 (set! (.-onmousemove js/document)
       (fn [event]
-        (swap! state/state assoc :mouse {:x event.pageX :y event.pageY})))
+        ((:send-fn @sente) [:mouse/move {:x event.pageX :y event.pageY}])))
 
 (rum/mount (ui) (.getElementById js/document "ui"))
 

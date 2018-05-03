@@ -14,7 +14,8 @@
             [compojure.core :as comp :refer [defroutes GET POST]]
             [compojure.route :as route]
             [taoensso.sente :as sente]
-            [taoensso.sente.server-adapters.http-kit :as sente.http-kit]))
+            [taoensso.sente.server-adapters.http-kit :as sente.http-kit]
+            [clojure.core.async :refer [go-loop <!]]))
 
 
 (defstate sente :start (sente/make-channel-socket!
@@ -44,6 +45,12 @@
   :start (http-kit/run-server app {})
   :stop  (http-server))
 
+(go-loop []
+  (let [{:as msg :keys [event]} (<! (:ch-recv sente))]
+    (println (pr-str event))
+    (when (= :mouse/move (first event))
+      ((:send-fn sente) "stathis" event))
+    (recur)))
 
 ;; to send events:
 ;; ((:send-fn sente) "stathis" [:my/foo {:text "hi!"}])
