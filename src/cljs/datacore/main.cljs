@@ -46,54 +46,63 @@
   [:div {:on-click (fn [_] (swap! state/state update :click-count inc))}
    "Cliiiicks: " (:click-count (rum/react state/state))])
 
-(defc keyboard-info < rum/reactive []
-  [:div#footer "key-code: " (some-> state/state rum/react :keyboard pr-str)])
+(defc keyboard-info < rum/static [keyboard]
+  [:div#footer "key-code: " (pr-str keyboard)])
 
 (defc ui < rum/reactive []
-  [:div#top
-   [:div "sente connected: " (some-> state/state rum/react :sente :open? pr-str)]
-   [:div "sente latest payload: " (some-> state/state rum/react :sente :latest pr-str)]
-   ;;[:div "state: " (some-> state/state rum/react pr-str)]
-   (counter)
-   (vega {:$schema     "https//vega.github.io/schema/vega-lite/v2.0.json"
-          :description "A simple bar chart with embedded data."
-          :data        {:values [{:a "A test" :b 28}
-                                 {:a "B test" :b 55}
-                                 {:a "C test" :b 43}
-                                 {:a "D test" :b 91}
-                                 {:a "E test" :b 81}
-                                 {:a "F test" :b 53}
-                                 {:a "G test" :b (:click-count (rum/react state/state))}
-                                 {:a "H test" :b 87}
-                                 {:a "I test" :b 52}]}
-          :mark        "bar"
-          :encoding    {:x {:field "a"
-                            :type  "ordinal"}
-                        :y {:field "b"
-                            :type  "quantitative"}}}
-         {:renderer "svg"
-          :theme    "quartz"
-          :actions  false})
-   [:div#overlay {:style {:display (if (= {:code "x", :key "x", :meta true}
-                                          (some-> state/state rum/react :keyboard))
-                                     "block" "none")}}
-    [:div.modal
-     [:p "prompt"]]]
-   (comment
-    [:dev#panes
-     [:div.h-split
-      [:div.pane
-       [:p "-start-"]
-       (map (fn [x] [:p (str "A-" x)]) (range 50))
-       [:p "-end-"]]
-      [:div.pane
-       [:p "-start-"]
-       (map (fn [x] [:p (str "B-" x)]) (range 50))
-       [:p "-end-"]]]
-     [:div {:style {:clear "both"}}]])
-   (keyboard-info)])
+  (let [{:keys [sente mouse keyboard]} (rum/react state/state)]
+   [:div#top
+    [:div "sente connected: " (some-> sente :open? pr-str)]
+    [:div "sente latest payload: " (some-> sente :latest pr-str)]
+    [:div "mouse: " (pr-str mouse)]
+    (let [{:keys [x y]} mouse]
+      [:div {:style {:top      (str y "px")
+                     :left     (str x "px")
+                     :position "absolute"}}
+       "<pointer>"])
+    ;;[:div "state: " (some-> state/state rum/react pr-str)]
+    (counter)
+    (vega {:$schema     "https//vega.github.io/schema/vega-lite/v2.0.json"
+           :description "A simple bar chart with embedded data."
+           :data        {:values [{:a "A test" :b 28}
+                                  {:a "B test" :b 55}
+                                  {:a "C test" :b 43}
+                                  {:a "D test" :b 91}
+                                  {:a "E test" :b 81}
+                                  {:a "F test" :b 53}
+                                  {:a "G test" :b (:click-count (rum/react state/state))}
+                                  {:a "H test" :b 87}
+                                  {:a "I test" :b 52}]}
+           :mark        "bar"
+           :encoding    {:x {:field "a"
+                             :type  "ordinal"}
+                         :y {:field "b"
+                             :type  "quantitative"}}}
+          {:renderer "svg"
+           :theme    "quartz"
+           :actions  false})
+    [:div#overlay {:style {:display (if (= keyboard {:code "x", :key "x", :meta true})
+                                      "block" "none")}}
+     [:div.modal
+      [:p "prompt"]]]
+    (comment
+      [:dev#panes
+       [:div.h-split
+        [:div.pane
+         [:p "-start-"]
+         (map (fn [x] [:p (str "A-" x)]) (range 50))
+         [:p "-end-"]]
+        [:div.pane
+         [:p "-start-"]
+         (map (fn [x] [:p (str "B-" x)]) (range 50))
+         [:p "-end-"]]]
+       [:div {:style {:clear "both"}}]])
+    (keyboard-info keyboard)]))
 
 (set! (.-onkeydown js/window) keys/handle-key)
+(set! (.-onmousemove js/document)
+      (fn [event]
+        (swap! state/state assoc :mouse {:x event.pageX :y event.pageY})))
 
 (rum/mount (ui) (.getElementById js/document "ui"))
 
