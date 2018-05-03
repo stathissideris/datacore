@@ -20,6 +20,7 @@
                  [compojure "1.6.1"]
                  [http-kit "2.3.0"]
                  [com.taoensso/sente "1.12.0"]
+                 [org.clojure/core.async "0.4.474"]
 
                  ;;client
                  [rum "0.11.2"]

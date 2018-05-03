@@ -3,19 +3,27 @@
             [cljsjs.vega-embed]
             [datacore.state :as state]
             [datacore.keys :as keys]
-            [taoensso.sente :as sente]))
+            [taoensso.sente]
+            [mount.core :as mount])
+  (:require-macros [mount.core :refer [defstate]]
+                   [cljs.core.async.macros :as a :refer [go go-loop]]))
 
-(let [{:keys [chsk ch-recv send-fn state]}
-      (sente/make-channel-socket! "/chsk" ; Note the same path as before
-                                  {:type :auto})] ; e/o #{:auto :ajax :ws}
-  (def chsk chsk)
-  (def sente-receive-chan ch-recv) ; ChannelSocket's receive channel
-  (def sente-send! send-fn) ; ChannelSocket's send API fn
-  (def sente-state state)) ; Watchable, read-only atom
+(enable-console-print!)
 
-(add-watch sente-state :sente
+(defstate sente :start (taoensso.sente/make-channel-socket! "/chsk" {:type :auto}))
+
+(add-watch (:state @sente) :sente
            (fn [_ _ _ new-state]
              (swap! state/state assoc-in [:sente :open?] (:open? new-state))))
+
+;;how to handle events: https://github.com/danielsz/system-websockets/blob/master/src/cljs/demo/core.cljs#L46-L56
+
+(go-loop []
+  (let [{:as msg :keys [event]} (<! (:ch-recv @sente))]
+    (println (pr-str event))
+    (when (= :chsk/recv (first event))
+      (swap! state/state assoc-in [:sente :latest] (second event)))
+    (recur)))
 
 (defn- dom-node [state]
   (some-> state :rum/react-component js/ReactDOM.findDOMNode))
@@ -44,6 +52,7 @@
 (defc ui < rum/reactive []
   [:div#top
    [:div "sente connected: " (some-> state/state rum/react :sente :open? pr-str)]
+   [:div "sente latest payload: " (some-> state/state rum/react :sente :latest pr-str)]
    ;;[:div "state: " (some-> state/state rum/react pr-str)]
    (counter)
    (vega {:$schema     "https//vega.github.io/schema/vega-lite/v2.0.json"

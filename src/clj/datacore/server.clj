@@ -18,7 +18,8 @@
 
 
 (defstate sente :start (sente/make-channel-socket!
-                        (sente.http-kit/get-sch-adapter) {}))
+                        (sente.http-kit/get-sch-adapter)
+                        {:user-id-fn (fn [req] "stathis")}))
 
 (defroutes routes
   (GET "/status" req (-> {:status 200 :body "ok"}
@@ -42,3 +43,7 @@
 (defstate http-server
   :start (http-kit/run-server app {})
   :stop  (http-server))
+
+
+;; to send events:
+;; ((:send-fn sente) "stathis" [:my/foo {:text "hi!"}])
