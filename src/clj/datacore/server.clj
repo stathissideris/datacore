@@ -3,7 +3,11 @@
             [taoensso.timbre :as log]
             [mount.core :refer [defstate] :as mount]
             [ring.util.response :refer [content-type]]
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.resource :refer [wrap-resource]]
+            [ring.middleware.content-type :refer [wrap-content-type]]
+            [ring.middleware.not-modified :refer [wrap-not-modified]]
             [ring.middleware.gzip :refer [wrap-gzip]]
             [ring.middleware.cljsjs :refer [wrap-cljsjs]]
             [org.httpkit.server :as http-kit]
@@ -21,13 +25,17 @@
                          (content-type "text/html")))
   (GET "/" req (content-type {:status 200
                               :body   (io/input-stream (io/resource "public/index.html"))} "text/html"))
-  (GET "/chsk" req ((:ring-ajax-get-or-ws-handshake sente) req))
-  (POST "/chsk" req ((:ring-ajax-post sente) req))
+  (GET "/chsk" req ((:ajax-get-or-ws-handshake-fn sente) req))
+  (POST "/chsk" req ((:ajax-post-fn sente) req))
   (route/not-found "<h1>404</h1>"))
 
 (def app
   (-> routes
+      wrap-keyword-params
+      wrap-params
       (wrap-resource "public")
+      wrap-content-type
+      wrap-not-modified
       wrap-cljsjs
       wrap-gzip))
 

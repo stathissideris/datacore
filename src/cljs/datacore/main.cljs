@@ -2,7 +2,20 @@
   (:require [rum.core :as rum :refer [defc]]
             [cljsjs.vega-embed]
             [datacore.state :as state]
-            [datacore.keys :as keys]))
+            [datacore.keys :as keys]
+            [taoensso.sente :as sente]))
+
+(let [{:keys [chsk ch-recv send-fn state]}
+      (sente/make-channel-socket! "/chsk" ; Note the same path as before
+                                  {:type :auto})] ; e/o #{:auto :ajax :ws}
+  (def chsk chsk)
+  (def sente-receive-chan ch-recv) ; ChannelSocket's receive channel
+  (def sente-send! send-fn) ; ChannelSocket's send API fn
+  (def sente-state state)) ; Watchable, read-only atom
+
+(add-watch sente-state :sente
+           (fn [_ _ _ new-state]
+             (swap! state/state assoc-in [:sente :open?] (:open? new-state))))
 
 (defn- dom-node [state]
   (some-> state :rum/react-component js/ReactDOM.findDOMNode))
@@ -30,6 +43,8 @@
 
 (defc ui < rum/reactive []
   [:div#top
+   [:div "sente connected: " (some-> state/state rum/react :sente :open? pr-str)]
+   ;;[:div "state: " (some-> state/state rum/react pr-str)]
    (counter)
    (vega {:$schema     "https//vega.github.io/schema/vega-lite/v2.0.json"
           :description "A simple bar chart with embedded data."
@@ -47,7 +62,9 @@
                             :type  "ordinal"}
                         :y {:field "b"
                             :type  "quantitative"}}}
-         {:actions false})
+         {:renderer "svg"
+          :theme    "quartz"
+          :actions  false})
    [:div#overlay {:style {:display (if (= {:code "x", :key "x", :meta true}
                                           (some-> state/state rum/react :keyboard))
                                      "block" "none")}}
