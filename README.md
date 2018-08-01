@@ -1,5 +1,9 @@
 # Datacore
 
+Maturity level: early-stage experimental vaporware, not usable. It
+allowed me to clear some things in my mind which I'm using to develop
+[eggshell](https://github.com/stathissideris/eggshell).
+
 An emacs-like for data
 
 Datacore:
